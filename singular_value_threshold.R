@@ -21,7 +21,7 @@
 
 #R code
 
-source("./soft_thresholding.R")
+source("./PCP/soft_thresholding.R")
 
 singular_value_threshold <- function(M, lambda) {
   
@@ -36,4 +36,3 @@ singular_value_threshold <- function(M, lambda) {
   svt <- list(N = N, v = v) #is this N the same as L??
   svt
 }
-

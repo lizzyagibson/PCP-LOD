@@ -37,7 +37,7 @@
 #R code
 library(stringr)
 
-source("./singular_value_threshold.R")
+source("./PCP/singular_value_threshold.R")
 
 stable_pcp_alternating <- function(D, lambda, mu) {
   
@@ -70,3 +70,5 @@ stable_pcp_alternating <- function(D, lambda, mu) {
   }
   list(L = L, S = S, Lambda = lambda, Mu = mu)
 }
+
+#More iterations, diff values for lambda will get lower rank L matrix
