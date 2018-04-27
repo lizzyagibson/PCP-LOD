@@ -17,7 +17,7 @@ n <- ncol(X)
 
 lambda = 1/sqrt(m)
 
-mixture_out <- stable_pcp_alternating(X, 4/sqrt(m), .1)
+mixture_out <- stable_pcp_alternating(X, 4/sqrt(m), 10)
 
 mixture_S <- mixture_out$S
 mixture_L <- mixture_out$L
@@ -36,7 +36,7 @@ mixture_S %>% as.tibble() %>%
 #Plot 1a (specific dates)
 dateLabels = c('5/28/10','5/29/10','5/30/10','5/31/10','6/1/10','6/2/10','6/3/10','6/4/10','6/5/10')
 
-cbind(dateLabels, mixture_S[(2417-3):(2417+5),]) %>% as.tibble() %>% 
+figure1 <- cbind(dateLabels, mixture_S[(2417-3):(2417+5),]) %>% as.tibble() %>% 
   gather(key = exposure, value = value, Al:Zn) %>%
   mutate(value = as.numeric(value)) %>% 
   ggplot(aes(x = exposure, y = dateLabels)) +
@@ -46,8 +46,12 @@ cbind(dateLabels, mixture_S[(2417-3):(2417+5),]) %>% as.tibble() %>%
   labs(x = "Exposure", y = "Date", title = "Sparse matrix of rare events", legend = "Magnitude") + 
   theme_classic()
 
+png("figure1.png", width = 2000, height = 1200, res = 300)
+figure1
+dev.off()
+
 # Plot 2
-as.tibble(svd(mixture_L)$v) %>% 
+figure2 <- as.tibble(svd(mixture_L)$v) %>% 
   mutate(id = 1:nrow(svd(mixture_L)$v)) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V20) %>% 
@@ -58,5 +62,9 @@ as.tibble(svd(mixture_L)$v) %>%
   geom_hline(yintercept = 0, linetype = "dashed", 
              color = "red") +
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of svd(L)")
+
+png("figure2.png", width = 2000, height = 1200, res = 300)
+figure2
+dev.off()
 
 
