@@ -1,6 +1,6 @@
 library(R.matlab)
 library(tidyverse)
-source("./PCP/stable_pcp_alternating")
+source("./PCP/stable_pcp_alternating.R")
 
 # Load data
 mixture <- readMat("./mixtures_data.mat")
@@ -52,9 +52,11 @@ dev.off()
 
 # Plot 2
 figure2 <- as.tibble(svd(mixture_L)$v) %>% 
-  mutate(id = 1:nrow(svd(mixture_L)$v)) %>% 
+  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
+                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
+                "Ti",  "V", "Zn")) %>% 
   select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V20) %>% 
+  gather(key = singular_vector, value = magnitude, V1:V20) %>%
   filter(singular_vector %in% c("V1", "V2", "V3", "V4", "V5")) %>% 
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
   geom_segment(aes(xend = id, yend = 0), color = "blue") +
@@ -63,7 +65,7 @@ figure2 <- as.tibble(svd(mixture_L)$v) %>%
              color = "red") +
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of svd(L)")
 
-png("figure2.png", width = 2000, height = 1200, res = 300)
+png("figure2.png", width = 5000, height = 1500, res = 300)
 figure2
 dev.off()
 
