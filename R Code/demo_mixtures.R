@@ -1,13 +1,13 @@
 library(R.matlab)
 library(tidyverse)
-source("./PCP/stable_pcp_alternating.R")
+source("./R Code/stable_pcp_alternating.R")
 
-mixture <- readMat("./mixtures_data.mat")
+mixture <- readMat("./MATLAB/mixtures_data.mat")
 
-L_matlab <- read_csv("./L_matlab.csv", col_names = FALSE)
-S_matlab <- read_csv("./S_matlab.csv", col_names = FALSE) %>% as.matrix()
+L_matlab <- read_csv("./MATLAB/L_matlab.csv", col_names = FALSE)
+S_matlab <- read_csv("./MATLAB/S_matlab.csv", col_names = FALSE) %>% as.matrix()
 
-mixture_data <- as.data.frame(mixture) %>% as.tibble() %>% select(Al, As, Ba, bc, Br, Ca, Cl,
+mixture_data <- as.data.frame(mixture) %>% as_tibble() %>% select(Al, As, Ba, bc, Br, Ca, Cl,
                                                                   Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
                                                                   Ti,  V, Zn)
 

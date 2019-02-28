@@ -2,7 +2,7 @@
 
 library(stringr)
 
-source("/Users/lizzy/OneDrive/Columbia/Spring 2018/Robust PCA/PCP/singular_value_threshold.R")
+source("/Users/lizzy/Principle.Component.Pursuit/R Code/singular_value_threshold.R")
 
 stable_pcp_alternating <- function(D, lambda, mu) {
   
@@ -21,7 +21,7 @@ stable_pcp_alternating <- function(D, lambda, mu) {
     iter <- iter + 1
     
     svt <- singular_value_threshold((D - S), 1/mu)
-    L <- svt[[1]] #svt$N #Are N and L equivalent?
+    L <- svt[[1]] #svt$N
     v <- svt[[2]]
     
     S <- soft_thresholding((D - L), lambda/mu)

@@ -1,6 +1,6 @@
 #R code
 
-source("/Users/lizzy/OneDrive/Columbia/Spring 2018/Robust PCA/PCP/soft_thresholding.R")
+source("/Users/lizzy/Principle.Component.Pursuit/R Code/soft_thresholding.R")
 
 singular_value_threshold <- function(M, lambda) {
   
@@ -12,6 +12,7 @@ singular_value_threshold <- function(M, lambda) {
   N <- U %*% diag(soft_thresholding_diag(S, lambda)) %*% t(V)
   
   v  <- sum(soft_thresholding_diag(S, lambda))
-  svt <- list(N = N, v = v) #is this N the same as L??
+  
+  svt <- list(N = N, v = v) 
   svt
 }

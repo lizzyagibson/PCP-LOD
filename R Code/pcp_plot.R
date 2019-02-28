@@ -1,10 +1,10 @@
-install.packages("R.matlab")
+#install.packages("R.matlab")
 library(R.matlab)
 library(tidyverse)
-source("./PCP/stable_pcp_alternating.R")
+source("./R code/stable_pcp_alternating.R")
 
 # Load data
-mixture <- readMat("./mixtures_data.mat")
+mixture <- readMat("./MATLAB/mixtures_data.mat")
 
 mixture_data <- as.data.frame(mixture) %>% as.tibble() %>% select(Al, As, Ba, bc, Br, Ca, Cl,
                                                                   Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
