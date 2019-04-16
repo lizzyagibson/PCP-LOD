@@ -33,7 +33,7 @@ stable_pcp_alternating <- function(D, lambda, mu) {
     if (iter >= MAX_ITER) {done <- TRUE}
     
   }
-  list(L = L, S = S, Lambda = lambda, Mu = mu)
+  list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj)
 }
 
 #More iterations, diff values for lambda will get lower rank L matrix
