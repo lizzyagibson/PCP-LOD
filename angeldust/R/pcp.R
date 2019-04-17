@@ -39,19 +39,19 @@ singular_value_threshold <- function(M, lambda) {
   U <- USV$u
   # U is each persons experience of the source
   # Matrix whose columns contain the left singular vectors of M. Dimension c(n, nu).
-  D <- USV$d
+  sv <- USV$d
   # Diagonal matrix of singular values, sorted decreasingly.
   V <- USV$v
   # Exposures and sources contribution
 
-  N <- U %*% diag(soft_thresholding_diag(D, lambda)) %*% t(V)
+  N <- U %*% diag(soft_thresholding_diag(sv, lambda)) %*% t(V)
   # Create a new version of the input matrix by putting the SVD back together
   # With new singular value diagonal matrix
   # Singular values greater than assigned lambda are pushed to zero
   # Singular value is relative scaling of how much a source is contributing
   # Zero singular values will make this new matrix lower rank
 
-  v  <- sum(soft_thresholding_diag(D, lambda))
+  v  <- sum(soft_thresholding_diag(sv, lambda))
   # Sum the singular values, with those less than assigned lambda pushed to zero
 
   svt <- list(N = N, v = v)
