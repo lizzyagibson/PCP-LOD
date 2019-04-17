@@ -38,7 +38,7 @@ singular_value_threshold <- function(M, lambda) {
   # Break SVD into separate matrices
   U <- USV$u
   # U is each persons experience of the source
-  # Matrix whose columns contain the left singular vectors of M. Dimension c(n, nu).
+  # Matrix whose columns contain the left singular vectors of M.
   sv <- USV$d
   # Diagonal matrix of singular values, sorted decreasingly.
   V <- USV$v
@@ -84,7 +84,7 @@ pcp <- function(D, mu) {
   while (!done) {
 
     iter <- iter + 1
-    #Loop through this function, update every time
+    #Loop through this algorithm, update every time
 
     svt <- singular_value_threshold((D - S), 1/mu)
     # First iteration is on original data matrix
