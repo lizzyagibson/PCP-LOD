@@ -189,3 +189,4 @@ S_diff <- as_data_frame(cbind(lod0 =norm((S_lod0 - S_lod0), type = "F")^2,
 
 S_diff %>% ggplot(aes(x = percent, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 ```
+
