@@ -174,7 +174,6 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   list(L = L, S = S, loss = loss)
 }
 
-fake <- matrix(rnorm(100), 10)
 
 
 
