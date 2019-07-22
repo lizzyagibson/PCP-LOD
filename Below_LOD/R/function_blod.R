@@ -69,9 +69,9 @@ is_same <- function(SAME_THRESH, ...) {
 
 loss_lod <- function(X, D, Delta) {
   
-  X_lod <- (X - D) * (D >= 0) +
-    (X - Delta) * (D < 0 & X > Delta) +
-    X * (D < 0 & X < 0)
+  X_lod <- (X - D)     * (D >= 0) +
+           (X - Delta) * (D < 0 & X > Delta) +
+            X          * (D < 0 & X < 0)
   # Element-wise boolean operator
   # If D_ij >= 0, then X_lod = X_ij - D_ij
   # If D_ij < 0 (This means < LOD) AND X_ij > Delta, then X_lod = X_ij - Delta
@@ -120,14 +120,16 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   loss <- vector("numeric", MAX_ITER)
   
   for (i in 1:MAX_ITER) {
-    nuc <- prox_nuclear( (L2 + L3 -(Z1 + Z2) / rho) / 2, 1/2/rho)
+    
+    nuc <- prox_nuclear( (L2 + L3 - (Z1 + Z2)/rho)/2, 1/2/rho)
     L1 <- nuc[[1]]
     nuclearL1 <- nuc[[2]]
-    S1 <- prox_l1( S2 - Z3 / rho, lambda / rho)
     
-    L2_opt1 <- ((m*rho*D)     + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
+    S1 <- prox_l1( S2 - Z3/rho, lambda/rho)
+    
+    L2_opt1 <- ((mu*rho*D)     + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- ((m*rho*Delta) + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
+    L2_opt3 <- ((mu*rho*Delta) + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
     L2_opt4 <- (                (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
     
     L2_new <- L2_opt1 * (D >= 0) +
@@ -147,17 +149,18 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   
     L2 <- L2_new
     
-    L3 <- max(L1 + L2/rho, 0)
+    L3 <- max(L1 + Z2/rho, 0)
     
     Z1 <- Z1 + rho*(L1 - L2)
     Z2 <- Z2 + rho*(L1 - L3)
     Z3 <- Z3 + rho*(S1 - S2)
     
-    loss[i] <- nuclearL1 + lambda*sum(abs(S1)) +
+    loss[i] <- nuclearL1 + 
+      lambda*sum(abs(S1)) +
       mu*loss_lod((L2 + S2), D, Delta) +
       sum(Z1*(L1 - L2)) +
       sum(Z2*(L1 - L3)) +
-      sum(Z3*(S1-S2)) +
+      sum(Z3*(S1 - S2)) +
       ((rho/2) * (sum((L1-L2)^2))) +
       sum((L1 - L3)^2) +
       sum((S1 - S2)^2)
