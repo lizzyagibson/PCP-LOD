@@ -12,7 +12,7 @@ output:
 require("knitr")
 opts_knit$set(root.dir = "../../")
 opts_chunk$set(echo = TRUE)
-
+options(scipen = 999)
 library(R.matlab)
 library(tidyverse)
 ```
@@ -73,7 +73,6 @@ mix_data_lod_40 <- mixture_data %>%
 mix_data_lod_50 <- mixture_data %>% 
   mutate_all(~ifelse(. <= quantile(., probs = .50), -1, .))
 
-summary(mix_data_lod_50)
 #write_csv(as_tibble(mix_data_lod_50), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_50.csv")
 ```
 
@@ -104,6 +103,27 @@ S_lod50 <- readMat("./Below_LOD/MATLAB/LOD_demo_output/sparse_lod50.mat") %>% as
 ## Compare Results
 
 ### Visualize
+
+#### Original Data
+
+```{r}
+V_original <- svd(mixture_data)$v[,1:5]
+
+as_tibble(V_original) %>% 
+  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
+                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
+                "Ti",  "V", "Zn")) %>% 
+  select(id, everything()) %>% 
+  gather(key = singular_vector, value = magnitude, V1:V5) %>%
+  filter(singular_vector %in% c("V1", "V2", "V3", "V4", "V5")) %>% 
+  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
+  geom_segment(aes(xend = id, yend = 0), color = "blue") +
+  facet_grid(. ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from SVD(original)")
+
+```
 
 **No values \<LOD**
 
@@ -151,42 +171,77 @@ S_lod50 <- readMat("./Below_LOD/MATLAB/LOD_demo_output/sparse_lod50.mat") %>% as
 
 ```{r}
 X <- as.matrix(mixture_data)
-F_norm <- as_data_frame(cbind(lod0 =norm((X - L_lod0 - S_lod0), type = "F")^2,
+F_norm <- as_tibble(cbind(lod0 =norm((X - L_lod0 - S_lod0), type = "F")^2,
       lod10 =norm((X - L_lod10 - S_lod10), type = "F")^2,
       lod20 =norm((X - L_lod20 - S_lod20), type = "F")^2,
       lod30 =norm((X - L_lod30 - S_lod30), type = "F")^2,
       lod40 =norm((X - L_lod40 - S_lod40), type = "F")^2,
       lod50 =norm((X - L_lod50 - S_lod50), type = "F")^2)) %>% 
-  gather(percent, norm)
+  gather(percent_blod, norm)
 
-F_norm %>% ggplot(aes(x = percent, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 ```
 
 ### \% L - 0\% L
 
 ```{r}
-L_diff <- as_data_frame(cbind(lod0 =norm((L_lod0 - L_lod0), type = "F")^2,
+L_diff <- as_tibble(cbind(lod0 =norm((L_lod0 - L_lod0), type = "F")^2,
       lod10 =norm((L_lod10 - L_lod0), type = "F")^2,
       lod20 =norm((L_lod20 - L_lod0), type = "F")^2,
       lod30 =norm((L_lod30 - L_lod0), type = "F")^2,
       lod40 =norm((L_lod40 - L_lod0), type = "F")^2,
       lod50 =norm((L_lod50 - L_lod0), type = "F")^2)) %>% 
-  gather(percent, norm)
+  gather(percent_blod, norm)
 
-L_diff %>% ggplot(aes(x = percent, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+L_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 ```
 
 ### \% S - 0\% S
 
 ```{r}
-S_diff <- as_data_frame(cbind(lod0 =norm((S_lod0 - S_lod0), type = "F")^2,
+S_diff <- as_tibble(cbind(lod0 =norm((S_lod0 - S_lod0), type = "F")^2,
       lod10 =norm((S_lod10 - S_lod0), type = "F")^2,
       lod20 =norm((S_lod20 - S_lod0), type = "F")^2,
       lod30 =norm((S_lod30 - S_lod0), type = "F")^2,
       lod40 =norm((S_lod40 - S_lod0), type = "F")^2,
       lod50 =norm((S_lod50 - S_lod0), type = "F")^2)) %>% 
-  gather(percent, norm)
+  gather(percent_blod, norm)
 
-S_diff %>% ggplot(aes(x = percent, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+S_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 ```
+
+### SVD results of L matrix
+
+```{r}
+# Extract components from each low rank solution matrix
+V_lod0 <- svd(L_lod0)$v[,1:5]
+V_lod10 <- svd(L_lod10)$v[,1:5]
+V_lod20 <- svd(L_lod20)$v[,1:5]
+V_lod30 <- svd(L_lod30)$v[,1:5]
+V_lod40 <- svd(L_lod40)$v[,1:5]
+V_lod50 <- svd(L_lod50)$v[,1:5]
+
+V_diff_orig <- as_tibble(cbind(lod_orig =norm((V_original - V_lod0), type = "F")^2,
+      lod0 =norm((V_lod0 - V_lod0), type = "F")^2,
+      lod10 =norm((V_lod10 - V_lod0), type = "F")^2,
+      lod20 =norm((V_lod20 - V_lod0), type = "F")^2,
+      lod30 =norm((V_lod30 - V_lod0), type = "F")^2,
+      lod40 =norm((V_lod40 - V_lod0), type = "F")^2,
+      lod50 =norm((V_lod50 - V_lod0), type = "F")^2)) %>% 
+  gather(percent_blod, norm)
+
+V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")^2,
+      lod10 =norm((V_lod10 - V_lod0), type = "F")^2,
+      lod20 =norm((V_lod20 - V_lod0), type = "F")^2,
+      lod30 =norm((V_lod30 - V_lod0), type = "F")^2,
+      lod40 =norm((V_lod40 - V_lod0), type = "F")^2,
+      lod50 =norm((V_lod50 - V_lod0), type = "F")^2)) %>% 
+  gather(percent_blod, norm)
+
+V_diff_orig %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+
+V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+```
+
+
 
