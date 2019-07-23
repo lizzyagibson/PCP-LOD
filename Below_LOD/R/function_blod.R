@@ -16,7 +16,7 @@ library(tidyverse)
 prox_l1 <- function(Y, c) {
   
     myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
-    X <- sign(Y) * pmax(abs(Y) - c, myzero)
+    X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
     X
     } 
 
@@ -33,7 +33,7 @@ prox_nuclear <- function(Y,c) {
   V <- USV$v
 
   myzero <- vector("numeric", length = length(S))
-  S_new <- sign(S) * pmax(abs(S) - c, myzero)
+  S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
   # Threshold the singular values, if SV < c, push it to zero
   
   X <- U %*% diag(S_new) %*% t(V)
@@ -121,52 +121,50 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   
   for (i in 1:MAX_ITER) {
     
-    nuc <- prox_nuclear( (L2 + L3 - (Z1 + Z2)/rho)/2, 1/2/rho)
+    nuc <- prox_nuclear( ((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
     L1 <- nuc[[1]]
     nuclearL1 <- nuc[[2]]
     
-    S1 <- prox_l1( S2 - Z3/rho, lambda/rho)
+    S1 <- prox_l1( (S2 - Z3/rho), lambda/rho)
     
-    L2_opt1 <- ((mu*rho*D)     + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
+    L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- ((mu*rho*Delta) + (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
-    L2_opt4 <- (                (mu + rho)*Z1 - (mu*Z3) + (mu + rho)*rho*L1 - (mu*rho*S1)) / ((2*mu*rho) + rho^2)
+    L2_opt3 <- (mu*rho*Delta + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
-    L2_new <- L2_opt1 * (D >= 0) +
-              L2_opt2 * (D < 0 & (L2 + S2) >= 0 & (L2 + S2) <= Delta) +
-              L2_opt3 * (D < 0 & (L2 + S2) > Delta) +
-              L2_opt4 * (D < 0 & (L2 + S2) < 0)
+    L2_new <- (L2_opt1 * (D >= 0)) +
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+              (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
     
-    S2_opt1 <- ((mu*rho*D)     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - (mu*rho*L1)) / ((2*mu*rho) + rho^2)
-    S2_opt2 <- S1 + Z3/rho
-    S2_opt3 <- ((mu*rho*Delta) + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - (mu*rho*L1)) / ((2*mu*rho) + rho^2)
-    S2_opt4 <- (                 (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - (mu*rho*L1)) / ((2*mu*rho) + rho^2)
+    S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt2 <- S1 + (Z3/rho)
+    S2_opt3 <- (mu*rho*Delta + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
-    S2 <- S2_opt1 * (D >= 0) +
-          S2_opt2 * (D < 0 & (L2 + S2) >= 0 & (L2 + S2) <= Delta) +
-          S2_opt3 * (D < 0 & (L2 + S2) > Delta) +
-          S2_opt4 * (D < 0 & (L2 + S2) < 0)
+    S2 <- (S2_opt1 * (D >= 0)) +
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+          (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
   
     L2 <- L2_new
     
-    L3 <- max(L1 + Z2/rho, 0)
+    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
     
     Z1 <- Z1 + rho*(L1 - L2)
     Z2 <- Z2 + rho*(L1 - L3)
     Z3 <- Z3 + rho*(S1 - S2)
     
     loss[i] <- nuclearL1 + 
-      lambda*sum(abs(S1)) +
-      mu*loss_lod((L2 + S2), D, Delta) +
+      (lambda*sum(abs(S1))) +
+      (mu*loss_lod((L2 + S2), D, Delta)) +
       sum(Z1*(L1 - L2)) +
       sum(Z2*(L1 - L3)) +
       sum(Z3*(S1 - S2)) +
-      ((rho/2) * (sum((L1-L2)^2))) +
-      sum((L1 - L3)^2) +
-      sum((S1 - S2)^2)
+      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
     
-    if (i != 1 && 
-        abs(loss[i-1] - loss[i]) < LOSS_THRESH && 
+    if ((i != 1) && 
+        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
         is_same(SAME_THRESH, L1, L2, L3) &&
         is_same(SAME_THRESH, S1, S2)) {
       break}

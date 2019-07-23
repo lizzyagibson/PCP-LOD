@@ -1,7 +1,6 @@
 % demo_mixtures
 clear;
 
-addpath('./Below_LOD');
 load('mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
@@ -35,11 +34,11 @@ lambda = 1/sqrt(m);
 %weight parameter for pcp, 1 / sqrt(number of rows)
 
 %[L,S] = constrained_completion(X,Omega,2000,1e-8,1e-8,1,lambda,lambda,0,0,0,0,0,0); 
-[L,S] = pcp_lod(X,4/sqrt(m),10, 0); 
+[L,S, loss] = pcp_lod(X,4/sqrt(m),10, 0); 
 % X is out dataset, set lambda and mu
 
-save('./MATLAB/LOD_demo_output/lowrank_lod0.mat', 'L')
-save('./MATLAB/LOD_demo_output/sparse_lod0.mat', 'S')
+save('../LOD_demo_output/lowrank_lod0.mat', 'L')
+save('../LOD_demo_output/sparse_lod0.mat', 'S')
 
 figure(1); imagesc(S((2417-3):(2417+5),:));
 
