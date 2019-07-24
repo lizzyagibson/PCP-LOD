@@ -1,5 +1,5 @@
 ---
-title: "Principal Component Pursuit w/ <LOD Penalty"
+title: "PCP w/ <LOD Penalty"
 author: "Lizzy Gibson"
 date: "7/16/2019"
 output: 
@@ -262,13 +262,13 @@ V_diff_orig %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_pa
 V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 ```
 
-### Values <LOD vs >LOD
+### Values \<LOD vs \>LOD
 
-* Are values <LOD estimated more poorly than those >LOD? Are <LOD driving the increased error?
-* Rescale by range/variance of values <LOD.
+* Are values \<LOD estimated more poorly than those \>LOD? Are \<LOD driving the increased error?
+* Rescale by range/variance of values \<LOD.
     * Wider range --> more error.
 
-### <LOD
+### \<LOD
 
 ```{r}
 tf_lod_10 <- mix_data_lod_10 %>% 
@@ -278,26 +278,31 @@ blod_10 <- as.matrix(tf_lod_10*L_lod10)
 # keep <LOD predictions, >LOD predictions are zero
 true_10 <- as.matrix(mixture_data*tf_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
+colSums(blod_10 != 0)/nrow(blod_10)
 
 tf_lod_20 <- mix_data_lod_20 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
 blod_20 <- as.matrix(tf_lod_20*L_lod20)
 true_20 <- as.matrix(mixture_data*tf_lod_20)
+colSums(blod_20 != 0)/nrow(blod_20)
 
 tf_lod_30 <- mix_data_lod_30 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
 blod_30 <- as.matrix(tf_lod_30*L_lod30)
 true_30 <- as.matrix(mixture_data*tf_lod_30)
+colSums(blod_30 != 0)/nrow(blod_30)
 
 tf_lod_40 <- mix_data_lod_40 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
 blod_40 <- as.matrix(tf_lod_40*L_lod40)
 true_40 <- as.matrix(mixture_data*tf_lod_40)
+colSums(blod_40 != 0)/nrow(blod_40)
 
 tf_lod_50 <- mix_data_lod_50 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
 blod_50 <- as.matrix(tf_lod_50*L_lod50)
 true_50 <- as.matrix(mixture_data*tf_lod_50) 
+colSums(blod_50 != 0)/nrow(blod_50)
 ```
 
 ```{r}
@@ -376,8 +381,6 @@ above_diff2 <- as_tibble(cbind(
   gather(percent_blod, norm)
 
 above_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-
-var(as.vector(above_blod_50))
 ```
 
 
