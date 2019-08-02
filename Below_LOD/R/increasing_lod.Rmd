@@ -16,6 +16,7 @@ options(scipen = 999)
 library(R.matlab)
 library(tidyverse)
 library(gridExtra)
+library(Matrix)
 ```
 
 ## Data
@@ -202,7 +203,7 @@ F_norm <- as_tibble(cbind(lod0 = norm((X - L_lod0 - S_lod0), type = "F")/norm((X
 
 F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error (norm(X-L-S) / norm(X))")
+  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))")
 ```
 
 ### Individual Solution Matrices
@@ -228,7 +229,7 @@ S_diff <- as_tibble(cbind(lod0 = norm((S_lod0 - S_lod0), type = "F")/norm((S_lod
 
 rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices (norm(difference) / norm(lod0))")
+  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))")
 ```
 
 ### SVD results of L matrix
@@ -242,8 +243,7 @@ V_lod30 <- svd(L_lod30)$v[,1:5]
 V_lod40 <- svd(L_lod40)$v[,1:5]
 V_lod50 <- svd(L_lod50)$v[,1:5]
 
-V_diff <- as_tibble(cbind(lod_orig = norm((V_original - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod10 =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod20 =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod30 =norm((V_lod30 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
@@ -261,123 +261,147 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 * Are values \<LOD estimated more poorly than those \>LOD? Are \<LOD driving the increased error?
 * Rescale by range/variance of values \<LOD.
-    * Wider range --> more error.
-
-### \<LOD
+    * Wider range -> more error
 
 ```{r}
+# This one is all zeros bc nothing is <LOD to begin with
+tf_lod_0 <- mixture_data %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
+s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
+true_0 <- as.matrix(mixture_data*tf_lod_0)
+
+
 tf_lod_10 <- mix_data_lod_10 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
 # T/F dataset, T = <LOD
-blod_10 <- as.matrix(tf_lod_10*L_lod10)
+l_blod_10 <- as.matrix(tf_lod_10*L_lod10)
+s_blod_10 <- as.matrix(tf_lod_10*S_lod10)
 # keep <LOD predictions, >LOD predictions are zero
+# Solution L matrix with >LOD values as zero
 true_10 <- as.matrix(mixture_data*tf_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
-colSums(blod_10 != 0)/nrow(blod_10)
+# Original matrix with only bottom 10percent, all >LOD set to zero
 
 tf_lod_20 <- mix_data_lod_20 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
-blod_20 <- as.matrix(tf_lod_20*L_lod20)
+l_blod_20 <- as.matrix(tf_lod_20*L_lod20)
+s_blod_20 <- as.matrix(tf_lod_20*S_lod20)
 true_20 <- as.matrix(mixture_data*tf_lod_20)
-colSums(blod_20 != 0)/nrow(blod_20)
 
 tf_lod_30 <- mix_data_lod_30 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
-blod_30 <- as.matrix(tf_lod_30*L_lod30)
+l_blod_30 <- as.matrix(tf_lod_30*L_lod30)
+s_blod_30 <- as.matrix(tf_lod_30*S_lod30)
 true_30 <- as.matrix(mixture_data*tf_lod_30)
-colSums(blod_30 != 0)/nrow(blod_30)
 
 tf_lod_40 <- mix_data_lod_40 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
-blod_40 <- as.matrix(tf_lod_40*L_lod40)
+l_blod_40 <- as.matrix(tf_lod_40*L_lod40)
+s_blod_40 <- as.matrix(tf_lod_40*S_lod40)
 true_40 <- as.matrix(mixture_data*tf_lod_40)
-colSums(blod_40 != 0)/nrow(blod_40)
 
 tf_lod_50 <- mix_data_lod_50 %>% 
   mutate_all(~ifelse(. == -1, TRUE, FALSE))
-blod_50 <- as.matrix(tf_lod_50*L_lod50)
+l_blod_50 <- as.matrix(tf_lod_50*L_lod50)
+s_blod_50 <- as.matrix(tf_lod_50*S_lod50)
 true_50 <- as.matrix(mixture_data*tf_lod_50) 
-colSums(blod_50 != 0)/nrow(blod_50)
+
+#Subtract true values and divide by norm of true
+less_diff <- as_tibble(cbind(lod0 = norm((true_0 - l_blod_0 - s_blod_0), type = "F"), #/norm((true_0), type = "F"),
+      lod10 = norm((true_10 - l_blod_10 - s_blod_10), type = "F")/norm((true_10), type = "F"),
+      lod20 = norm((true_20 - l_blod_20 - s_blod_20), type = "F")/norm((true_20), type = "F"),
+      lod30 = norm((true_30 - l_blod_30 - s_blod_30), type = "F")/norm((true_30), type = "F"),
+      lod40 = norm((true_40 - l_blod_40 - s_blod_40), type = "F")/norm((true_40), type = "F"),
+      lod50 = norm((true_50 - l_blod_50 - s_blod_50), type = "F")/norm((true_50), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Values = "< LOD")
 ```
 
 ```{r}
-#divide by range
-less_diff <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/(range(blod_10)[1] - range(blod_10)[2]), type = "F"),
-      lod20 = norm((blod_20 - true_20)/(range(blod_20)[1] - range(blod_20)[2]), type = "F"),
-      lod30 = norm((blod_30 - true_30)/(range(blod_30)[1] - range(blod_30)[2]), type = "F"),
-      lod40 = norm((blod_40 - true_40)/(range(blod_40)[1] - range(blod_40)[2]), type = "F"),
-      lod50 = norm((blod_50 - true_50)/(range(blod_50)[1] - range(blod_50)[2]), type = "F"))) %>% 
-  gather(percent_blod, norm)
+above_lod_0 <- mixture_data %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
+l_above_blod_0 <- as.matrix(above_lod_0*L_lod0)
+s_above_blod_0 <- as.matrix(above_lod_0*S_lod0)
+above_true_0 <- as.matrix(mixture_data*above_lod_0)
 
-less_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-
-#divide by variance
-less_diff2 <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/var(as.vector(blod_10)), type = "F"),
-      lod20 = norm((blod_20 - true_20)/var(as.vector(blod_20)), type = "F"),
-      lod30 = norm((blod_30 - true_30)/var(as.vector(blod_30)), type = "F"),
-      lod40 = norm((blod_40 - true_40)/var(as.vector(blod_40)), type = "F"),
-      lod50 = norm((blod_50 - true_50)/var(as.vector(blod_50)), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-less_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-```
-
-### ABOVE LOD
-
-```{r}
 above_lod_10 <- mix_data_lod_10 %>% 
   mutate_all(~ifelse(. == -1, FALSE, TRUE))
 # T/F dataset, T = >LOD
-above_blod_10 <- as.matrix(above_lod_10*L_lod10)
+l_above_blod_10 <- as.matrix(above_lod_10*L_lod10)
+s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
 # keep >LOD predictions, BLOD predictions are zero
 above_true_10 <- as.matrix(mixture_data*above_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
 
 above_lod_20 <- mix_data_lod_20 %>% 
   mutate_all(~ifelse(. == -1, FALSE, TRUE))
-above_blod_20 <- as.matrix(above_lod_20*L_lod20)
+l_above_blod_20 <- as.matrix(above_lod_20*L_lod20)
+s_above_blod_20 <- as.matrix(above_lod_20*S_lod20)
 above_true_20 <- as.matrix(mixture_data*above_lod_20)
 
 above_lod_30 <- mix_data_lod_30 %>% 
   mutate_all(~ifelse(. == -1, FALSE, TRUE))
-above_blod_30 <- as.matrix(above_lod_30*L_lod30)
+l_above_blod_30 <- as.matrix(above_lod_30*L_lod30)
+s_above_blod_30 <- as.matrix(above_lod_30*S_lod30)
 above_true_30 <- as.matrix(mixture_data*above_lod_30)
 
 above_lod_40 <- mix_data_lod_40 %>% 
   mutate_all(~ifelse(. == -1, FALSE, TRUE))
-above_blod_40 <- as.matrix(above_lod_40*L_lod40)
+l_above_blod_40 <- as.matrix(above_lod_40*L_lod40)
+s_above_blod_40 <- as.matrix(above_lod_40*S_lod40)
 above_true_40 <- as.matrix(mixture_data*above_lod_40)
 
 above_lod_50 <- mix_data_lod_50 %>% 
   mutate_all(~ifelse(. == -1, FALSE, TRUE))
-above_blod_50 <- as.matrix(above_lod_50*L_lod50)
+l_above_blod_50 <- as.matrix(above_lod_50*L_lod50)
+s_above_blod_50 <- as.matrix(above_lod_50*S_lod50)
 above_true_50 <- as.matrix(mixture_data*above_lod_50) 
 ```
 
 ```{r}
-#divide by range
+#divide by true values
 above_diff <- as_tibble(cbind(
-  lod10 = norm((above_blod_10 - above_true_10)/(range(above_blod_10)[1] - range(above_blod_10)[2]), type = "F"),
-  lod20 = norm((above_blod_20 - above_true_20)/(range(above_blod_20)[1] - range(above_blod_20)[2]), type = "F"),
-  lod30 = norm((above_blod_30 - above_true_30)/(range(above_blod_30)[1] - range(above_blod_30)[2]), type = "F"),
-  lod40 = norm((above_blod_40 - above_true_40)/(range(above_blod_40)[1] - range(above_blod_40)[2]), type = "F"),
-  lod50 = norm((above_blod_50 - above_true_50)/(range(above_blod_50)[1] - range(above_blod_50)[2]), type = "F"))) %>% 
-  gather(percent_blod, norm)
+  lod0  = norm((above_true_0  - l_above_blod_0  - s_above_blod_0),  type = "F")/norm(above_true_0,  type = "F"),
+  lod10 = norm((above_true_10 - l_above_blod_10 - s_above_blod_10), type = "F")/norm(above_true_10, type = "F"),
+  lod20 = norm((above_true_20 - l_above_blod_20 - s_above_blod_20), type = "F")/norm(above_true_20, type = "F"),
+  lod30 = norm((above_true_30 - l_above_blod_30 - s_above_blod_30), type = "F")/norm(above_true_30, type = "F"),
+  lod40 = norm((above_true_40 - l_above_blod_40 - s_above_blod_40), type = "F")/norm(above_true_40, type = "F"),
+  lod50 = norm((above_true_50 - l_above_blod_50 - s_above_blod_50), type = "F")/norm(above_true_50, type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Values = "> LOD")
 
-above_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-
-#divide by variance
-above_diff2 <- as_tibble(cbind(
-  lod10 = norm((above_blod_10 - above_true_10)/var(as.vector(above_blod_10)), type = "F"),
-  lod20 = norm((above_blod_20 - above_true_20)/var(as.vector(above_blod_20)), type = "F"),
-  lod30 = norm((above_blod_30 - above_true_30)/var(as.vector(above_blod_30)), type = "F"),
-  lod40 = norm((above_blod_40 - above_true_40)/var(as.vector(above_blod_40)), type = "F"),
-  lod50 = norm((above_blod_50 - above_true_50)/var(as.vector(above_blod_50)), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-above_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+rbind(above_diff, less_diff) %>% 
+  ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))")
 ```
 
+## L0 Norm
+
+Number of nonzero entries / Original Number of nonzero entries
+```{r}
+nnz <- rbind(c("lod0", nnzero(L_lod0)/nnzero(mixture_data), "Low-Rank"),
+       c("lod10", nnzero(L_lod10)/nnzero(mixture_data), "Low-Rank"),
+       c("lod20", nnzero(L_lod20)/nnzero(mixture_data), "Low-Rank"),
+       c("lod30", nnzero(L_lod30)/nnzero(mixture_data), "Low-Rank"),
+       c("lod40", nnzero(L_lod40)/nnzero(mixture_data), "Low-Rank"),
+       c("lod50", nnzero(L_lod50)/nnzero(mixture_data), "Low-Rank"),
+       c("lod0", nnzero(S_lod0)/nnzero(mixture_data), "Sparse"),
+       c("lod10", nnzero(S_lod10)/nnzero(mixture_data), "Sparse"),
+       c("lod20", nnzero(S_lod20)/nnzero(mixture_data), "Sparse"),
+       c("lod30", nnzero(S_lod30)/nnzero(mixture_data), "Sparse"),
+       c("lod40", nnzero(S_lod40)/nnzero(mixture_data), "Sparse"),
+       c("lod50", nnzero(S_lod50)/nnzero(mixture_data), "Sparse")) %>% as_tibble() %>% 
+  rename(percent_blod = V1, nnz_rel = V2, Matrix = V3) %>% 
+  mutate(nnz_rel = as.numeric(nnz_rel))
+
+nnz %>% ggplot(aes(x = percent_blod, y = nnz_rel)) + 
+  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Number of Non-Zero Values")
+```
 
 
 
