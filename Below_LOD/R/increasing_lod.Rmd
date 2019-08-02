@@ -15,6 +15,7 @@ opts_chunk$set(echo = TRUE)
 options(scipen = 999)
 library(R.matlab)
 library(tidyverse)
+library(gridExtra)
 ```
 
 ## Data
@@ -40,7 +41,7 @@ mixture_data
 1. Run Jingkai's PCP version on original air pollution data (MATLAB).
 2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets (R).
 3. Run Jingkai's PCP version on all 5 <LOD datasets, save L and S matrices from each (MATLAB).
-4. Compare results from <LOD datasets with original (R).
+4. Evaluate relative error -- compare results from <LOD datasets with original (R).
 
 ## Create \<LOD Datasets
 
@@ -190,43 +191,44 @@ as_tibble(V_original) %>%
 
 ```{r}
 X <- as.matrix(mixture_data)
-F_norm <- as_tibble(cbind(lod0 = norm((X - L_lod0 - S_lod0), type = "F")^2,
-      lod10 = norm((X - L_lod10 - S_lod10), type = "F")^2,
-      lod20 = norm((X - L_lod20 - S_lod20), type = "F")^2,
-      lod30 = norm((X - L_lod30 - S_lod30), type = "F")^2,
-      lod40 = norm((X - L_lod40 - S_lod40), type = "F")^2,
-      lod50 = norm((X - L_lod50 - S_lod50), type = "F")^2)) %>% 
+
+F_norm <- as_tibble(cbind(lod0 = norm((X - L_lod0 - S_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - L_lod10 - S_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - L_lod20 - S_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - L_lod30 - S_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - L_lod40 - S_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - L_lod50 - S_lod50), type = "F")/norm((X), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error (norm(X-L-S) / norm(X))")
 ```
 
-### \% L - 0\% L
+### Individual Solution Matrices
 
 ```{r}
-L_diff <- as_tibble(cbind(lod0 = norm((L_lod0 - L_lod0), type = "F")^2,
-      lod10 = norm((L_lod10 - L_lod0), type = "F")^2,
-      lod20 = norm((L_lod20 - L_lod0), type = "F")^2,
-      lod30 = norm((L_lod30 - L_lod0), type = "F")^2,
-      lod40 = norm((L_lod40 - L_lod0), type = "F")^2,
-      lod50 = norm((L_lod50 - L_lod0), type = "F")^2)) %>% 
-  gather(percent_blod, norm)
+L_diff <- as_tibble(cbind(lod0 = norm((L_lod0 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod10 = norm((L_lod10 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod20 = norm((L_lod20 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod30 = norm((L_lod30 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod40 = norm((L_lod40 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod50 = norm((L_lod50 - L_lod0), type = "F")/norm((L_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Low-Rank")
 
-L_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-```
+S_diff <- as_tibble(cbind(lod0 = norm((S_lod0 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod10 = norm((S_lod10 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod20 = norm((S_lod20 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod30 = norm((S_lod30 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod40 = norm((S_lod40 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod50 = norm((S_lod50 - S_lod0), type = "F")/norm((S_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Sparse")
 
-### \% S - 0\% S
-
-```{r}
-S_diff <- as_tibble(cbind(lod0 = norm((S_lod0 - S_lod0), type = "F")^2,
-      lod10 = norm((S_lod10 - S_lod0), type = "F")^2,
-      lod20 = norm((S_lod20 - S_lod0), type = "F")^2,
-      lod30 = norm((S_lod30 - S_lod0), type = "F")^2,
-      lod40 = norm((S_lod40 - S_lod0), type = "F")^2,
-      lod50 = norm((S_lod50 - S_lod0), type = "F")^2)) %>% 
-  gather(percent_blod, norm)
-
-S_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices (norm(difference) / norm(lod0))")
 ```
 
 ### SVD results of L matrix
@@ -240,26 +242,19 @@ V_lod30 <- svd(L_lod30)$v[,1:5]
 V_lod40 <- svd(L_lod40)$v[,1:5]
 V_lod50 <- svd(L_lod50)$v[,1:5]
 
-V_diff_orig <- as_tibble(cbind(lod_orig =norm((V_original - V_lod0), type = "F")^2,
-      lod0 =norm((V_lod0 - V_lod0), type = "F")^2,
-      lod10 =norm((V_lod10 - V_lod0), type = "F")^2,
-      lod20 =norm((V_lod20 - V_lod0), type = "F")^2,
-      lod30 =norm((V_lod30 - V_lod0), type = "F")^2,
-      lod40 =norm((V_lod40 - V_lod0), type = "F")^2,
-      lod50 =norm((V_lod50 - V_lod0), type = "F")^2)) %>% 
+V_diff <- as_tibble(cbind(lod_orig = norm((V_original - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod10 =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod20 =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod30 =norm((V_lod30 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod40 =norm((V_lod40 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod50 =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")^2,
-      lod10 =norm((V_lod10 - V_lod0), type = "F")^2,
-      lod20 =norm((V_lod20 - V_lod0), type = "F")^2,
-      lod30 =norm((V_lod30 - V_lod0), type = "F")^2,
-      lod40 =norm((V_lod40 - V_lod0), type = "F")^2,
-      lod50 =norm((V_lod50 - V_lod0), type = "F")^2)) %>% 
-  gather(percent_blod, norm)
-
-V_diff_orig %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
-
-V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
+V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))")
 ```
 
 ### Values \<LOD vs \>LOD
@@ -307,21 +302,21 @@ colSums(blod_50 != 0)/nrow(blod_50)
 
 ```{r}
 #divide by range
-less_diff <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/(range(blod_10)[1] - range(blod_10)[2]), type = "F")^2,
-      lod20 = norm((blod_20 - true_20)/(range(blod_20)[1] - range(blod_20)[2]), type = "F")^2,
-      lod30 = norm((blod_30 - true_30)/(range(blod_30)[1] - range(blod_30)[2]), type = "F")^2,
-      lod40 = norm((blod_40 - true_40)/(range(blod_40)[1] - range(blod_40)[2]), type = "F")^2,
-      lod50 = norm((blod_50 - true_50)/(range(blod_50)[1] - range(blod_50)[2]), type = "F")^2)) %>% 
+less_diff <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/(range(blod_10)[1] - range(blod_10)[2]), type = "F"),
+      lod20 = norm((blod_20 - true_20)/(range(blod_20)[1] - range(blod_20)[2]), type = "F"),
+      lod30 = norm((blod_30 - true_30)/(range(blod_30)[1] - range(blod_30)[2]), type = "F"),
+      lod40 = norm((blod_40 - true_40)/(range(blod_40)[1] - range(blod_40)[2]), type = "F"),
+      lod50 = norm((blod_50 - true_50)/(range(blod_50)[1] - range(blod_50)[2]), type = "F"))) %>% 
   gather(percent_blod, norm)
 
 less_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 
 #divide by variance
-less_diff2 <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/var(as.vector(blod_10)), type = "F")^2,
-      lod20 = norm((blod_20 - true_20)/var(as.vector(blod_20)), type = "F")^2,
-      lod30 = norm((blod_30 - true_30)/var(as.vector(blod_30)), type = "F")^2,
-      lod40 = norm((blod_40 - true_40)/var(as.vector(blod_40)), type = "F")^2,
-      lod50 = norm((blod_50 - true_50)/var(as.vector(blod_50)), type = "F")^2)) %>% 
+less_diff2 <- as_tibble(cbind(lod10 = norm((blod_10 - true_10)/var(as.vector(blod_10)), type = "F"),
+      lod20 = norm((blod_20 - true_20)/var(as.vector(blod_20)), type = "F"),
+      lod30 = norm((blod_30 - true_30)/var(as.vector(blod_30)), type = "F"),
+      lod40 = norm((blod_40 - true_40)/var(as.vector(blod_40)), type = "F"),
+      lod50 = norm((blod_50 - true_50)/var(as.vector(blod_50)), type = "F"))) %>% 
   gather(percent_blod, norm)
 
 less_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
@@ -362,22 +357,22 @@ above_true_50 <- as.matrix(mixture_data*above_lod_50)
 ```{r}
 #divide by range
 above_diff <- as_tibble(cbind(
-  lod10 = norm((above_blod_10 - above_true_10)/(range(above_blod_10)[1] - range(above_blod_10)[2]), type = "F")^2,
-  lod20 = norm((above_blod_20 - above_true_20)/(range(above_blod_20)[1] - range(above_blod_20)[2]), type = "F")^2,
-  lod30 = norm((above_blod_30 - above_true_30)/(range(above_blod_30)[1] - range(above_blod_30)[2]), type = "F")^2,
-  lod40 = norm((above_blod_40 - above_true_40)/(range(above_blod_40)[1] - range(above_blod_40)[2]), type = "F")^2,
-  lod50 = norm((above_blod_50 - above_true_50)/(range(above_blod_50)[1] - range(above_blod_50)[2]), type = "F")^2)) %>% 
+  lod10 = norm((above_blod_10 - above_true_10)/(range(above_blod_10)[1] - range(above_blod_10)[2]), type = "F"),
+  lod20 = norm((above_blod_20 - above_true_20)/(range(above_blod_20)[1] - range(above_blod_20)[2]), type = "F"),
+  lod30 = norm((above_blod_30 - above_true_30)/(range(above_blod_30)[1] - range(above_blod_30)[2]), type = "F"),
+  lod40 = norm((above_blod_40 - above_true_40)/(range(above_blod_40)[1] - range(above_blod_40)[2]), type = "F"),
+  lod50 = norm((above_blod_50 - above_true_50)/(range(above_blod_50)[1] - range(above_blod_50)[2]), type = "F"))) %>% 
   gather(percent_blod, norm)
 
 above_diff %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
 
 #divide by variance
 above_diff2 <- as_tibble(cbind(
-  lod10 = norm((above_blod_10 - above_true_10)/var(as.vector(above_blod_10)), type = "F")^2,
-  lod20 = norm((above_blod_20 - above_true_20)/var(as.vector(above_blod_20)), type = "F")^2,
-  lod30 = norm((above_blod_30 - above_true_30)/var(as.vector(above_blod_30)), type = "F")^2,
-  lod40 = norm((above_blod_40 - above_true_40)/var(as.vector(above_blod_40)), type = "F")^2,
-  lod50 = norm((above_blod_50 - above_true_50)/var(as.vector(above_blod_50)), type = "F")^2)) %>% 
+  lod10 = norm((above_blod_10 - above_true_10)/var(as.vector(above_blod_10)), type = "F"),
+  lod20 = norm((above_blod_20 - above_true_20)/var(as.vector(above_blod_20)), type = "F"),
+  lod30 = norm((above_blod_30 - above_true_30)/var(as.vector(above_blod_30)), type = "F"),
+  lod40 = norm((above_blod_40 - above_true_40)/var(as.vector(above_blod_40)), type = "F"),
+  lod50 = norm((above_blod_50 - above_true_50)/var(as.vector(above_blod_50)), type = "F"))) %>% 
   gather(percent_blod, norm)
 
 above_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + geom_point() + geom_path(aes(group = 1)) + theme_bw()
