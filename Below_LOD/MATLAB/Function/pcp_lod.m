@@ -84,8 +84,8 @@ for i = 1:MAX_ITER
     end
 end
 
-L = (L1+L2+L3) / 3;
-S = (S1+S2) / 2;
+L = (L1+L2+L3) / 3; % take L3
+S = (S1+S2) / 2; % take S1
 
 % figure
 % plot(loss(1:i))
