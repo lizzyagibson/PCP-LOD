@@ -199,11 +199,34 @@ F_norm <- as_tibble(cbind(lod0 = norm((X - L_lod0 - S_lod0), type = "F")/norm((X
       lod30 = norm((X - L_lod30 - S_lod30), type = "F")/norm((X), type = "F"),
       lod40 = norm((X - L_lod40 - S_lod40), type = "F")/norm((X), type = "F"),
       lod50 = norm((X - L_lod50 - S_lod50), type = "F")/norm((X), type = "F"))) %>% 
-  gather(percent_blod, norm)
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Both")
+
+F_norm_s <- as_tibble(cbind(lod0 = norm((X - S_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - S_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - S_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - S_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - S_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - S_lod50), type = "F")/norm((X), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Sparse")
+
+F_norm_l <- as_tibble(cbind(lod0 = norm((X - L_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - L_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - L_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - L_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - L_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - L_lod50), type = "F")/norm((X), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Low-Rank")
 
 F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))")
+
+rbind(F_norm, F_norm_l, F_norm_s) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X - .) / norm(X))")
 ```
 
 ### Individual Solution Matrices
@@ -235,7 +258,7 @@ rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) +
 ### SVD results of L matrix
 
 ```{r}
-# Extract singular vectors from each low rank solution matrix
+# Extract right singular vectors from each low rank solution matrix
 V_lod0 <- svd(L_lod0)$v[,1:5]
 V_lod10 <- svd(L_lod10)$v[,1:5]
 V_lod20 <- svd(L_lod20)$v[,1:5]
