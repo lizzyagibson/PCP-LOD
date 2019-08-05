@@ -1,5 +1,5 @@
 getwd()
-source("./Below_LOD/R/function_blod.R")
+source("./Below_LOD/R/function_pcp_lod.R")
 
 library(R.matlab)
 library(tidyverse)
@@ -52,7 +52,7 @@ mix <- as.matrix(mix[complete.cases(mix),])
 m <- nrow(mix)
 n <- ncol(mix)
 
-R_out <- pcp_lod(mix, 4/sqrt(m), 10, 0)
+R_out <- pcp_lod(mix, 4/sqrt(m), 10, rep(0, 20))
 R_S_lod0 <- R_out$S
 R_L_lod0 <- R_out$L
 
@@ -80,7 +80,13 @@ colSums(svd(M_L_lod0)$v)
 svd(R_L_lod0)$d
 svd(M_L_lod0)$d
 
+### NMF
+library(NMF)
 
+nmf(R_L_lod0, rank = 5)
+sum(R_L_lod0 < 0)
+R_L_lod0[R_L_lod0 < 0]
 
-
+nmf(M_L_lod0, rank = 5)
+sum(M_L_lod0 < 0)
 
