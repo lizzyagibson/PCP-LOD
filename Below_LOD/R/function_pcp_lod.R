@@ -170,8 +170,8 @@ pcp_lod <- function(D, lambda, mu, Delta) {
       break}
   }
   
-  L <- (L1 + L2 + L3) / 3
-  S <- (S1 + S2) / 2
+  L <- L3 # (L1 + L2 + L3) / 3
+  S <- S1 # (S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
 
