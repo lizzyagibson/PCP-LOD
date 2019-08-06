@@ -83,10 +83,13 @@ svd(M_L_lod0)$d
 ### NMF
 library(NMF)
 
-nmf(R_L_lod0, rank = 5)
+results_nmf <- nmf(R_L_lod0, rank = 5)
 sum(R_L_lod0 < 0)
 R_L_lod0[R_L_lod0 < 0]
 
-nmf(M_L_lod0, rank = 5)
-sum(M_L_lod0 < 0)
-
+summary(results_nmf)
+fit(results_nmf)
+# W
+basis(results_nmf)
+# H
+coef(results_nmf)
