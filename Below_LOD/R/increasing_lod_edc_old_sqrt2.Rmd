@@ -1,41 +1,66 @@
 ---
-title: "Increasing <LOD with Old PCP"
-subtitle: "Boston air pollution example"
+title: "Original PCP, increasing <LOD, EDC example"
 author: "Lizzy Gibson"
-date: "7/20/2019"
-output: 
+date: "10/9/2019"
+output:
   html_document:
-    toc: TRUE
-    toc_float: TRUE
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
 ---
 
 ```{r setup, include=FALSE}
-require("knitr")
-opts_knit$set(root.dir = "../../")
-opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 options(scipen = 999)
-library(R.matlab)
+library(haven)
 library(tidyverse)
+library(janitor)
+library(reshape2)
+library(broom)
+library(tableone)
+library(knitr)
+library(ggcorrplot)
+library(ggfortify)  
 library(gridExtra)
+library(factoextra)
 library(Matrix)
+library(rlist)
+library(ggrepel)
+library(broom)
+library(RColorBrewer)
+library(gplots)
+library(grid)
 ```
 
-## Data
+## Read Data
 
-* 20 air pollution species
-* 2,478 days (~6.7 years)
+```{r read}
+library(MNdata)
 
-```{r}
-# Read air pollution data
-mixture <- readMat("./Data/mixtures_data.mat")
-
-mixture_data <- as.data.frame(mixture) %>% as_tibble() %>% 
-  select(Al, As, Ba, bc, Br, Ca, Cl,
-         Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
-         Ti,  V, Zn) %>% 
+edc <- mn_edc %>% select(1:18) %>% 
+                    rename("TCS" = 17,
+                                "BPA" = 18,
+                                "BP_3" = 14,
+                                "DCP_24" = 11,
+                                "DCP_25" = 12,
+                                "B_PB" = 13,
+                                "M_PB" = 15,
+                                "P_PB" = 16,
+                                "MECPP" = 2,
+                                "MEHHP" = 3,
+                                "MEOHP" = 4,
+                                "MCPP" = 5,
+                                "MIBP" = 6,
+                                "MBP" = 7,
+                                "MBZP" = 8,
+                                "MEP" = 9,
+                                "MEHP" = 10) %>% 
   drop_na()
 
-mixture_data
+mixture_data <- edc %>%
+  mutate_if(is.numeric, scale, center = FALSE, scale = TRUE) %>% 
+  select(-sid) %>% 
+  drop_na()
 ```
 
 ## Steps
@@ -50,25 +75,31 @@ mixture_data
 *Push values \<LOD to zero*
 
 ```{r}
+summary(mixture_data)
+
+apply(as.matrix(mixture_data), 2 , quantile, probs = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.9))/sqrt(2)
+
 # Create version with 10% lowest values for each variable as below the LOD
 mix_data_lod_10 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .10), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .10), (quantile(., probs = .10)/sqrt(2)), .)) %>% as.matrix()
 
 # Create version with 20% lowest values for each variable as below the LOD
 mix_data_lod_20 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .20), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .20), (quantile(., probs = .20)/sqrt(2)), .)) %>% as.matrix()
 
 # Create version with 30% lowest values for each variable as below the LOD
 mix_data_lod_30 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .30), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .30), (quantile(., probs = .30)/sqrt(2)), .)) %>% as.matrix()
 
 # Create version with 40% lowest values for each variable as below the LOD
 mix_data_lod_40 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .40), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .40), (quantile(., probs = .40)/sqrt(2)), .)) %>% as.matrix()
 
 # Create version with 50% lowest values for each variable as below the LOD
 mix_data_lod_50 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .50), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .50), (quantile(., probs = .50)/sqrt(2)), .)) %>% as.matrix()
+
+summary(mix_data_lod_50)
 ```
 
 ### Original PCP
@@ -263,9 +294,12 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
     * Wider range -> more error
 
 ```{r}
+summary(mixture_data)
+apply(as.matrix(mixture_data), 2 , quantile, probs = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.9))/sqrt(2)
+
 # This one is all zeros bc nothing is <LOD to begin with
 tf_lod_0 <- mixture_data %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), FALSE, FALSE))
 # T/F dataset, T = <LOD
 l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
 s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
@@ -277,7 +311,10 @@ true_0 <- as.matrix(mixture_data*tf_lod_0)
 
 tf_lod_10 <- mix_data_lod_10 %>% 
   as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+
+apply(tf_lod_10, 2 , table)/nrow(tf_lod_10)
+
 # T/F dataset, T = <LOD
 l_blod_10 <- as.matrix(tf_lod_10*L_lod10)
 s_blod_10 <- as.matrix(tf_lod_10*S_lod10)
@@ -287,50 +324,58 @@ true_10 <- as.matrix(mixture_data*tf_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
 # Original matrix with only bottom 10percent, all >LOD set to zero
 
+head(true_10)[,1:5]
+apply(as.matrix(mixture_data), 2 , quantile, probs = c(0.1))[1:5]/sqrt(2)
+head(l_blod_10)[,1:5]
+
 tf_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
 l_blod_20 <- as.matrix(tf_lod_20*L_lod20)
 s_blod_20 <- as.matrix(tf_lod_20*S_lod20)
 true_20 <- as.matrix(mixture_data*tf_lod_20)
 
+head(true_20)[,1:5]
+apply(as.matrix(mixture_data), 2 , quantile, probs = c(0.2))[1:5]/sqrt(2)
+head(l_blod_20)[,1:5]
+
 tf_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
 l_blod_30 <- as.matrix(tf_lod_30*L_lod30)
 s_blod_30 <- as.matrix(tf_lod_30*S_lod30)
 true_30 <- as.matrix(mixture_data*tf_lod_30)
 
 tf_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
 l_blod_40 <- as.matrix(tf_lod_40*L_lod40)
 s_blod_40 <- as.matrix(tf_lod_40*S_lod40)
 true_40 <- as.matrix(mixture_data*tf_lod_40)
 
 tf_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
 l_blod_50 <- as.matrix(tf_lod_50*L_lod50)
 s_blod_50 <- as.matrix(tf_lod_50*S_lod50)
 true_50 <- as.matrix(mixture_data*tf_lod_50) 
 
 #Subtract true values and divide by norm of true
-less_diff <- as_tibble(cbind(lod0 = norm((true_0 - l_blod_0 - s_blod_0), type = "F"), #/norm((true_0), type = "F"),
-      lod10 = norm((true_10 - l_blod_10 - s_blod_10), type = "F")/norm((true_10), type = "F"),
-      lod20 = norm((true_20 - l_blod_20 - s_blod_20), type = "F")/norm((true_20), type = "F"),
-      lod30 = norm((true_30 - l_blod_30 - s_blod_30), type = "F")/norm((true_30), type = "F"),
-      lod40 = norm((true_40 - l_blod_40 - s_blod_40), type = "F")/norm((true_40), type = "F"),
-      lod50 = norm((true_50 - l_blod_50 - s_blod_50), type = "F")/norm((true_50), type = "F"))) %>% 
+less_diff <- as_tibble(cbind(lod0  = norm((true_0  - l_blod_0  - s_blod_0),  type = "F"), #/norm((true_0), type = "F"),
+                             lod10 = norm((true_10 - l_blod_10 - s_blod_10), type = "F")/norm((true_10), type = "F"),
+                             lod20 = norm((true_20 - l_blod_20 - s_blod_20), type = "F")/norm((true_20), type = "F"),
+                             lod30 = norm((true_30 - l_blod_30 - s_blod_30), type = "F")/norm((true_30), type = "F"),
+                             lod40 = norm((true_40 - l_blod_40 - s_blod_40), type = "F")/norm((true_40), type = "F"),
+                             lod50 = norm((true_50 - l_blod_50 - s_blod_50), type = "F")/norm((true_40), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "< LOD")
 ```
 
 ```{r}
 above_lod_0 <- mixture_data %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), TRUE, TRUE))
 l_above_blod_0 <- as.matrix(above_lod_0*L_lod0)
 s_above_blod_0 <- as.matrix(above_lod_0*S_lod0)
 above_true_0 <- as.matrix(mixture_data*above_lod_0)
 
 above_lod_10 <- mix_data_lod_10 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
 # T/F dataset, T = >LOD
 l_above_blod_10 <- as.matrix(above_lod_10*L_lod10)
 s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
@@ -339,25 +384,25 @@ above_true_10 <- as.matrix(mixture_data*above_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
 
 above_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
 l_above_blod_20 <- as.matrix(above_lod_20*L_lod20)
 s_above_blod_20 <- as.matrix(above_lod_20*S_lod20)
 above_true_20 <- as.matrix(mixture_data*above_lod_20)
 
 above_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
 l_above_blod_30 <- as.matrix(above_lod_30*L_lod30)
 s_above_blod_30 <- as.matrix(above_lod_30*S_lod30)
 above_true_30 <- as.matrix(mixture_data*above_lod_30)
 
 above_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
 l_above_blod_40 <- as.matrix(above_lod_40*L_lod40)
 s_above_blod_40 <- as.matrix(above_lod_40*S_lod40)
 above_true_40 <- as.matrix(mixture_data*above_lod_40)
 
 above_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
 l_above_blod_50 <- as.matrix(above_lod_50*L_lod50)
 s_above_blod_50 <- as.matrix(above_lod_50*S_lod50)
 above_true_50 <- as.matrix(mixture_data*above_lod_50) 
@@ -386,9 +431,7 @@ rbind(above_diff, less_diff) %>%
 
 ```{r}
 svd_orig <- as_tibble(svd(mixture_data)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -399,9 +442,7 @@ svd_orig <- as_tibble(svd(mixture_data)$v[,1:5]) %>%
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from SVD(original)")
 
 svd_0 <- as_tibble(svd(L_lod0)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -412,9 +453,7 @@ svd_0 <- as_tibble(svd(L_lod0)$v[,1:5]) %>%
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_0")
 
 svd_10 <- as_tibble(svd(L_lod10)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -425,9 +464,7 @@ svd_10 <- as_tibble(svd(L_lod10)$v[,1:5]) %>%
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_10")
 
 svd_20 <- as_tibble(svd(L_lod20)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -438,9 +475,7 @@ svd_20 <- as_tibble(svd(L_lod20)$v[,1:5]) %>%
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_20")
 
 svd_30 <- as_tibble(svd(L_lod30)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -451,9 +486,7 @@ svd_30 <- as_tibble(svd(L_lod30)$v[,1:5]) %>%
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_30")
 
 svd_40 <- as_tibble(svd(L_lod40)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
@@ -463,10 +496,8 @@ svd_40 <- as_tibble(svd(L_lod40)$v[,1:5]) %>%
              color = "red") +
   theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_40")
 
-svd_50 <- as_tibble(svd(L_lod50)$v[,1:5]) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
+svd_50 <- as_tibble(svd(L_lod50)$v[,1:5]) %>%
+  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
   select(id, everything()) %>% 
   gather(key = singular_vector, value = magnitude, V1:V5) %>%
   ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 

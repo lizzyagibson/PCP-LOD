@@ -1,0 +1,442 @@
+---
+title: "PCP with EDCs (centered and scaled)"
+author: "Lizzy Gibson"
+date: "2/26/2019"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+options(scipen = 999)
+library(haven)
+library(tidyverse)
+library(janitor)
+library(reshape2)
+library(broom)
+library(tableone)
+library(knitr)
+library(ggcorrplot)
+library(ggfortify)  
+library(gridExtra)
+library(factoextra)
+library(Matrix)
+library(rlist)
+library(ggrepel)
+library(broom)
+library(RColorBrewer)
+library(gplots)
+library(grid)
+```
+
+## Read Data
+
+```{r read}
+library(MNdata)
+
+edc <- mn_edc %>% select(1:18) %>% 
+                    rename("TCS" = 17,
+                                "BPA" = 18,
+                                "BP_3" = 14,
+                                "DCP_24" = 11,
+                                "DCP_25" = 12,
+                                "B_PB" = 13,
+                                "M_PB" = 15,
+                                "P_PB" = 16,
+                                "MECPP" = 2,
+                                "MEHHP" = 3,
+                                "MEOHP" = 4,
+                                "MCPP" = 5,
+                                "MIBP" = 6,
+                                "MBP" = 7,
+                                "MBZP" = 8,
+                                "MEP" = 9,
+                                "MEHP" = 10) %>% 
+  drop_na()
+```
+
+### Import PCP Function
+
+```{r import}
+########################################################################
+########################################################################
+
+soft_thresholding <- function(v, lambda) {
+  myzero <- matrix(data = 0, ncol = ncol(v), nrow = nrow(v))
+  w <- sign(v) * pmax(abs(v) - lambda, myzero)
+  # If absolute value is less than set lambda value, push to zero
+  # If absolute value is greater than lambda, new value is difference
+  # W is either zero or the difference between v and lambda
+  w
+}
+
+soft_thresholding_diag <- function(v, lambda) {
+  myzero <- vector("numeric", length = length(v))
+  w <- sign(v) * pmax(abs(v) - lambda, myzero)
+  # If absolute value is less than set lambda value, push to zero
+  # If absolute value is greater than lambda, new value is difference
+  # W is either zero or the difference between v and lambda
+  w
+}
+
+########################################################################
+########################################################################
+
+singular_value_threshold <- function(M, lambda) {
+
+  USV <- svd(M)
+  # Break SVD into separate matrices
+  U <- USV$u
+  # U is each persons experience of the source
+  # Matrix whose columns contain the left singular vectors of M.
+  sv <- USV$d
+  # Diagonal matrix of singular values, sorted decreasingly.
+  V <- USV$v
+  # Exposures and sources contribution
+
+  N <- U %*% diag(soft_thresholding_diag(sv, lambda)) %*% t(V)
+  # Create a new version of the input matrix by putting the SVD back together
+  # With new singular value diagonal matrix
+  # Singular values greater than assigned lambda are pushed to zero
+  # Singular value is relative scaling of how much a source is contributing
+  # Zero singular values will make this new matrix lower rank
+
+  v  <- sum(soft_thresholding_diag(sv, lambda))
+  # Sum the singular values, with those less than assigned lambda pushed to zero
+
+  svt <- list(N = N, v = v)
+  # Output new data matrix and sum of singular values
+
+  svt
+}
+
+########################################################################
+########################################################################
+
+pcp <- function(D, mu) {
+
+  D <- as.matrix(D)
+  # Dataframe needs to be a matrix
+
+  m <- nrow(D)
+  n <- ncol(D)
+  lambda <- 1/sqrt(m)
+
+  S <- matrix(0, nrow = m, ncol = n)
+  L <- matrix(0, nrow = m, ncol = n)
+  # First iteration starts with empty matrices same size as original data matrix
+
+  iter <- 0
+  done <- FALSE
+  MAX_ITER <- 20
+  # Maximum number of iterations
+
+  while (!done) {
+
+    iter <- iter + 1
+    #Loop through this algorithm, update every time
+
+    svt <- singular_value_threshold((D - S), 1/mu)
+    # First iteration is on original data matrix
+    # Following iterations are on D - S = Low rank matrix
+    # Singular values less than 1/mu are pushed to zero
+    # Singular values are either zero or the remainder after subtracting 1/mu
+
+    L <- svt[[1]] #svt$N
+    v <- svt[[2]]
+    # Outputs thresholded Low rank matrix and sum of thresholded singular values (v)
+
+    S <- soft_thresholding((D - L), lambda/mu)
+    # First iteration is on original data matrix
+    # Following iterations are on D - L = Sparse matrix
+    # All values in Sparse matrix less than lambda/mu are pushed to zero
+    # Values are either zero or the remainder after subtracting lambda/mu
+
+    error <- D - L - S
+    # D - L - S should be close to zero, error
+    # Parts of exposure matrix we are losing
+
+    obj <- v + lambda * sum(abs(S)) + (mu/2) * norm((D - L - S), type = "F")^2
+    # Objective function will decrease with each iteration
+    # Larger error matrix => larger objective function
+      # Penalizing error in prediction
+    # v is sum of singular values from Low rank matrix
+      # Penalizing larger values
+    # abs(S) means less sparse sparse matrix is more penalized
+
+    print(paste(iter, "Obj:", obj))
+
+    if (iter >= MAX_ITER) {done <- TRUE}
+
+  }
+  list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj, error = error)
+}
+```
+
+## Data Viz
+
+### Raw Data
+```{r edc}
+edc %>% 
+  gather(key = EDC, value = Concentration, -sid) %>% 
+  ggplot(aes(x = Concentration)) + geom_density() +
+  facet_wrap(~EDC, scales = "free") + theme_minimal()
+```
+
+SG adjustment got rid of the right tail spikes.
+
+### Scaled Data
+```{r scaled}
+edc %>% 
+  mutate_if(is.numeric, scale) %>% 
+  gather(key = EDC, value = Concentration, -sid) %>% 
+  ggplot(aes(x = Concentration)) + geom_density() +
+  facet_wrap(~EDC, scales = "free") + theme_minimal()
+```
+
+## PCP with Selected $\mu = 0.3$
+
+```{r basic}
+mix <- edc %>%
+  mutate_if(is.numeric, scale) %>% 
+  select(-sid) %>% 
+  drop_na() %>% 
+  as.matrix(.)
+
+summary(mix)
+
+m <- nrow(mix)
+n <- ncol(mix)
+
+svd(mix)$d
+
+#BY CONVENTION, should we change?
+lambda = 1/sqrt(m)
+```
+
+```{r new}
+#mu from validation RMD
+mixture_out.4 <- pcp(mix, 0.3)
+# PCP function now with 100 interations -> different answer
+
+summary(mixture_out.4)
+
+mixture_S.4 <- mixture_out.4$S
+mixture_L.4 <- mixture_out.4$L
+
+svd(mixture_L.4)$d
+#This L IS low rank
+```
+
+### Variance Explained
+
+```{r}
+#prcomp function does this: s$d <- s$d / sqrt(max(1, nrow(x) - 1))
+#this should be the same as the sum of the eigenvalues
+sum(matrix(svd(mix)$d/sqrt(max(1, nrow(mix) - 1)))^2)
+#If mix matrix isn't scaled, this sum does not equal 17
+
+#As mu increases, penalty goes to zero, and variance in low rank matrix goes to 17
+sum(matrix(svd(mixture_L.4)$d/sqrt(max(1, nrow(mixture_L.4) - 1)))^2)
+sum(matrix(svd(mixture_S.4)$d/sqrt(max(1, nrow(mixture_S.4) - 1)))^2)
+
+(sum(matrix(svd(mixture_L.4)$d/sqrt(max(1, nrow(mixture_L.4) - 1)))^2) + sum(matrix(svd(mixture_S.4)$d/sqrt(max(1, nrow(mixture_S.4) - 1)))^2))/17
+#First 5 SV explain 81% of the variance
+
+(sum(matrix(svd(mixture_L.4)$d/sqrt(max(1, nrow(mixture_L.4) - 1)))^2))/17 
+
+(sum(matrix(svd(mixture_S.4)$d/sqrt(max(1, nrow(mixture_S.4) - 1)))^2))/17
+
+```
+
+## PCP Viz
+
+### Sparse Matrix
+
+sparse matrix to identify unusual, unique, or extreme exposure events.
+
+```{r sparse2}
+mixture_S.4 %>% as_tibble() %>% 
+  mutate(id = 1:nrow(mixture_S.4)) %>% 
+  select(id, everything()) %>% 
+  gather(key = exposure, value = value, -id) %>%
+  ggplot(aes(x = exposure, y = id)) +
+  geom_tile(aes(fill = value)) + 
+  scale_fill_gradient2(low = "navy", mid = "blue", high = "yellow", 
+                       na.value = "transparent") +
+  labs(x = "Exposure", y = "Participant", title = "Sparse matrix of rare events", legend = "Magnitude") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+```
+
+```{r}
+colfunc <- colorRampPalette(c("blue", "orange"))
+
+### This is not the real heatmap.2 function ###
+#png("./Figures/sparse_pcp_matrix.png", height = 1200, width = 1500, res = 250)
+heatmap.2(mixture_S.4, key.title = "", key.xlab = "Scaled Concentrations",
+          ylab = "Participants", symbreaks = FALSE,
+          labRow = FALSE, dendrogram = "none", 
+          col = colfunc(100), keysize = 1.5,
+          density.info="none", trace="none")
+#dev.off()
+```
+
+#### Sparsity
+
+```{r}
+not_zeros <- sum(mixture_S.4 != 0)
+cells <- nrow(mixture_S.4)*ncol(mixture_S.4)
+prop_not_zero <- not_zeros/cells
+1 - prop_not_zero
+
+mixture_S.4 %>% as_tibble() %>% 
+  filter_all(., all_vars(. == 0))
+
+summary(mixture_S.4)
+
+mixture_S.4 %>% as_tibble() %>% 
+  filter(MEHP != 0 & MECPP!= 0 & MEHHP != 0 & MEOHP != 0 & MIBP != 0) %>% 
+  select(MECPP, MEHHP, MEOHP, MEHP, MIBP)
+
+mixture_S.4 %>% as_tibble() %>% 
+  filter(MEHP > 0 & MECPP > 0 & MEHHP > 0 & MEOHP > 0 & MIBP > 0) %>% 
+  select(MECPP, MEHHP, MEOHP, MEHP, MIBP)
+```
+
+### Low Rank Matrix
+
+low-rank matrix to identify consistent patterns of exposure across the pollutants.
+
+```{r low2}
+lr_plot <- as_tibble(svd(mixture_L.4)$v) %>% 
+  mutate(edc = c(colnames(edc)[2:18])) %>% 
+  select(edc, everything()) %>% 
+  gather(key = singular_vector, value = magnitude, V1:V17) %>%
+  filter(singular_vector %in% c("V1", "V2", "V3", "V4", "V5")) %>%
+  mutate(singular_vector = fct_recode(singular_vector, "Component 1" = "V1",
+                                      "Component 2" = "V2",
+                                      "Component 3" = "V3",
+                                      "Component 4" = "V4",
+                                      "Component 5" = "V5")) %>% 
+  mutate(Group = case_when(edc == "TCS" | edc == "BPA" ~ "Phenols", 
+                           grepl("PB", edc) ~ "Parabens",
+                           grepl("_", edc) ~ "Phenols",
+                           grepl("^M", edc) == TRUE ~ "Phthalates")) %>% 
+  mutate(edc = fct_relevel(edc, "TCS",
+                                "BPA",
+                                "BP_3",
+                                "DCP_24",
+                                "DCP_25",
+                                "B_PB",
+                                "M_PB",
+                                "P_PB",
+                                "MECPP", 
+                                "MEHHP",
+                                "MEOHP",
+                                "MCPP",
+                                "MIBP",
+                                "MBP", 
+                                "MBZP",  
+                                "MEP", 
+                                "MEHP")) %>% 
+  ggplot(aes(x = edc, y = magnitude, color = Group)) + geom_point() + 
+  geom_segment(aes(xend = edc, yend = 0)) +
+  facet_wrap(. ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+
+#png("./lr_plot.png", width = 2500, height = 1500, res = 275)
+lr_plot
+#dev.off()
+```
+
+## Component-wise Correlation
+
+Q: Is this the matrix we care about? **svd(mixture_L.4)$u**
+
+```{r}
+pcp_scores <- svd(mixture_L.4)$u %>% as_tibble() %>% 
+  select(V1:V5) %>% 
+  cbind(., sid = edc$sid) %>% 
+  as_tibble() %>% 
+  mutate(sid = as.character(sid))
+
+pcp_scores %>% select(V1:V5) %>% cor()
+
+#write_csv(pcp_scores, "./Data/pcp_scores.csv")
+```
+
+## More Sparsity
+
+```{r}
+edc <- edc %>% mutate_if(is.numeric, scale) #so both are scaled
+
+dat_sparse <- mixture_S.4 %>% as_tibble() %>% 
+  mutate(sid = edc$sid) %>% 
+  left_join(edc, ., by = "sid") # .y extension means from the sparse matrix, .x extension means original values
+
+plot_sparse <- function(x, y, i) {
+  dat_sparse %>% 
+  ggplot(aes(x = x, y = y)) + geom_point() +
+  geom_abline(intercept = 0, slope = max(y)/max(x), color = "red") + 
+  # slope = delta y / delta x
+  labs(x = "", y = "",
+       title = toupper(str_sub(colnames(dat_sparse)[i], start = 1L, end = -3L))) + 
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.margin = unit(c(.1,.1,.1,.1), "cm"))
+}
+
+#Create lists of components and products
+observed <- dat_sparse[, 2:18]
+observed <- lapply(seq_len(ncol(observed)), function(i) observed[,i])
+
+patterns <- dat_sparse[, 19:35]
+patterns <- lapply(seq_len(ncol(patterns)), function(i) patterns[,i])
+
+num <- 2:18
+
+#empty list to put plot output for each pair
+out <- list()
+
+#loop through lm for each pattern/product combo
+for (i in 1:length(observed)) {
+  out[[i]] <- plot_sparse(x = as.matrix(observed[[i]]), y = as.matrix(patterns[[i]]), i = num[i])
+}
+
+out[[1]]
+
+grid.arrange(grobs = out,
+             left = textGrob("Sparse matrix values", rot = 90, vjust = 1),
+             bottom = textGrob("Observed values"))
+```
+
+```{r}
+sparse_viz <- dat_sparse %>% 
+  ggplot(aes(x = MECPP.x, y = MECPP.y)) + geom_point() +
+  geom_abline(intercept = 0, slope = max(dat_sparse$MECPP.y)/max(dat_sparse$MECPP.x), color = "red") + 
+  # slope = delta y / delta x
+  labs(x = "Observed Scaled Concentrations", y = "Sparse Matrix Scaled Concentrations",
+       title = "") + 
+    theme_bw()
+
+#png("./Figures/sparse_viz.png", width = 800, height = 800, res = 200)
+sparse_viz
+#dev.off()
+```
+
