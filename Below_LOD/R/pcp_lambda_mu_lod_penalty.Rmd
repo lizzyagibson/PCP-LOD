@@ -1,0 +1,420 @@
+---
+title: "<LOD Penalty PCP -- vary $\\lambda$ and $\\mu$"
+author: "Lizzy Gibson"
+date: "9/3/2019"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+options(scipen = 999)
+library(tidyverse)
+library(janitor)
+library(reshape2)
+library(tableone)
+library(ggcorrplot)
+library(ggfortify)  
+library(gridExtra)
+library(factoextra)
+library(Matrix)
+library(rlist)
+library(ggrepel)
+library(broom)
+library(R.matlab)
+```
+
+## Read Data
+
+Read Boston air pollution data.
+
+```{r read}
+# Read air pollution data
+mixture <- readMat(here::here("Data/mixtures_data.mat"))
+
+mix <- as.data.frame(mixture) %>% as_tibble() %>% 
+  select(Al, As, Ba, bc, Br, Ca, Cl,
+         Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
+         Ti,  V, Zn) %>% 
+  drop_na(.) %>% 
+  as.matrix(.)
+
+m <- nrow(mix)
+n <- ncol(mix)
+
+lambda_mix = 1/sqrt(m)
+#This is the default lambda
+```
+
+### Import NEW \< LOD Penalty PCP Function
+
+```{r import}
+# Prox L1 norm function, soft thresholding
+# if Y < c, push to zero
+prox_l1 <- function(Y, c) {
+  
+    myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
+    X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
+    X
+    } 
+
+############################################################
+############################################################
+
+# Prox nuclear norm function, L1 norm of the singular values
+# This encourages matrix to be low rank by pushing SV to zero
+prox_nuclear <- function(Y,c) {
+  
+  USV <- svd(Y)
+  U <- USV$u
+  S <- USV$d
+  V <- USV$v
+
+  myzero <- vector("numeric", length = length(S))
+  S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
+  # Threshold the singular values, if SV < c, push it to zero
+  
+  X <- U %*% diag(S_new) %*% t(V)
+  
+  nuclearX  <- sum(abs(S_new))
+  # This is the L1 of the truncated singular values
+ 
+  list(X = X, nuclearX = nuclearX)
+  }
+
+############################################################
+############################################################
+
+# is same function for convergence criteria
+# is the difference among matrices > noise threshold?
+## if TRUE, keep iterating, if FALSE, end
+is_same <- function(SAME_THRESH, ...) {
+  flag <- TRUE
+  varargin <- list(...)
+
+  for (i in 1:(length(as.list(match.call())) - 3)) {
+    if (max(abs(varargin[[i]] - varargin[[i + 1]])) > SAME_THRESH) {
+        flag <- FALSE
+      }
+    }
+  flag
+}
+
+############################################################
+############################################################
+
+# loss_lod function
+
+loss_lod <- function(X, D, Delta) {
+  
+  X_lod <- (X - D)     * (D >= 0) +
+           (X - Delta) * (D < 0 & X > Delta) +
+            X          * (D < 0 & X < 0)
+  # Element-wise boolean operator
+  # If D_ij >= 0, then X_lod = X_ij - D_ij
+  # If D_ij < 0 (This means < LOD) AND X_ij > Delta, then X_lod = X_ij - Delta
+  # If D_ij < 0 AND X_ij < 0, then X_lod = X_ij
+  l <- sum(X_lod^2) / 2
+  # L2 norm
+  # Want to minimize this loss (e.g., discrepancy from valid data), shrink negative things
+  l
+  }
+
+############################################################
+############################################################
+
+# % If the LOD threshold Delta = 0, solve the following ADMM splitting problem:
+#   % min_{L1,L2,L3,S1,S2}
+# %      ||L1||_* + lambda * ||S1||_1 + mu/2 * ||L2+S2-D||_F^2 + I_{L3>=0}
+# % s.t. L1 = L2
+# %      L1 = L3
+# %      S1 = S2.
+# %
+# % If Delta is not 0, replace ||L2+S2-D||_F^2 with LOD penalty.
+# %
+# % Below-LOD data input in D should be denoted as negative values, e.g. -1.
+
+pcp_lod <- function(D, lambda, mu, Delta) {
+  
+  m <- nrow(D)
+  n <- ncol(D)
+  rho <- 1 # Augmented Lagrangian coefficient (rate)
+  
+  L1 <- matrix(0, m, n)
+  L2 <- matrix(0, m, n)
+  L3 <- matrix(0, m, n)
+  
+  S1 <- matrix(0, m, n)
+  S2 <- matrix(0, m, n)
+  
+  Z1 <- matrix(0, m, n)
+  Z2 <- matrix(0, m, n)
+  Z3 <- matrix(0, m, n)
+  
+  MAX_ITER <- 100
+  LOSS_THRESH <- 1e-5
+  SAME_THRESH <- 1e-4
+  
+  loss <- vector("numeric", MAX_ITER)
+  
+  for (i in 1:MAX_ITER) {
+    
+    nuc <- prox_nuclear( ((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
+    L1 <- nuc[[1]]
+    nuclearL1 <- nuc[[2]]
+    
+    S1 <- prox_l1( (S2 - Z3/rho), lambda/rho)
+    
+    L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt2 <- L1 + Z1/rho
+    L2_opt3 <- (mu*rho*Delta + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    
+    L2_new <- (L2_opt1 * (D >= 0)) +
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+              (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+    
+    S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt2 <- S1 + (Z3/rho)
+    S2_opt3 <- (mu*rho*Delta + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    
+    S2 <- (S2_opt1 * (D >= 0)) +
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+          (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+  
+    L2 <- L2_new
+    
+    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
+    
+    Z1 <- Z1 + rho*(L1 - L2)
+    Z2 <- Z2 + rho*(L1 - L3)
+    Z3 <- Z3 + rho*(S1 - S2)
+    
+    loss[i] <- nuclearL1 + 
+      (lambda*sum(abs(S1))) +
+      (mu*loss_lod((L2 + S2), D, Delta)) +
+      sum(Z1*(L1 - L2)) +
+      sum(Z2*(L1 - L3)) +
+      sum(Z3*(S1 - S2)) +
+      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
+    
+    if ((i != 1) && 
+        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
+        is_same(SAME_THRESH, L1, L2, L3) &&
+        is_same(SAME_THRESH, S1, S2)) {
+      break}
+  }
+  
+  L <- L3 # (L1 + L2 + L3) / 3
+  S <- S1 # (S1 + S2) / 2
+  list(L = L, S = S, mu = mu, lambda = lambda, loss = loss)
+}
+```
+
+## Vary $\lambda$ and $\mu$
+
+Create function to output new low rank matrix, sparse matrix, singular values and rank of new low rank matrix, and $\lambda$ and $\mu$ parameters used. Create grid of $\lambda$ and $\mu$ values to loop over.
+
+```{r mu_lam}
+mu_value <- seq(0.01, 11, by = 0.1)
+# Every mu > 3 has all 17 non-zero singular values.
+
+lambda_value <- c(seq(0.00001, 1/sqrt(m), by = 0.01), seq(1/sqrt(m), 0.15, by = 0.01))
+# center lambda = 1/sqrt(n)
+
+parameters <- expand.grid(mu_value, lambda_value)
+# combo of all mu and lambda pairs
+mu_value <- parameters[,1]
+lambda_value <- parameters[,2]
+
+make_L_mu_l <- function(lambda, mu){ 
+  mixture_mu <- pcp_lod(mix, lambda, mu, 0)
+  L <- mixture_mu$L
+  S <- mixture_mu$S
+  sv_diag <- svd(L)$d # singular values on new low rank matrix
+  sv_count <- sum(sv_diag > 0.001) # rank of new low rank matrix
+  list(L = L, SV = sv_diag, S = S, Count = sv_count, Mu = mu, Lambda = lambda)
+}
+```
+
+Loop over $\lambda$, $\mu$ pairs.
+
+```{r looop, results = FALSE, cache = TRUE}
+range_out <- map2(.x = lambda_value, .y = mu_value, ~make_L_mu_l(lambda = .x, mu = .y))
+```
+
+### Changing Low Rank Matrix
+
+Examine how rank of low rank matrix changes with varying $\lambda$ and $\mu$.
+
+```{r rank_ml}
+singular_value_count <- range_out %>% list.map(.[4]) %>% unlist() %>% 
+  cbind(sv_count = ., parameters) %>% as_tibble() %>% rename(mu = Var1, lambda = Var2)
+```
+
+```{r rank2}
+singular_value_count %>% summary()
+
+singular_value_count %>% 
+  mutate(lambda = round(lambda, 5)) %>% 
+  mutate_at(vars(2:3), as.factor) %>% 
+  ggplot(aes(x = mu, y = lambda)) +
+  geom_tile(aes(fill = sv_count), color = "white") +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent", limits = c(0, 17)) +
+  theme_bw() + labs(fill = "Rank", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = expression(paste("Changing low rank matrix rank with varying ", mu, " and ", lambda))) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+```{r}
+singular_value_count %>% 
+  filter(lambda == lambda_mix) %>% 
+  ggplot(aes(x = mu, y = sv_count)) +
+  geom_point() + geom_line() +
+  theme_bw() +
+  labs(y = "Rank",
+       x = expression(mu),
+       title = expression(paste("Changing rank of low rank matrix with varying ", mu))) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+### Changing Sparse Matrix
+
+Examine how sparsity of sparse matrix changes with varying $\lambda$ and $\mu$.
+
+```{r mu_sparse2}
+sparse <- range_out %>% list.map(.[3])
+# Extract all sparse matrices
+
+loop.vector2 <- 1:length(parameters[,1])
+
+cells <- nrow(mix)*ncol(mix)
+prop_not_zero <- vector(length = length(parameters[,1]))
+
+for (i in loop.vector2) { # Loop over loop.vector2
+
+ not_zeros <- sum(sparse[[i]]$S != 0)
+  # Create proportion of non-zero values across all cells in sparse matrix
+  prop_not_zero[i] <- not_zeros/cells
+}
+
+sparseness <- cbind(prop_not_zero, singular_value_count) %>% as_tibble()
+```
+
+```{r plot_sparse2}
+sparseness %>% summary()
+
+sparseness %>%
+  mutate(lambda = round(lambda, 5)) %>% 
+  mutate_at(vars(3:4), as.factor) %>% 
+  ggplot(aes(y = lambda, x = mu)) + 
+  geom_tile(aes(fill = prop_not_zero), color = "white") +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent", limits = c(0, 1)) +
+  theme_bw() + labs(fill = "Not Zero", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = expression(paste("Changing sparse matrix sparsity with varying ", mu, " and ", lambda))) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+```{r}
+sparseness %>% 
+  filter(lambda == lambda_mix) %>% 
+  ggplot(aes(x = mu, y = prop_not_zero)) +
+  geom_point() + geom_line() +
+  theme_bw() +
+  labs(y = "Proportion Non-Zero",
+       x = expression(mu),
+       title = expression(paste("Changing sparsity of sparse matrix with varying ", mu))) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+## Error
+
+Each PCP creates a low rank L matrix and a sparse matrix that sum to the original D matrix with some error. To choose the best value for $\lambda$ and $\mu$, we add the L and S matrices to form D', then subtract D - D' to get an error matrix for each $\lambda$ and $\mu$ pair. We then take the RMSE of the low rank matrix and the F norm of each error matrix, divided by the norm of the original matrix, to get relative error.
+
+```{r cv_both}
+# low_rank and sparse are lists of L and S matrices for each 
+
+loop.vector2 <- 1:length(parameters[,1])
+rmse <- vector(length = length(parameters[,1]))
+rel_error <- vector(length = length(parameters[,1]))
+new_ml <- list()
+
+low_rank_ml <- range_out %>% list.map(.[1])
+sparse_ml <- range_out %>% list.map(.[3])
+
+for (i in loop.vector2) { # Loop over loop.vector
+  new_ml[[i]]  <- low_rank_ml[[i]]$L + sparse_ml[[i]]$S
+  rmse[i]      <- sqrt(mean((mix - new_ml[[i]])^2))
+  rel_error[i] <- norm((mix - new_ml[[i]]), type = "F")/norm(mix, type = "F")
+  }
+
+cv <- cbind(parameters, rmse, rel_error) %>% as_tibble() %>% 
+  rename(mu = Var1, lambda = Var2)
+```
+
+### Plot Error
+
+```{r plot_both}
+cv %>% summary()
+
+cv %>% 
+  mutate(lambda = round(lambda, 5)) %>% 
+  mutate_at(vars(1:2), as.factor) %>% 
+  ggplot(aes(x = mu, y = lambda)) +
+  geom_tile(aes(fill = rmse), color = "white") +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent", limits = c(0, 1.01)) +
+  theme_bw() + labs(fill = "RMSE", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = expression(paste("Changing RMSE with varying ", mu, " and ", lambda))) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+```{r}
+cv %>% 
+  #filter(rel_error > 0.01) %>% 
+  mutate(lambda = round(lambda, 5)) %>% 
+  mutate_at(vars(1:2), as.factor) %>% 
+  ggplot(aes(x = mu, y = lambda)) +
+  geom_tile(aes(fill = rel_error), color = "white") +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent", limits = c(0, 1.01)) +
+  theme_bw() + labs(fill = "Relative Error", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = "Relative Error norm(X - L - S)/norm(X)") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+Below is the cross-section at $\lambda = 1/\sqrt{n}$, same as only varying $\mu$.
+
+```{r}
+cv %>% 
+  filter(lambda == lambda_mix) %>% 
+  ggplot(aes(y = rmse, x = mu)) + 
+  geom_point() + geom_line() +
+  theme_bw() +
+  labs(y = "Root Mean Squared Error",
+       x = expression(mu),
+       title = expression(paste("Changing RMSE with varying ", mu)))
+```
