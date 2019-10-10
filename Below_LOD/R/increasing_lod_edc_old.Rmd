@@ -7,6 +7,7 @@ output:
     toc: yes
     toc_float: yes
     toc_depth: 4
+    code_folding: "hide"
 ---
 
 ```{r setup, include=FALSE}
@@ -256,7 +257,7 @@ rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))")
 ```
 
-### SVD results of L matrix
+### SVD low rank vs. no \<LOD
 
 ```{r}
 # Extract right singular vectors from each low rank solution matrix
@@ -279,6 +280,26 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))")
+```
+
+### SVD low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+V_orig <- svd(X)$v[,1:5]
+
+V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod10 =norm((V_lod10 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod20 =norm((V_lod20 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod30 =norm((V_lod30 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod40 =norm((V_lod40 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod50 =norm((V_lod50 - V_orig), type = "F")/norm((V_orig), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))")
 ```
 
 ### Values \<LOD vs \>LOD
@@ -405,88 +426,4 @@ rbind(above_diff, less_diff) %>%
   geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))")
-```
-
-### SVD components
-
-```{r}
-svd_orig <- as_tibble(svd(mixture_data)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from SVD(original)")
-
-svd_0 <- as_tibble(svd(L_lod0)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_0")
-
-svd_10 <- as_tibble(svd(L_lod10)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_10")
-
-svd_20 <- as_tibble(svd(L_lod20)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_20")
-
-svd_30 <- as_tibble(svd(L_lod30)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_30")
-
-svd_40 <- as_tibble(svd(L_lod40)$v[,1:5]) %>% 
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_40")
-
-svd_50 <- as_tibble(svd(L_lod50)$v[,1:5]) %>%
-  mutate(id = c("TCS", "BPA", "BP_3", "DCP_24", "DCP_25", "B_PB", "M_PB", "P_PB", "MECPP", "MEHHP", "MEOHP", "MCPP", "MIBP", "MBP", "MBZP", "MEP", "MEHP")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from L_50")
-
-svd_orig
-grid.arrange(svd_0, svd_10, svd_20, svd_30, svd_40, svd_50)
 ```

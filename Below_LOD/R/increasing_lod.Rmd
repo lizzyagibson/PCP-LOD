@@ -7,6 +7,7 @@ output:
   html_document:
     toc: TRUE
     toc_float: TRUE
+    code_folding: 'hide'
 ---
 
 ```{r setup, include=FALSE}
@@ -77,25 +78,6 @@ mix_data_lod_50 <- mixture_data %>%
   mutate_all(~ifelse(. <= quantile(., probs = .50), -1, .))
 
 #write_csv(as_tibble(mix_data_lod_50), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_50.csv")
-```
-
-### Quantiles
-
-```{r}
-mixture_data %>% 
-  summarise_all(quantile, probs = .10) %>% as.matrix()
-
-mixture_data %>% 
-  summarise_all(quantile, probs = .20) %>% as.matrix()
-
-mixture_data %>% 
-  summarise_all(quantile, probs = .30) %>% as.matrix()
-
-mixture_data %>% 
-  summarise_all(quantile, probs = .40) %>% as.matrix()
-
-mixture_data %>% 
-  summarise_all(quantile, probs = .50) %>% as.matrix()
 ```
 
 ## Read MATLAB Output
@@ -191,11 +173,11 @@ rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))")
 ```
 
-### SVD results of L matrix
+### SVD low rank vs. no \<LOD
 
 ```{r}
 # Extract right singular vectors from each low rank solution matrix
-V_lod0 <- svd(L_lod0)$v[,1:5]
+V_lod0  <-  svd(L_lod0)$v[,1:5]
 V_lod10 <- svd(L_lod10)$v[,1:5]
 V_lod20 <- svd(L_lod20)$v[,1:5]
 V_lod30 <- svd(L_lod30)$v[,1:5]
@@ -214,6 +196,26 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))")
+```
+
+### SVD low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+V_orig <- svd(X)$v[,1:5]
+
+V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod10 =norm((V_lod10 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod20 =norm((V_lod20 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod30 =norm((V_lod30 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod40 =norm((V_lod40 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod50 =norm((V_lod50 - V_orig), type = "F")/norm((V_orig), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))")
 ```
 
 ### Values \<LOD vs \>LOD
@@ -336,66 +338,3 @@ rbind(above_diff, less_diff) %>%
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))")
 ```
-
-### SVD components
-
-```{r}
-V_original <- svd(mixture_data)$v[,1:5]
-
-as_tibble(V_original) %>% 
-  mutate(id = c("Al", "As", "Ba", "bc", "Br", "Ca", "Cl",
-                "Cr", "Cu", "Fe", "K",  "Mn",  "Ni",  "Pb",  "S",  "Se",  "Si",
-                "Ti",  "V", "Zn")) %>% 
-  select(id, everything()) %>% 
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  filter(singular_vector %in% c("V1", "V2", "V3", "V4", "V5")) %>% 
-  ggplot(aes(x = id, y = magnitude)) + geom_point(color = "blue") + 
-  geom_segment(aes(xend = id, yend = 0), color = "blue") +
-  facet_grid(. ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw() + labs(x = "", y = "Magnitude", title = "First 5 right singular vectors of V from SVD(original)")
-
-```
-
-**No values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_0.png" width="350" />
-  <img src="../IMAGES/fig2_lod_0.png" width="350" /> 
-</p>
-
-**10\% values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_10.png" width="350" />
-  <img src="../IMAGES/fig2_lod_10.png" width="350" /> 
-</p>
-
-**20\% values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_20.png" width="350" />
-  <img src="../IMAGES/fig2_lod_20.png" width="350" /> 
-</p>
-
-**30\% values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_30.png" width="350" />
-  <img src="../IMAGES/fig2_lod_30.png" width="350" /> 
-</p>
-
-**40\% values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_40.png" width="350" />
-  <img src="../IMAGES/fig2_lod_40.png" width="350" /> 
-</p>
-
-**50\% values \<LOD**
-
-<p float="left">
-  <img src="../IMAGES/fig1_lod_50.png" width="350" />
-  <img src="../IMAGES/fig2_lod_50.png" width="350" /> 
-</p>
