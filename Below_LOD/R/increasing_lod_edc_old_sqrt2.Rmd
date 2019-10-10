@@ -73,7 +73,7 @@ mixture_data <- edc %>%
 
 ## Create \<LOD Datasets
 
-*Push values \<LOD to zero*
+*Push values \<LOD to LOD/sqrt(2)*
 
 ```{r}
 # Create version with 10% lowest values for each variable as below the LOD

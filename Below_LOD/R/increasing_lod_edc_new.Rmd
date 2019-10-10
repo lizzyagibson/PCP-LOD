@@ -1,5 +1,5 @@
 ---
-title: "Original PCP, increasing <LOD"
+title: "Penalty PCP, increasing <LOD"
 subtitle: "EDC example"
 author: "Lizzy Gibson"
 date: "10/9/2019"
@@ -67,14 +67,14 @@ mixture_data <- edc %>%
 
 ## Steps
 
-1. Run ORIGINAL PCP on original air pollution data.
+1. Run new PCP on original air pollution data.
 2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets.
 3. Run ORIGINAL PCP version on all 5 <LOD datasets, save L and S matrices from each.
 4. Evaluate relative error -- compare results from <LOD datasets with original.
 
 ## Create \<LOD Datasets
 
-*Push values \<LOD to zero*
+*Push values \<LOD to negative number*
 
 ```{r}
 # Create version with 10% lowest values for each variable as below the LOD
