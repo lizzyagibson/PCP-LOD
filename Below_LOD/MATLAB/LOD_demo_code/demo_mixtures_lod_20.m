@@ -79,7 +79,7 @@ delta20 = [0.0268, 0, 0, 0.3461307, 0, 0.0182, 0.0011, 0, 0.0011, ...
     8e-04, 0.0046]
 
 %[L,S] = constrained_completion(X,Omega,2000,1e-8,1e-8,1,lambda,lambda,0,0,0,0,0,0); 
-[L,S] = pcp_lod(X,4/sqrt(m),10, delta20); 
+[L,S] = pcp_lod(X, 4/sqrt(m), 10, delta20); 
 % X is out dataset, set lambda and mu
 
 save('../LOD_demo_output/lowrank_lod20.mat', 'L')

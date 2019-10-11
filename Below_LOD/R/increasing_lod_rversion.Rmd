@@ -41,9 +41,9 @@ mixture_data
 
 ## Steps
 
-1. Run Jingkai's PCP version on original air pollution data (MATLAB).
+1. Run Jingkai's PCP version on original air pollution data (R).
 2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets (R).
-3. Run Jingkai's PCP version on all 5 <LOD datasets, save L and S matrices from each (MATLAB).
+3. Run Jingkai's PCP version on all 5 <LOD datasets, save L and S matrices from each (R).
 4. Evaluate relative error -- compare results from <LOD datasets with original (R).
 
 ## Create \<LOD Datasets
@@ -80,9 +80,30 @@ mix_data_lod_50 <- mixture_data %>%
 #write_csv(as_tibble(mix_data_lod_50), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_50.csv")
 ```
 
+### Quantiles = LOD
+
+```{r}
+delta10 <- mixture_data %>% 
+  summarise_all(quantile, probs = .10) %>% as_vector()
+
+delta20 <- mixture_data %>% 
+  summarise_all(quantile, probs = .20) %>% as_vector()
+
+delta30 <- mixture_data %>% 
+  summarise_all(quantile, probs = .30) %>% as_vector()
+
+delta40 <- mixture_data %>% 
+  summarise_all(quantile, probs = .40) %>% as_vector()
+
+delta50 <- mixture_data %>% 
+  summarise_all(quantile, probs = .50) %>% as_vector()
+```
+
 ### >LOD PCP Function
 
 ```{r import}
+# Prox L1 norm function, soft thresholding
+# if Y < c (threshold), push to zero
 prox_l1 <- function(Y, c) {
   
     myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
@@ -126,18 +147,22 @@ prox_nuclear <- function(Y,c) {
 
 # Compares L1, L2, L3 OR S1, S2
 # Need ... for function to handle different number of inputs
-
+# length(varargin) gives the number of function input arguments given in the call
+# for L1, L2, L3, THREE comparisons, L1/L2, L1/L3, and L2/L3
+# for S1, S2, one comparison
 is_same <- function(SAME_THRESH, ...) {
   flag <- TRUE
   varargin <- list(...)
-  
-  for (i in 1:(length(as.list(match.call())) - 3)) {
-    # match.call returns a call in which all of the specified arguments are specified by their full names.
-    # length(as.list( gives the number of function input arguments given in the call
-    # for L1, L2, L3, length = 5, (5-3 = 2), two comparisons, L1/L2, and L2/L3
-    # for S1, S2, length = 4, (4-3 = 1), one comparison = 1 loop
-    if (max(abs(varargin[[i]] - varargin[[i + 1]])) > SAME_THRESH) {
-        flag <- FALSE
+    if (length(varargin) == 2) {
+      if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
+      flag <- FALSE
+    }
+  }
+    else if (length(varargin) == 3) {
+      if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
+         (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
+         (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
+      flag <- FALSE
       }
     }
   flag
@@ -159,7 +184,7 @@ loss_lod <- function(X, D, Delta) {
   # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
   # Normal loss for >LOD measures (distance from original value)
     
-           (X - Delta) * (D < 0 & X > Delta) +
+           t(t(X) - Delta) * (D < 0 & t(t(X) > Delta)) +
   # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
   # % D is < 0 when < LOD
   # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
@@ -175,7 +200,7 @@ loss_lod <- function(X, D, Delta) {
   # % Minimize discrepancy for valid data
   # % Want to shrink negative things
   l
-  }
+}
 
 ############################################################
 ############################################################
@@ -232,14 +257,14 @@ lod_pcp <- function(D, lambda, mu, Delta) {
     # These are all derivatives
     L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- (mu*rho*Delta + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt3 <- t((mu*rho*Delta + t(((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
     L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
-    L2 <-     (L2_opt1 * (D >= 0)) +
+    L2_new <- (L2_opt1 * (D >= 0)) +
       # If D >= LOD, use opt1 (Good)
-              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
       # If D < LOD and new is between 0 and LOD, use opt2 (Good)
-              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+              (L2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
       # If D < LOD and new > LOD use opt3 (Bad)
               (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
       # If D < LOD and new < LOD, use opt4 (Bad)
@@ -247,16 +272,17 @@ lod_pcp <- function(D, lambda, mu, Delta) {
     
     S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     S2_opt2 <- S1 + (Z3/rho)
-    S2_opt3 <- (mu*rho*Delta + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt3 <- t(((mu*rho*Delta) + t(((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
     S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
     S2 <- (S2_opt1 * (D >= 0)) +
-          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
-          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
           (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
     # % For data >LOD, use opt 1
     # % S2 becomes whichever of the 4 meets the conditions
     
+    L2 <- L2_new
     # % The code block above takes LOD into account.
     # % The code block commented out below does not take LOD into account
     # %     L2 = (mu*rho*D + (mu+rho)*Z1 - mu*Z3 + (mu+rho)*rho*L1 - mu*rho*S1) / (2*mu*rho+rho^2);
@@ -292,7 +318,7 @@ lod_pcp <- function(D, lambda, mu, Delta) {
   }
   
   L <- L3 # (L1 + L2 + L3) / 3
-  S <- (S1 + S2) / 2
+  S <- S1 #(S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
 ```
@@ -304,12 +330,12 @@ Run >LOD PCP on separate datasets.
 ```{r}
 m <- nrow(mixture_data)
 
-results_0  <- lod_pcp(as.matrix(mixture_data), 4/sqrt(m), 0.3, 0)
-results_10 <- lod_pcp(mix_data_lod_10, 4/sqrt(m), 0.3, 0)
-results_20 <- lod_pcp(mix_data_lod_20, 4/sqrt(m), 0.3, 0)
-results_30 <- lod_pcp(mix_data_lod_30, 4/sqrt(m), 0.3, 0)
-results_40 <- lod_pcp(mix_data_lod_40, 4/sqrt(m), 0.3, 0)
-results_50 <- lod_pcp(mix_data_lod_50, 4/sqrt(m), 0.3, 0)
+results_0  <- lod_pcp(as.matrix(mixture_data), 4/sqrt(m), 10, 0)
+results_10 <- lod_pcp(mix_data_lod_10,         4/sqrt(m), 10, delta10)
+results_20 <- lod_pcp(mix_data_lod_20,         4/sqrt(m), 10, delta20)
+results_30 <- lod_pcp(mix_data_lod_30,         4/sqrt(m), 10, delta30)
+results_40 <- lod_pcp(mix_data_lod_40,         4/sqrt(m), 10, delta40)
+results_50 <- lod_pcp(mix_data_lod_50,         4/sqrt(m), 10, delta50)
 
 L_lod0 <- results_0[[1]]
 S_lod0 <- results_0[[2]]

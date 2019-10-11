@@ -25,6 +25,13 @@ dat <- matrix(1:100, nrow = 10, byrow = TRUE)
 # Create 11 x 10 matrix
 dat_11 <- rbind(dat, 101:110)
 
+# 50% <LOD
+mix_data_lod_50 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .50), -1, .)) %>% as.matrix()
+
+delta50 <- mixture_data %>% 
+  summarise_all(quantile, probs = .50) %>% as_vector()
+
 ############################################################
 ############################################################
 
@@ -38,8 +45,7 @@ prox_l1 <- function(Y, c) {
     } 
 
 # Test
-prox_l1(dat_11, 5)
-norm(prox_l1(x, 5), type = "F")
+norm(prox_l1(dat_11, 5), "F")
 
 ############################################################
 ############################################################
@@ -107,7 +113,6 @@ is_same(0.5, x, (x-0.5), (x-0.4))
 is_same(0.5, x, (x-0.4), (x-0.7))
 is_same(0.5, x, (x-0.4), (x+0.2))
 
-
 ############################################################
 ############################################################
 
@@ -124,7 +129,7 @@ loss_lod <- function(X, D, Delta) {
   # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
   # Normal loss for >LOD measures (distance from original value)
     
-           (X - Delta) * (D < 0 & X > Delta) +
+           t(t(X) - Delta) * (D < 0 & t(t(X) > Delta)) +
   # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
   # % D is < 0 when < LOD
   # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
@@ -140,11 +145,22 @@ loss_lod <- function(X, D, Delta) {
   # % Minimize discrepancy for valid data
   # % Want to shrink negative things
   l
-  }
+}
 
 # Test
+loss_lod(dat_11, (dat_11-100), 1:10)
 loss_lod(dat_11, (dat_11-100), 0)
-loss_lod(x, (x-5), 0)
+loss_lod(x, (x-5), delta50)
+loss_lod(x, (x-5), 7)
+# if delta is scalar, this is the same
+# if delta is vector, NOT THE SAME
+
+# DIFFERENT
+dat > (1:10)
+
+# SAME
+t(t(dat) > 1:10)
+t(t(dat) > c(20, 5, 22:29))
 
 ############################################################
 ############################################################
@@ -201,14 +217,14 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     # These are all derivatives
     L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- (mu*rho*Delta + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt3 <- t((mu*rho*Delta + t(((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
     L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
-    L2 <-     (L2_opt1 * (D >= 0)) +
+    L2_new <- (L2_opt1 * (D >= 0)) +
       # If D >= LOD, use opt1 (Good)
-              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
       # If D < LOD and new is between 0 and LOD, use opt2 (Good)
-              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+              (L2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
       # If D < LOD and new > LOD use opt3 (Bad)
               (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
       # If D < LOD and new < LOD, use opt4 (Bad)
@@ -216,16 +232,17 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     
     S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     S2_opt2 <- S1 + (Z3/rho)
-    S2_opt3 <- (mu*rho*Delta + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt3 <- t(((mu*rho*Delta) + t(((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
     S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
     S2 <- (S2_opt1 * (D >= 0)) +
-          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
-          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
           (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
     # % For data >LOD, use opt 1
     # % S2 becomes whichever of the 4 meets the conditions
     
+    L2 <- L2_new
     # % The code block above takes LOD into account.
     # % The code block commented out below does not take LOD into account
     # %     L2 = (mu*rho*D + (mu+rho)*Z1 - mu*Z3 + (mu+rho)*rho*L1 - mu*rho*S1) / (2*mu*rho+rho^2);
@@ -289,13 +306,26 @@ norm(sparse_r - sparse_m, type = "F")
 head(lowrank_r)[1:5]
 head(lowrank_m)[1:5]
 
-# 10 x 10 matrix
-r_10_output <- pcp_lod(dat, 1/sqrt(10), 10, 0)
-r_10_output
+######################################
+# 50% <LOD
+# MATLAB results
+lowrank_m50 <- readMat("./Below_LOD/MATLAB/LOD_demo_output/lowrank_lod50.mat") %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  as.matrix()
+sparse_m50 <- readMat("./Below_LOD/MATLAB/LOD_demo_output/sparse_lod50.mat") %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  as.matrix()
 
-r_11_output <- pcp_lod(dat_11, 1/sqrt(10), 10, 0)
-r_11_output
+# R results 
+r_output50 <- pcp_lod(mix_data_lod_50, 4/sqrt(m), 10, delta50)
+lowrank_r50 <- r_output50$L
+sparse_r50 <- r_output50$S
 
+# NOPE
+norm(lowrank_r50 - lowrank_m50, type = "F")
+norm(sparse_r50 - sparse_m50, type = "F")
 
-
-
+head(lowrank_r50)[1:5]
+head(lowrank_m50)[1:5]
