@@ -1,12 +1,29 @@
 ############################################################
 # PCP w/ <LOD Penalty ######################################
-# Original MATLAB by Jingkai ###############################
-# 7/17/2019 ################################################
+# Troubleshooting ##########################################
 # 5 functions total ########################################
 ############################################################
 
 library(matconv)
 library(tidyverse)
+library(R.matlab)
+
+# Read air pollution data
+mixture <- readMat("./Data/mixtures_data.mat")
+
+mixture_data <- as.data.frame(mixture) %>% as_tibble() %>% 
+  select(Al, As, Ba, bc, Br, Ca, Cl,
+         Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
+         Ti,  V, Zn) %>% 
+  drop_na()
+
+x <- as.matrix(mixture_data)
+
+# Creat 10 x 10 matrix
+dat <- matrix(1:100, nrow = 10, byrow = TRUE)
+
+# Create 11 x 10 matrix
+dat_11 <- rbind(dat, 101:110)
 
 ############################################################
 ############################################################
@@ -19,6 +36,10 @@ prox_l1 <- function(Y, c) {
     X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
     X
     } 
+
+# Test
+prox_l1(dat_11, 5)
+norm(prox_l1(x, 5), type = "F")
 
 ############################################################
 ############################################################
@@ -47,6 +68,10 @@ prox_nuclear <- function(Y,c) {
   list(X = X, nuclearX = nuclearX)
   }
 
+# Test
+prox_nuclear(dat_11, 5)
+norm(prox_nuclear(x, 5)[[1]], type = "F")
+
 ############################################################
 ############################################################
 
@@ -62,20 +87,26 @@ prox_nuclear <- function(Y,c) {
 is_same <- function(SAME_THRESH, ...) {
   flag <- TRUE
   varargin <- list(...)
-  if (length(varargin) == 2) {
-    if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
+    if (length(varargin) == 2) {
+      if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
       flag <- FALSE
     }
   }
-  else if (length(varargin) == 3) {
-    if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
-        (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
-        (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
+    else if (length(varargin) == 3) {
+      if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
+         (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
+         (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
       flag <- FALSE
+      }
     }
-  }
   flag
 }
+
+# Test
+is_same(0.5, x, (x-0.5), (x-0.4))
+is_same(0.5, x, (x-0.4), (x-0.7))
+is_same(0.5, x, (x-0.4), (x+0.2))
+
 
 ############################################################
 ############################################################
@@ -110,6 +141,10 @@ loss_lod <- function(X, D, Delta) {
   # % Want to shrink negative things
   l
   }
+
+# Test
+loss_lod(dat_11, (dat_11-100), 0)
+loss_lod(x, (x-5), 0)
 
 ############################################################
 ############################################################
@@ -226,12 +261,40 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   }
   
   L <- L3 # (L1 + L2 + L3) / 3
-  S <- (S1 + S2) / 2
+  S <- S1 #(S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
 
+# Test
+# R results 
+m <- nrow(mixture_data)
+r_output <- pcp_lod(x, 4/sqrt(m), 10, 0)
+lowrank_r <- r_output$L
+sparse_r <- r_output$S
 
+# MATLAB results
+lowrank_m <- readMat("./Below_LOD/MATLAB/LOD_demo_output/lowrank_lod0.mat") %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  as.matrix()
+sparse_m <- readMat("./Below_LOD/MATLAB/LOD_demo_output/sparse_lod0.mat") %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  as.matrix()
 
+# Pretty close!
+norm(lowrank_r - lowrank_m, type = "F")
+norm(sparse_r - sparse_m, type = "F")
+
+head(lowrank_r)[1:5]
+head(lowrank_m)[1:5]
+
+# 10 x 10 matrix
+r_10_output <- pcp_lod(dat, 1/sqrt(10), 10, 0)
+r_10_output
+
+r_11_output <- pcp_lod(dat_11, 1/sqrt(10), 10, 0)
+r_11_output
 
 
 
