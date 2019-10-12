@@ -15,10 +15,10 @@ library(tidyverse)
 # if Y < c (threshold), push to zero
 prox_l1 <- function(Y, c) {
   
-    myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
-    X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
-    X
-    } 
+  myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
+  X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
+  X
+} 
 
 ############################################################
 ############################################################
@@ -31,11 +31,11 @@ prox_nuclear <- function(Y,c) {
   U <- USV$u
   S <- USV$d
   V <- USV$v
-
+  
   myzero <- vector("numeric", length = length(S))
   S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
   # Threshold the singular values, if SV < c, push it to zero
-
+  
   X <- U %*% diag(S_new) %*% t(V)
   # % X is the truncation of the original
   # % Multiply the thresholded SVD components back together
@@ -43,9 +43,9 @@ prox_nuclear <- function(Y,c) {
   nuclearX  <- sum(abs(S_new))
   # This is the L1 norm of the truncated singular values
   # Goes into the loss function
-
+  
   list(X = X, nuclearX = nuclearX)
-  }
+}
 
 ############################################################
 ############################################################
@@ -89,16 +89,16 @@ loss_lod <- function(X, D, Delta) {
   
   # % Pointwise boolean operation tricks for element-wise updating
   X_lod <- (X - D)     * (D >= 0) +
-  # % D>=0 will spit out 0/1 (no/yes)
-  # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
-  # Normal loss for >LOD measures (distance from original value)
+    # % D>=0 will spit out 0/1 (no/yes)
+    # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
+    # Normal loss for >LOD measures (distance from original value)
     
-           (X - Delta) * (D < 0 & X > Delta) +
-  # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
-  # % D is < 0 when < LOD
-  # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
+    t(t(X) - Delta) * (D < 0 & t(t(X) > Delta)) +
+    # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
+    # % D is < 0 when < LOD
+    # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
     
-            X          * (D < 0 & X < 0)
+    X          * (D < 0 & X < 0)
   # % If D_ij < 0 AND X_ij < 0, then X_lod = X, else zero
   
   l <- sum(X_lod^2) / 2
@@ -109,7 +109,7 @@ loss_lod <- function(X, D, Delta) {
   # % Minimize discrepancy for valid data
   # % Want to shrink negative things
   l
-  }
+}
 
 ############################################################
 ############################################################
@@ -159,38 +159,39 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     # % L, Z, S all start at zero, and change each iteration
     # % Prox_nuc is singular value thresholding
     # % L is low rank matrix
-
+    
     S1 <- prox_l1((S2 - Z3/rho), lambda/rho)
     # % S is sparse matrix
     
     # These are all derivatives
     L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- (mu*rho*Delta + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt3 <- t((mu*rho*Delta + t(((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
     L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
-    L2 <-     (L2_opt1 * (D >= 0)) +
+    L2_new <- (L2_opt1 * (D >= 0)) +
       # If D >= LOD, use opt1 (Good)
-              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+      (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
       # If D < LOD and new is between 0 and LOD, use opt2 (Good)
-              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+      (L2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
       # If D < LOD and new > LOD use opt3 (Bad)
-              (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
-      # If D < LOD and new < LOD, use opt4 (Bad)
-      # % L2_new becomes whichever of the 4 meets the conditions
+      (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+    # If D < LOD and new < LOD, use opt4 (Bad)
+    # % L2_new becomes whichever of the 4 meets the conditions
     
     S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     S2_opt2 <- S1 + (Z3/rho)
-    S2_opt3 <- (mu*rho*Delta + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt3 <- t(((mu*rho*Delta) + t(((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
     S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
     S2 <- (S2_opt1 * (D >= 0)) +
-          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
-          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
-          (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+      (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+      (S2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
+      (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
     # % For data >LOD, use opt 1
     # % S2 becomes whichever of the 4 meets the conditions
     
+    L2 <- L2_new
     # % The code block above takes LOD into account.
     # % The code block commented out below does not take LOD into account
     # %     L2 = (mu*rho*D + (mu+rho)*Z1 - mu*Z3 + (mu+rho)*rho*L1 - mu*rho*S1) / (2*mu*rho+rho^2);
@@ -217,7 +218,7 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     # %     loss(i) = nuclearL1 + lambda*sum(sum(abs(S1))) + mu/2*sum(sum((L2+S2-D).^2)) ...
     # %         + sum(sum(Z1.*(L1-L2))) + sum(sum(Z2.*(L1-L3))) + sum(sum(Z3.*(S1-S2))) ...
     # %         + rho/2 * ( sum(sum((L1-L2).^2)) + sum(sum((L1-L3).^2)) + sum(sum((S1-S2).^2)) );
-
+    
     if ((i != 1) && 
         (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
         is_same(SAME_THRESH, L1, L2, L3) &&
@@ -226,7 +227,7 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   }
   
   L <- L3 # (L1 + L2 + L3) / 3
-  S <- (S1 + S2) / 2
+  S <- S1 #(S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
 
