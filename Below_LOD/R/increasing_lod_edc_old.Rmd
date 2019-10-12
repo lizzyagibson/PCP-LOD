@@ -167,12 +167,12 @@ Run ORIGINAL PCP on separate datasets.
 ```{r}
 m <- nrow(mixture_data)
 
-results_0  <- original_pcp(as.matrix(mixture_data), 4/sqrt(m), 10)
-results_10 <- original_pcp(mix_data_lod_10, 4/sqrt(m), 10)
-results_20 <- original_pcp(mix_data_lod_20, 4/sqrt(m), 10)
-results_30 <- original_pcp(mix_data_lod_30, 4/sqrt(m), 10)
-results_40 <- original_pcp(mix_data_lod_40, 4/sqrt(m), 10)
-results_50 <- original_pcp(mix_data_lod_50, 4/sqrt(m), 10)
+results_0  <- original_pcp(as.matrix(mixture_data), 1/sqrt(m), 0.3)
+results_10 <- original_pcp(mix_data_lod_10, 1/sqrt(m), 0.3)
+results_20 <- original_pcp(mix_data_lod_20, 1/sqrt(m), 0.3)
+results_30 <- original_pcp(mix_data_lod_30, 1/sqrt(m), 0.3)
+results_40 <- original_pcp(mix_data_lod_40, 1/sqrt(m), 0.3)
+results_50 <- original_pcp(mix_data_lod_50, 1/sqrt(m), 0.3)
 
 L_lod0 <- results_0[[1]]
 S_lod0 <- results_0[[2]]
