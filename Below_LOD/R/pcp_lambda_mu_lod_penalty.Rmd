@@ -279,7 +279,7 @@ pcp_lod <- function(D, lambda, mu, Delta) {
 Create function to output new low rank matrix, sparse matrix, singular values and rank of new low rank matrix, and $\lambda$ and $\mu$ parameters used. Create grid of $\lambda$ and $\mu$ values to loop over.
 
 ```{r mu_lam}
-mu_value <- seq(0.01, 11, by = 0.1)
+mu_value <- seq(0.01, 11, by = 0.5)
 # Every mu > 3 has all 17 non-zero singular values.
 
 lambda_value <- c(seq(0.00001, 1/sqrt(m), by = 0.01), seq(1/sqrt(m), 0.15, by = 0.01))

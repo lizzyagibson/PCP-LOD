@@ -234,7 +234,7 @@ loss_lod <- function(X, D, Delta) {
 # %
 # % Below-LOD data input in D should be denoted as negative values, e.g. -1.
 
-pcp_lod <- function(D, lambda, mu, Delta) {
+lod_pcp <- function(D, lambda, mu, Delta) {
   
   m <- nrow(D)
   n <- ncol(D)
@@ -353,7 +353,7 @@ results_10 <- lod_pcp(mix_data_lod_10, 1/sqrt(m), 0.3, delta10)
 results_20 <- lod_pcp(mix_data_lod_20, 1/sqrt(m), 0.3, delta20)
 results_30 <- lod_pcp(mix_data_lod_30, 1/sqrt(m), 0.3, delta30)
 results_40 <- lod_pcp(mix_data_lod_40, 1/sqrt(m), 0.3, delta40)
-results_50 <- lod_pcp(mix_data_lod_50, 1/sqrt(m), 0.3, delta50)
+results_50 <- lod_pcp(mix_data_lod_50, 1 /sqrt(m), 0.3, delta50)
 
 L_lod0 <- results_0[[1]]
 S_lod0 <- results_0[[2]]
