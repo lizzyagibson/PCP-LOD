@@ -1,8 +1,8 @@
 ---
-title: "Increasing <LOD with Old PCP and 0"
+title: "PCP w/ <LOD Penalty"
 subtitle: "Boston air pollution example"
 author: "Lizzy Gibson"
-date: "7/20/2019"
+date: "7/16/2019"
 output: 
   html_document:
     toc: TRUE
@@ -41,113 +41,309 @@ mixture_data
 
 ## Steps
 
-1. Run ORIGINAL PCP on original air pollution data.
-2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets.
-3. Run ORIGINAL PCP version on all 5 <LOD datasets, save L and S matrices from each.
-4. Evaluate relative error -- compare results from <LOD datasets with original.
+1. Run Jingkai's PCP version on original air pollution data (R).
+2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets (R).
+3. Run Jingkai's PCP version on all 5 <LOD datasets, save L and S matrices from each (R).
+4. Evaluate relative error -- compare results from <LOD datasets with original (R).
 
 ## Create \<LOD Datasets
 
-*Push values \<LOD to zero*
-
 ```{r}
+apply(mixture_data, 2, quantile, probs = c(0, .10, .20, .30, .40, .50))
+
 # Create version with 10% lowest values for each variable as below the LOD
 mix_data_lod_10 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .10), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .10), -1, .)) %>% as.matrix()
+
+apply(mix_data_lod_10, 2, quantile, probs = c(0, .10, .20, .30, .40, .50))
+#write_csv(as_tibble(mix_data_lod_10), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_10.csv")
 
 # Create version with 20% lowest values for each variable as below the LOD
 mix_data_lod_20 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .20), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .20), -1, .)) %>% as.matrix()
+
+apply(mix_data_lod_20, 2, quantile, probs = c(0, .10, .15, .20, .30, .40, .50))
+#write_csv(as_tibble(mix_data_lod_20), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_20.csv")
 
 # Create version with 30% lowest values for each variable as below the LOD
 mix_data_lod_30 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .30), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .30), -1, .)) %>% as.matrix()
+
+apply(mix_data_lod_30, 2, quantile, probs = c(0, .10, .20, .30, .40, .50))
+#write_csv(as_tibble(mix_data_lod_30), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_30.csv")
 
 # Create version with 40% lowest values for each variable as below the LOD
 mix_data_lod_40 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .40), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .40), -1, .)) %>% as.matrix()
+
+apply(mix_data_lod_40, 2, quantile, probs = c(0, .10, .20, .30, .40, .50))
+#write_csv(as_tibble(mix_data_lod_40), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_40.csv")
 
 # Create version with 50% lowest values for each variable as below the LOD
 mix_data_lod_50 <- mixture_data %>% 
-  mutate_all(~ifelse(. <= quantile(., probs = .50), 0, .)) %>% as.matrix()
+  mutate_all(~ifelse(. <= quantile(., probs = .50), -1, .)) %>% as.matrix()
+
+apply(mix_data_lod_50, 2, quantile, probs = c(0, .10, .20, .30, .40, .50, .60))
+#write_csv(as_tibble(mix_data_lod_50), "./Below_LOD/R/BLOD_airpol_data/mix_data_lod_50.csv")
 ```
 
-### Original PCP
+### Quantiles = LOD
 
 ```{r}
-soft_thresholding <- function(v, lambda) {
-  myzero <- matrix(data = 0, ncol = ncol(v), nrow = nrow(v))
-  w <- sign(v) * pmax(abs(v) - lambda, myzero)
-  w
-} 
+delta10 <- mixture_data %>% 
+  summarise_all(quantile, probs = .10) %>% as_vector()
 
-soft_thresholding_diag <- function(v, lambda) {
-  myzero <- vector("numeric", length = length(v))
-  w <- sign(v) * pmax(abs(v) - lambda, myzero)
-  w
-} 
+delta20 <- mixture_data %>% 
+  summarise_all(quantile, probs = .20) %>% as_vector()
 
-singular_value_threshold <- function(M, lambda) {
+delta30 <- mixture_data %>% 
+  summarise_all(quantile, probs = .30) %>% as_vector()
+
+delta40 <- mixture_data %>% 
+  summarise_all(quantile, probs = .40) %>% as_vector()
+
+delta50 <- mixture_data %>% 
+  summarise_all(quantile, probs = .50) %>% as_vector()
+```
+
+### >LOD PCP Function
+
+```{r import}
+# Updated 10/16/2019
+# Prox L1 norm function, soft thresholding
+# if Y < c (threshold), push to zero
+prox_l1 <- function(Y, c) {
   
-  USV <- svd(M)
+    myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
+    X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
+    X
+    } 
+
+############################################################
+############################################################
+
+# Prox nuclear norm function, L1 norm of the singular values
+# This encourages matrix to be low rank by pushing SV to zero (sparse)
+prox_nuclear <- function(Y,c) {
+  
+  USV <- svd(Y)
   U <- USV$u
   S <- USV$d
   V <- USV$v
-    
-  N <- U %*% diag(soft_thresholding_diag(S, lambda)) %*% t(V)
+
+  myzero <- vector("numeric", length = length(S))
+  S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
+  # Threshold the singular values, if SV < c, push it to zero
+
+  X <- U %*% diag(S_new) %*% t(V)
+  # % X is the truncation of the original
+  # % Multiply the thresholded SVD components back together
   
-  v  <- sum(soft_thresholding_diag(S, lambda))
-  
-  svt <- list(N = N, v = v) 
-  svt
+  nuclearX  <- sum(abs(S_new))
+  # This is the L1 norm of the truncated singular values
+  # Goes into the loss function
+
+  list(X = X, nuclearX = nuclearX)
+  }
+
+############################################################
+############################################################
+
+# is same function for convergence criteria
+# is the difference among matrices > noise threshold?
+## if TRUE, keep iterating, if FALSE, end
+
+# Compares L1, L2, L3 OR S1, S2
+# Need ... for function to handle different number of inputs
+# length(varargin) gives the number of function input arguments given in the call
+# for L1, L2, L3, THREE comparisons, L1/L2, L1/L3, and L2/L3
+# for S1, S2, one comparison
+is_same <- function(SAME_THRESH, ...) {
+  flag <- TRUE
+  varargin <- list(...)
+    if (length(varargin) == 2) {
+      if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
+      flag <- FALSE
+    }
+  }
+    else if (length(varargin) == 3) {
+      if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
+         (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
+         (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
+      flag <- FALSE
+      }
+    }
+  flag
 }
 
-original_pcp <- function(D, lambda, mu) {
+############################################################
+############################################################
+
+# loss_lod function (only used in the loss function)
+
+loss_lod <- function(X, D, Delta) {
+  # % D is the original data
+  # % X is the new thing (L + S)
+  # Delta is the LOD
+  
+  # % Pointwise boolean operation tricks for element-wise updating
+  X_lod <- (X - D)     * (D >= 0) +
+  # % D>=0 will spit out 0/1 (no/yes)
+  # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
+  # Normal loss for >LOD measures (distance from original value)
+    
+           t(t(X) - Delta) * (D < 0 & t(t(X) > Delta)) +
+  # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
+  # % D is < 0 when < LOD
+  # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
+    
+            X          * (D < 0 & X < 0)
+  # % If D_ij < 0 AND X_ij < 0, then X_lod = X, else zero
+  
+  l <- sum(X_lod^2) / 2
+  # % L2 norm
+  
+  # % Any D_ij < 0 AND X_ij < Delta AND > 0 are treated as equal
+  
+  # % Minimize discrepancy for valid data
+  # % Want to shrink negative things
+  l
+}
+
+############################################################
+############################################################
+
+# % If the LOD threshold Delta = 0, solve the following ADMM splitting problem:
+#   % min_{L1,L2,L3,S1,S2}
+# %      ||L1||_* + lambda * ||S1||_1 + mu/2 * ||L2+S2-D||_F^2 + I_{L3>=0}
+# % s.t. L1 = L2
+# %      L1 = L3
+# %      S1 = S2.
+# %
+# % If Delta is not 0, replace ||L2+S2-D||_F^2 with LOD penalty.
+# %
+# % Below-LOD data input in D should be denoted as negative values, e.g. -1.
+
+lod_pcp <- function(D, lambda, mu, Delta) {
   
   m <- nrow(D)
   n <- ncol(D)
+  rho <- 1 # Augmented Lagrangian coefficient (rate)
   
-  S <- matrix(0, nrow = m, ncol = n)
-  L <- matrix(0, nrow = m, ncol = n)
+  L1 <- matrix(0, m, n)
+  L2 <- matrix(0, m, n)
+  L3 <- matrix(0, m, n)
   
-  iter <- 0
-  MAX_ITER <- 20
-  done <- FALSE
+  S1 <- matrix(0, m, n)
+  S2 <- matrix(0, m, n)
   
-  while (!done) {
+  Z1 <- matrix(0, m, n)
+  Z2 <- matrix(0, m, n)
+  Z3 <- matrix(0, m, n)
+  
+  # Max iteration
+  MAX_ITER <- 100
+  
+  # Convergence Thresholds
+  LOSS_THRESH <- 1e-5
+  SAME_THRESH <- 1e-4
+  
+  loss <- vector("numeric", MAX_ITER)
+  
+  for (i in 1:MAX_ITER) {
     
-    iter <- iter + 1
+    nuc <- prox_nuclear( ((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
+    L1 <- nuc[[1]]
+    nuclearL1 <- nuc[[2]] #nuclearX
+    # % L, Z, S all start at zero, and change each iteration
+    # % Prox_nuc is singular value thresholding
+    # % L is low rank matrix
+
+    S1 <- prox_l1((S2 - Z3/rho), lambda/rho)
+    # % S is sparse matrix
     
-    svt <- singular_value_threshold((D - S), 1/mu)
-    L <- svt[[1]] #svt$N
-    v <- svt[[2]]
+    # These are all derivatives
+    L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+    L2_opt2 <- L1 + Z1/rho
+    L2_opt3 <- t((mu*rho*Delta + t(((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
+    L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
-    S <- soft_thresholding((D - L), lambda/mu)
+    L2_new <- (L2_opt1 * (D >= 0)) +
+      # If D >= LOD, use opt1 (Good)
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+      # If D < LOD and new is between 0 and LOD, use opt2 (Good)
+              (L2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
+      # If D < LOD and new > LOD use opt3 (Bad)
+              (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+      # If D < LOD and new < LOD, use opt4 (Bad)
+      # % L2_new becomes whichever of the 4 meets the conditions
     
-    obj <- v + lambda * sum(abs(S)) + (mu/2) * norm((D - L - S), type = "F")^2
+    S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+    S2_opt2 <- S1 + (Z3/rho)
+    S2_opt3 <- t(((mu*rho*Delta) + t(((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
+    S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
-    print(str_c(iter, " Obj: ", obj))
+    S2 <- (S2_opt1 * (D >= 0)) +
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
+          (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+    # % For data >LOD, use opt 1
+    # % S2 becomes whichever of the 4 meets the conditions
     
-    if (iter >= MAX_ITER) {done <- TRUE}
+    L2 <- L2_new
+    # % The code block above takes LOD into account.
+    # % The code block commented out below does not take LOD into account
+    # %     L2 = (mu*rho*D + (mu+rho)*Z1 - mu*Z3 + (mu+rho)*rho*L1 - mu*rho*S1) / (2*mu*rho+rho^2);
+    # %     S2 = (mu*rho*D + (mu+rho)*Z3 - mu*Z1 + (mu+rho)*rho*S1 - mu*rho*L1) / (2*mu*rho+rho^2);
     
+    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
+    # % Non-Negativity constraint!
+    
+    Z1 <- Z1 + rho*(L1 - L2)
+    Z2 <- Z2 + rho*(L1 - L3)
+    Z3 <- Z3 + rho*(S1 - S2)
+    # % Z accumulate differnces between L and L and between S and S
+    
+    loss[i] <- nuclearL1 + 
+      (lambda*sum(abs(S1))) +
+      (mu*loss_lod((L2 + S2), D, Delta)) +
+      sum(Z1*(L1 - L2)) +
+      sum(Z2*(L1 - L3)) +
+      sum(Z3*(S1 - S2)) +
+      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
+    # % The code block above takes LOD into account.
+    
+    # % The code block commented out below does not take LOD into account
+    # %     loss(i) = nuclearL1 + lambda*sum(sum(abs(S1))) + mu/2*sum(sum((L2+S2-D).^2)) ...
+    # %         + sum(sum(Z1.*(L1-L2))) + sum(sum(Z2.*(L1-L3))) + sum(sum(Z3.*(S1-S2))) ...
+    # %         + rho/2 * ( sum(sum((L1-L2).^2)) + sum(sum((L1-L3).^2)) + sum(sum((S1-S2).^2)) );
+
+    if ((i != 1) && 
+        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
+        is_same(SAME_THRESH, L1, L2, L3) &&
+        is_same(SAME_THRESH, S1, S2)) {
+      break} # % Convergence criteria!
   }
-  list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj)
+  
+  L <- L3 # (L1 + L2 + L3) / 3
+  S <- S1 #(S1 + S2) / 2
+  list(L = L, S = S, loss = loss)
 }
 ```
 
 ## Run PCP
 
-Run ORIGINAL PCP on separate datasets.
+Run >LOD PCP on separate datasets.
 
 ```{r}
 m <- nrow(mixture_data)
 
-results_0  <- original_pcp(as.matrix(mixture_data), 4/sqrt(m), 10)
-results_10 <- original_pcp(mix_data_lod_10, 4/sqrt(m), 10)
-results_20 <- original_pcp(mix_data_lod_20, 4/sqrt(m), 10)
-results_30 <- original_pcp(mix_data_lod_30, 4/sqrt(m), 10)
-results_40 <- original_pcp(mix_data_lod_40, 4/sqrt(m), 10)
-results_50 <- original_pcp(mix_data_lod_50, 4/sqrt(m), 10)
+results_0  <- lod_pcp(as.matrix(mixture_data), 4/sqrt(m), 10, 0)
+results_10 <- lod_pcp(mix_data_lod_10,         4/sqrt(m), 10, delta10)
+results_20 <- lod_pcp(mix_data_lod_20,         4/sqrt(m), 10, delta20)
+results_30 <- lod_pcp(mix_data_lod_30,         4/sqrt(m), 10, delta30)
+results_40 <- lod_pcp(mix_data_lod_40,         4/sqrt(m), 10, delta40)
+results_50 <- lod_pcp(mix_data_lod_50,         4/sqrt(m), 10, delta50)
 
 L_lod0 <- results_0[[1]]
 S_lod0 <- results_0[[2]]
@@ -236,7 +432,7 @@ rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 # Extract right singular vectors from each low rank solution matrix
-V_lod0  <- svd(L_lod0)$v[,1:5]
+V_lod0  <-  svd(L_lod0)$v[,1:5]
 V_lod10 <- svd(L_lod10)$v[,1:5]
 V_lod20 <- svd(L_lod20)$v[,1:5]
 V_lod30 <- svd(L_lod30)$v[,1:5]
@@ -286,48 +482,49 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```{r}
 # This one is all zeros bc nothing is <LOD to begin with
 tf_lod_0 <- mixture_data %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
-# T/F dataset, T = <LOD
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
 s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
-# keep <LOD predictions, >LOD predictions are zero
-# Solution matrices with >LOD values as zero
 true_0 <- as.matrix(mixture_data*tf_lod_0)
-# keep zeros as values, push >LOD values to zero
-# Original matrix with only zeros, all >LOD set to zero
+
 
 tf_lod_10 <- mix_data_lod_10 %>% 
-  as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 # T/F dataset, T = <LOD
 l_blod_10 <- as.matrix(tf_lod_10*L_lod10)
 s_blod_10 <- as.matrix(tf_lod_10*S_lod10)
 # keep <LOD predictions, >LOD predictions are zero
-# Solution matrice with >LOD values as zero
+# Solution L matrix with >LOD values as zero
 true_10 <- as.matrix(mixture_data*tf_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
 # Original matrix with only bottom 10percent, all >LOD set to zero
 
-tf_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+tf_lod_20 <- mix_data_lod_20 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 l_blod_20 <- as.matrix(tf_lod_20*L_lod20)
 s_blod_20 <- as.matrix(tf_lod_20*S_lod20)
 true_20 <- as.matrix(mixture_data*tf_lod_20)
 
-tf_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+tf_lod_30 <- mix_data_lod_30 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 l_blod_30 <- as.matrix(tf_lod_30*L_lod30)
 s_blod_30 <- as.matrix(tf_lod_30*S_lod30)
 true_30 <- as.matrix(mixture_data*tf_lod_30)
 
-tf_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+tf_lod_40 <- mix_data_lod_40 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 l_blod_40 <- as.matrix(tf_lod_40*L_lod40)
 s_blod_40 <- as.matrix(tf_lod_40*S_lod40)
 true_40 <- as.matrix(mixture_data*tf_lod_40)
 
-tf_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+tf_lod_50 <- mix_data_lod_50 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, TRUE, FALSE))
 l_blod_50 <- as.matrix(tf_lod_50*L_lod50)
 s_blod_50 <- as.matrix(tf_lod_50*S_lod50)
 true_50 <- as.matrix(mixture_data*tf_lod_50) 
@@ -344,14 +541,16 @@ less_diff <- as_tibble(cbind(lod0 = norm((true_0 - l_blod_0 - s_blod_0), type = 
 ```
 
 ```{r}
-above_lod_0 <- mixture_data %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_0 <- mixture_data %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 l_above_blod_0 <- as.matrix(above_lod_0*L_lod0)
 s_above_blod_0 <- as.matrix(above_lod_0*S_lod0)
 above_true_0 <- as.matrix(mixture_data*above_lod_0)
 
-above_lod_10 <- mix_data_lod_10 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_10 <- mix_data_lod_10 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 # T/F dataset, T = >LOD
 l_above_blod_10 <- as.matrix(above_lod_10*L_lod10)
 s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
@@ -359,26 +558,30 @@ s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
 above_true_10 <- as.matrix(mixture_data*above_lod_10)
 # keep 10% lowest true values, push >LOD values to zero
 
-above_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_20 <- mix_data_lod_20 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 l_above_blod_20 <- as.matrix(above_lod_20*L_lod20)
 s_above_blod_20 <- as.matrix(above_lod_20*S_lod20)
 above_true_20 <- as.matrix(mixture_data*above_lod_20)
 
-above_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_30 <- mix_data_lod_30 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 l_above_blod_30 <- as.matrix(above_lod_30*L_lod30)
 s_above_blod_30 <- as.matrix(above_lod_30*S_lod30)
 above_true_30 <- as.matrix(mixture_data*above_lod_30)
 
-above_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_40 <- mix_data_lod_40 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 l_above_blod_40 <- as.matrix(above_lod_40*L_lod40)
 s_above_blod_40 <- as.matrix(above_lod_40*S_lod40)
 above_true_40 <- as.matrix(mixture_data*above_lod_40)
 
-above_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
+above_lod_50 <- mix_data_lod_50 %>% 
+  as_tibble() %>% 
+  mutate_all(~ifelse(. == -1, FALSE, TRUE))
 l_above_blod_50 <- as.matrix(above_lod_50*L_lod50)
 s_above_blod_50 <- as.matrix(above_lod_50*S_lod50)
 above_true_50 <- as.matrix(mixture_data*above_lod_50) 

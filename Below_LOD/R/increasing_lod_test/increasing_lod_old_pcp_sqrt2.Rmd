@@ -1,5 +1,5 @@
 ---
-title: "Increasing <LOD with Old PCP using LOD/sqrt(2)"
+title: "Increasing <LOD with Old PCP and LOD/sqrt(2)"
 subtitle: "Boston air pollution example"
 author: "Lizzy Gibson"
 date: "7/20/2019"
@@ -12,7 +12,7 @@ output:
 
 ```{r setup, include=FALSE}
 require("knitr")
-opts_knit$set(root.dir = "../../")
+opts_knit$set(root.dir = "../../..")
 opts_chunk$set(echo = TRUE)
 options(scipen = 999)
 library(R.matlab)
