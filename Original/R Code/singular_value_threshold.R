@@ -1,6 +1,6 @@
 #R code
 
-source("/Users/lizzy/Principle.Component.Pursuit/R Code/soft_thresholding.R")
+source("/Users/lizzy/Principle.Component.Pursuit/Original/R Code/soft_thresholding.R")
 
 singular_value_threshold <- function(M, lambda) {
   

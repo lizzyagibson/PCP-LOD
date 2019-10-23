@@ -2,7 +2,7 @@
 
 library(stringr)
 
-source("/Users/lizzy/Principle.Component.Pursuit/R Code/singular_value_threshold.R")
+source("/Users/lizzy/Principle.Component.Pursuit/Original/R Code/singular_value_threshold.R")
 
 stable_pcp_alternating <- function(D, lambda, mu) {
   
