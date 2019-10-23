@@ -1,5 +1,5 @@
 ---
-title: "<LOD PCP with EDCs"
+title: "<LOD PCP with EDCs (not centered)"
 author: "Lizzy Gibson"
 date: "2/26/2019"
 output:
@@ -62,6 +62,7 @@ edc <- mn_edc %>% select(1:18) %>%
 ### Import PCP Function
 
 ```{r import}
+# Function updated 10/16/2019
 # Prox L1 norm function, soft thresholding
 # if Y < c (threshold), push to zero
 prox_l1 <- function(Y, c) {
@@ -299,7 +300,6 @@ n <- ncol(mix)
 
 svd(mix)$d
 
-#BY CONVENTION, should we change?
 lambda = 1/sqrt(m)
 ```
 

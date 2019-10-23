@@ -1,5 +1,5 @@
 ---
-title: "PCP with EDCs (centered and scaled)"
+title: "Original PCP with EDCs (centered and scaled)"
 author: "Lizzy Gibson"
 date: "2/26/2019"
 output:
@@ -176,27 +176,6 @@ pcp <- function(D, mu) {
 }
 ```
 
-## Data Viz
-
-### Raw Data
-```{r edc}
-edc %>% 
-  gather(key = EDC, value = Concentration, -sid) %>% 
-  ggplot(aes(x = Concentration)) + geom_density() +
-  facet_wrap(~EDC, scales = "free") + theme_minimal()
-```
-
-SG adjustment got rid of the right tail spikes.
-
-### Scaled Data
-```{r scaled}
-edc %>% 
-  mutate_if(is.numeric, scale) %>% 
-  gather(key = EDC, value = Concentration, -sid) %>% 
-  ggplot(aes(x = Concentration)) + geom_density() +
-  facet_wrap(~EDC, scales = "free") + theme_minimal()
-```
-
 ## PCP with Selected $\mu = 0.3$
 
 ```{r basic}
@@ -213,8 +192,7 @@ n <- ncol(mix)
 
 svd(mix)$d
 
-#BY CONVENTION, should we change?
-lambda = 1/sqrt(m)
+lambda = 1/sqrt(m) # set inside function
 ```
 
 ```{r new}
@@ -438,5 +416,26 @@ sparse_viz <- dat_sparse %>%
 #png("./Figures/sparse_viz.png", width = 800, height = 800, res = 200)
 sparse_viz
 #dev.off()
+```
+
+## More Data Viz
+
+### Raw Data
+```{r edc}
+edc %>% 
+  gather(key = EDC, value = Concentration, -sid) %>% 
+  ggplot(aes(x = Concentration)) + geom_density() +
+  facet_wrap(~EDC, scales = "free") + theme_minimal()
+```
+
+SG adjustment got rid of the right tail spikes.
+
+### Scaled Data
+```{r scaled}
+edc %>% 
+  mutate_if(is.numeric, scale) %>% 
+  gather(key = EDC, value = Concentration, -sid) %>% 
+  ggplot(aes(x = Concentration)) + geom_density() +
+  facet_wrap(~EDC, scales = "free") + theme_minimal()
 ```
 
