@@ -27,6 +27,8 @@ vignettes/*.pdf
 # knitr and R markdown default cache directories
 /*_cache/
 /cache/
+/Below_LOD/R/pcp_lambda_mu_lod_penalty_files/
+/Below_LOD/R/pcp_lambda_mu_lod_penalty_cache/
 
 # Temporary files created by R markdown
 *.utf8.md
