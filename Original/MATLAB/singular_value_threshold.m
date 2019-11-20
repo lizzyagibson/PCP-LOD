@@ -58,8 +58,9 @@ function [N,v,sv] = singular_value_threshold( M, lambda, B, sv )
     
 %    N = U * diag(s) * V';
 %	
-end
     
 v = sum(diag(soft_thresholding(S,lambda))); 
+
+end
 % diag converts diagonal matrix into straight vector
 % takes singular value diagonal matrix and makes vector of singular values

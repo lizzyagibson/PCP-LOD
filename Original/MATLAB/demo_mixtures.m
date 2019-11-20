@@ -1,8 +1,8 @@
 % demo_mixtures
 clear;
 
-addpath('./ADMM constrained');
-load('mixtures_data.mat');
+addpath('/Users/lizzy/Principle.Component.Pursuit/');
+load('./Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
 X = [Al As Ba bc Br Ca Cl Cr Cu Fe K  Mn  Ni  Pb  S  Se  Si Ti  V Zn];
@@ -19,7 +19,7 @@ X = X(goodRows,:);
 
 [m,n] = size(X);
 % m and n become the number of rows and columns
-X = normalize_columns(X); 
+X = normalize(X); 
 % subtract mean and divide by std dev
 
 %Xcentered = X; 

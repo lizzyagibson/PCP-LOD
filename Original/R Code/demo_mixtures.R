@@ -39,9 +39,9 @@ colSums(mixture_L)
 colSums(L_matlab)
 
 #compare svd(L) with MATLAB code
-U_matlab <- read_csv("./U_matlab.csv", col_names = FALSE)
-sigma_matlab <- read_csv("./Sigma_matlab.csv", col_names = FALSE) %>% as.matrix()
-V_matlab <- read_csv("./V_matlab.csv", col_names = FALSE)
+U_matlab <- read_csv("./Original/MATLAB/U_matlab.csv", col_names = FALSE)
+sigma_matlab <- read_csv("./Original/MATLAB/Sigma_matlab.csv", col_names = FALSE) %>% as.matrix()
+V_matlab <- read_csv("./Original/MATLAB/V_matlab.csv", col_names = FALSE)
 
 #similar sigma!
 colSums(sigma_matlab)
@@ -56,3 +56,4 @@ summary(svd(mixture_L)$v[,1])
 
 hist(V_matlab$X1)
 hist(svd(mixture_L)$v[,1])
+
