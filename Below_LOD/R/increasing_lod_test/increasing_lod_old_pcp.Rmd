@@ -197,9 +197,12 @@ F_norm_l <- as_tibble(cbind(lod0 = norm((X - L_lod0), type = "F")/norm((X), type
   gather(percent_blod, norm) %>% 
   mutate(Matrix = "Low-Rank")
 
+#pdf("original_lod_subzero_Fnorm.pdf")
 F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))")
+  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
+       title = "Original PCP w/ 0")
+#dev.off()
 
 rbind(F_norm, F_norm_l, F_norm_s) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
@@ -227,9 +230,12 @@ S_diff <- as_tibble(cbind(lod0 = norm((S_lod0 - S_lod0), type = "F")/norm((S_lod
   gather(percent_blod, norm) %>% 
   mutate(Matrix = "Sparse")
 
+#pdf("original_lod_subzero_LandS.pdf")
 rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))")
+  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
+       title = "Original PCP w/ 0")
+#dev.off()
 ```
 
 ### SVD low rank vs. no \<LOD
@@ -251,10 +257,13 @@ V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0
       lod50 =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
+#pdf("original_lod_subzero_singular_vectors.pdf")
 V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))")
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ 0")
+#dev.off()
 ```
 
 ### SVD low rank vs. original
@@ -263,7 +272,7 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 # Extract right singular vectors from original matrix
 V_orig <- svd(X)$v[,1:5]
 
-V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig), type = "F"),
+V_diff2 <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig), type = "F"),
       lod10 =norm((V_lod10 - V_orig), type = "F")/norm((V_orig), type = "F"),
       lod20 =norm((V_lod20 - V_orig), type = "F")/norm((V_orig), type = "F"),
       lod30 =norm((V_lod30 - V_orig), type = "F")/norm((V_orig), type = "F"),
@@ -271,10 +280,13 @@ V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig
       lod50 =norm((V_lod50 - V_orig), type = "F")/norm((V_orig), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+#pdf("original_lod_subzero_singular_vectors_vs_original.pdf")
+V_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))")
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ 0")
+#dev.off()
 ```
 
 ### Values \<LOD vs \>LOD
@@ -286,7 +298,7 @@ V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```{r}
 # This one is all zeros bc nothing is <LOD to begin with
 tf_lod_0 <- mixture_data %>% 
-  mutate_all(~ifelse(. == 0, TRUE, FALSE))
+  mutate_all(~ifelse(. == 0, FALSE, FALSE))
 # T/F dataset, T = <LOD
 l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
 s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
@@ -344,11 +356,9 @@ less_diff <- as_tibble(cbind(lod0 = norm((true_0 - l_blod_0 - s_blod_0), type = 
 ```
 
 ```{r}
-above_lod_0 <- mixture_data %>% as_tibble(.) %>% 
-  mutate_all(~ifelse(. == 0, FALSE, TRUE))
-l_above_blod_0 <- as.matrix(above_lod_0*L_lod0)
-s_above_blod_0 <- as.matrix(above_lod_0*S_lod0)
-above_true_0 <- as.matrix(mixture_data*above_lod_0)
+l_above_blod_0 <- as.matrix(L_lod0)
+s_above_blod_0 <- as.matrix(S_lod0)
+above_true_0 <- as.matrix(mixture_data)
 
 above_lod_10 <- mix_data_lod_10 %>% as_tibble(.) %>% 
   mutate_all(~ifelse(. == 0, FALSE, TRUE))
@@ -396,9 +406,142 @@ above_diff <- as_tibble(cbind(
   gather(percent_blod, norm) %>% 
   mutate(Values = "> LOD")
 
+#pdf("original_lod_subzero_above_below.pdf")
 rbind(above_diff, less_diff) %>% 
   ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
-       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))")
+       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
+       title = "Original PCP w/ 0")
+#dev.off()
+```
+
+### SVD compare scores - low rank vs. no \<LOD
+
+```{r}
+# Extract left singular vectors from each low rank solution matrix
+u_lod0  <-  svd(L_lod0)$u
+u_lod10 <- svd(L_lod10)$u
+u_lod20 <- svd(L_lod20)$u
+u_lod30 <- svd(L_lod30)$u
+u_lod40 <- svd(L_lod40)$u
+u_lod50 <- svd(L_lod50)$u
+
+u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod10 =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod20 =norm((u_lod20 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod30 =norm((u_lod30 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod40 =norm((u_lod40 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod50 =norm((u_lod50 - u_lod0), type = "F")/norm((u_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("original_lod_subzero_score_vectors.pdf")
+u_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ 0")
+#dev.off()
+```
+
+### SVD compare scores - low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+u_orig <- svd(X)$u
+
+u_diff2 <- as_tibble(cbind(lod0 =norm((u_lod0 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod10 =norm((u_lod10 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod20 =norm((u_lod20 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod30 =norm((u_lod30 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod40 =norm((u_lod40 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod50 =norm((u_lod50 - u_orig), type = "F")/norm((u_orig), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("original_lod_subzero_score_vectors_vs_original.pdf")
+u_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ 0")
+#dev.off()
+```
+
+### SVD compare singular values - low rank vs. no \<LOD
+
+```{r}
+# Extract left singular vectors from each low rank solution matrix
+d_lod0  <-  svd(L_lod0)$d
+d_lod10 <- svd(L_lod10)$d
+d_lod20 <- svd(L_lod20)$d
+d_lod30 <- svd(L_lod30)$d
+d_lod40 <- svd(L_lod40)$d
+d_lod50 <- svd(L_lod50)$d
+norm_vec <- function(x) sqrt(sum(x^2))
+
+d_diff <- as_tibble(cbind(lod0 = norm_vec(d_lod0 - d_lod0)/norm_vec(d_lod0),
+      lod10 = norm_vec(d_lod10 - d_lod0)/norm_vec(d_lod0),
+      lod20 = norm_vec(d_lod20 - d_lod0)/norm_vec(d_lod0),
+      lod30 = norm_vec(d_lod30 - d_lod0)/norm_vec(d_lod0),
+      lod40 = norm_vec(d_lod40 - d_lod0)/norm_vec(d_lod0),
+      lod50 = norm_vec(d_lod50 - d_lod0)/norm_vec(d_lod0))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("original_lod_penalty_sv.pdf")
+d_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ 0")
+#dev.off()
+```
+
+### SVD compare singular values - low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+d_orig <- svd(X)$d
+
+d_diff2 <- as_tibble(cbind(lod0 = norm_vec(d_lod0 - d_orig)/norm_vec(d_orig),
+      lod10 =norm_vec(d_lod10 - d_orig)/norm_vec(d_orig),
+      lod20 =norm_vec(d_lod20 - d_orig)/norm_vec(d_orig),
+      lod30 =norm_vec(d_lod30 - d_orig)/norm_vec(d_orig),
+      lod40 =norm_vec(d_lod40 - d_orig)/norm_vec(d_orig),
+      lod50 =norm_vec(d_lod50 - d_orig)/norm_vec(d_orig))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("original_lod_penalty_sv_vs_original.pdf")
+d_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ 0")
+#dev.off()
+```
+
+## Sanity Check
+
+SVD results should produce original matrix solution.
+
+```{r}
+dim(svd(X)$u)
+length(svd(X)$d)
+dim(svd(X)$v)
+
+# Does svd give v or v' ?
+# Should = zero
+norm((X - (svd(X)$u %*% diag(svd(X)$d) %*% t(svd(X)$v))), type = "F")
+norm((X - (svd(X)$u %*% diag(svd(X)$d) %*% svd(X)$v)), type = "F")
+
+svd_diff <- as_tibble(cbind(
+      lod0  = norm((L_lod0 - (u_lod0  %*% diag(d_lod0)  %*% t(svd(L_lod0)$v))),  type = "F")/norm((L_lod0),  type = "F"),
+      lod10 =norm((L_lod10 - (u_lod10 %*% diag(d_lod10) %*% t(svd(L_lod10)$v))), type = "F")/norm((L_lod10), type = "F"),
+      lod20 =norm((L_lod20 - (u_lod20 %*% diag(d_lod20) %*% t(svd(L_lod20)$v))), type = "F")/norm((L_lod20), type = "F"),
+      lod30 =norm((L_lod30 - (u_lod30 %*% diag(d_lod30) %*% t(svd(L_lod30)$v))), type = "F")/norm((L_lod30), type = "F"),
+      lod40 =norm((L_lod40 - (u_lod40 %*% diag(d_lod40) %*% t(svd(L_lod40)$v))), type = "F")/norm((L_lod40), type = "F"),
+      lod50 =norm((L_lod50 - (u_lod50 %*% diag(d_lod50) %*% t(svd(L_lod50)$v))), type = "F")/norm((L_lod50), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+# Basically zero
+svd_diff
 ```
