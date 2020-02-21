@@ -1,65 +1,159 @@
 ---
-title: "<LOD Penalty PCP -- vary $\\lambda$ and $\\mu$"
+title: "PCP-LOD: Increasing LOD in NHANES POPs"
 author: "Lizzy Gibson"
-date: "9/3/2019"
-output:
+date: "2/1/2020"
+output: 
   html_document:
-    toc: yes
-    toc_float: yes
-    toc_depth: 4
-    code_folding: hide
+    toc: TRUE
+    toc_float: TRUE
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
-options(scipen = 999)
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("tidyverse")
 library(tidyverse)
+#install.packages("janitor")
 library(janitor)
-library(reshape2)
+#install.packages("ggcorrplot")
 library(ggcorrplot)
+#install.packages("ggfortify")
 library(ggfortify)  
+#install.packages("gridExtra")
 library(gridExtra)
+#install.packages("factoextra")
 library(factoextra)
-library(Matrix)
+#install.packages("knitr")
+library(knitr)
+library(haven)
 library(rlist)
-library(ggrepel)
-library(broom)
-library(R.matlab)
+
+options(scipen = 999)
 ```
 
-## Read Data
+# Data Import and Cleaning
 
-Read Boston air pollution data.
+CDC imputes values \<LOD as LOD/sqrt(2). Here, if comment code = "below detectable limit", set value to -1.
 
-```{r read}
-# Read air pollution data
-mixture <- readMat(here::here("Data/mixtures_data.mat"))
-
-mix <- as.data.frame(mixture) %>% as_tibble() %>% 
-  select(Al, As, Ba, bc, Br, Ca, Cl,
-         Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
-         Ti,  V, Zn) %>% 
-  drop_na(.) %>% 
-  as.matrix(.)
-
-m <- nrow(mix)
-n <- ncol(mix)
-
-lambda_mix = 1/sqrt(m)
-#This is the default lambda
+```{r}
+pop_lods <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
+  clean_names() %>% 
+  mutate(lbx074la = ifelse(lbd074lc == 1, -1, lbx074la),
+         lbx099la = ifelse(lbd099lc == 1, -1, lbx099la),
+         lbx105la = ifelse(lbd105lc == 1, -1, lbx105la),
+         lbx118la = ifelse(lbd118lc == 1, -1, lbx118la),
+         lbx138la = ifelse(lbd138lc == 1, -1, lbx138la),
+         lbx153la = ifelse(lbd153lc == 1, -1, lbx153la),
+         lbx156la = ifelse(lbd156lc == 1, -1, lbx156la),
+         lbx157la = ifelse(lbd157lc == 1, -1, lbx157la),
+         lbx167la = ifelse(lbd167lc == 1, -1, lbx167la),
+         lbx170la = ifelse(lbd170lc == 1, -1, lbx170la),
+         lbx180la = ifelse(lbd180lc == 1, -1, lbx180la),
+         lbx187la = ifelse(lbd187lc == 1, -1, lbx187la),
+         lbxd01la = ifelse(lbdd01lc == 1, -1, lbxd01la),
+         lbxd03la = ifelse(lbdd03lc == 1, -1, lbxd03la),
+         lbxd04la = ifelse(lbdd04lc == 1, -1, lbxd04la),
+         lbxd05la = ifelse(lbdd05lc == 1, -1, lbxd05la),
+         lbxd07la = ifelse(lbdd07lc == 1, -1, lbxd07la),
+         lbxf01la = ifelse(lbdf01lc == 1, -1, lbxf01la),
+         lbxf02la = ifelse(lbdf02lc == 1, -1, lbxf02la),
+         lbxf03la = ifelse(lbdf03lc == 1, -1, lbxf03la),
+         lbxf04la = ifelse(lbdf04lc == 1, -1, lbxf04la),
+         lbxf05la = ifelse(lbdf05lc == 1, -1, lbxf05la),
+         lbxf06la = ifelse(lbdf06lc == 1, -1, lbxf06la),
+         lbxf07la = ifelse(lbdf07lc == 1, -1, lbxf07la),
+         lbxf08la = ifelse(lbdf08lc == 1, -1, lbxf08la),
+         lbxpcbla = ifelse(lbdpcblc == 1, -1, lbxpcbla),
+         lbxtcdla = ifelse(lbdtcdlc == 1, -1, lbxtcdla),
+         lbxhxcla = ifelse(lbdhxclc == 1, -1, lbxhxcla),
+         lbx189la = ifelse(lbd189lc == 1, -1, lbx189la),
+         lbx194la = ifelse(lbd194lc == 1, -1, lbx194la),
+         lbx196la = ifelse(lbd196lc == 1, -1, lbx196la),
+         lbx199la = ifelse(lbd199lc == 1, -1, lbx199la),
+         lbxd02la = ifelse(lbdd02lc == 1, -1, lbxd02la),
+         lbxf09la = ifelse(lbdf09lc == 1, -1, lbxf09la)) %>% 
+    select(names(.)[grep("la", names(.))] ) %>% 
+    na.omit(.) %>% 
+    as.matrix(.)
 ```
 
-### Import NEW \< LOD Penalty PCP Function
+Here, make matrix of LODs to use in PCP-LOD. Comment code = 1 means "below detectable limit", so element-wise multiplication gives us a matrix of LOD/sqrt(2) where values are \<LOD and zero where values are \>LOD. Take this product and multiply by sqrt(2) and we have a matrix of LODs with zero in cells that are above the LOD. Should we still have the LOD there? Will it matter?
+
+```{r}
+lods <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
+  clean_names() %>% 
+  select(names(.)[grep("lc", names(.))] ) %>% 
+  na.omit()
+
+pops <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
+  clean_names() %>% 
+  select(names(.)[grep("la", names(.))] ) %>% 
+  na.omit()
+
+lod_matrix <- (lods * pops) * sqrt(2)
+lod_matrix <- as.matrix(lod_matrix)
+```
+
+**Need to scale LODs, too!**
+
+Need to scale PCBs because they have super different ranges. Need to get rid of values less than LOD to scale and then add them back.
+
+
+
+```{r}
+summary(pop_lods)
+
+# make <LOD NA so they dont affect the scaling
+pop_lods[pop_lods < 0] <- NA
+
+pop_sd <- apply(as.matrix(pop_lods), 2, sd, na.rm = TRUE)
+pop_sd[is.na(pop_sd)] <- 1
+pop_sd <- as.vector(pop_sd)
+
+head(pop_lods[,5]/pop_sd[5])
+
+# Scale bc way different ranges
+pop_lods <- scale(pop_lods, center = FALSE, scale = pop_sd)
+
+# make <LOD negative again
+pop_lods[is.na(pop_lods)] <- -100
+mixture_data <- pop_lods
+
+summary(mixture_data)
+```
+
+Also want to scale the LODS!
+
+```{r}
+# Scale bc way different ranges
+lod_matrix <- scale(lod_matrix, center = FALSE, scale = pop_sd)
+```
+
+Probably don't want log.
+
+```{r}
+#create a new data frame with my.x and convert values for the predictor variables to its natural log.
+#log.x <- data.frame(apply(studypop, 2, FUN = function(x) log(x))) %>%
+ # setNames(paste(my.x, "log", sep = ".")) #add suffix 12 to the predictors' name
+
+#check dimensions of dataset
+#dim(log.x)
+
+#summary statistics on dataset
+#summary(log.x)
+```
+
+### >LOD PCP Function
 
 ```{r import}
+# Updated 10/16/2019
 # Prox L1 norm function, soft thresholding
 # if Y < c (threshold), push to zero
 prox_l1 <- function(Y, c) {
   
-  myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
-  X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
-  X
-} 
+    myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
+    X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
+    X
+    } 
 
 ############################################################
 ############################################################
@@ -72,11 +166,11 @@ prox_nuclear <- function(Y,c) {
   U <- USV$u
   S <- USV$d
   V <- USV$v
-  
+
   myzero <- vector("numeric", length = length(S))
   S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
   # Threshold the singular values, if SV < c, push it to zero
-  
+
   X <- U %*% diag(S_new) %*% t(V)
   # % X is the truncation of the original
   # % Multiply the thresholded SVD components back together
@@ -84,9 +178,9 @@ prox_nuclear <- function(Y,c) {
   nuclearX  <- sum(abs(S_new))
   # This is the L1 norm of the truncated singular values
   # Goes into the loss function
-  
+
   list(X = X, nuclearX = nuclearX)
-}
+  }
 
 ############################################################
 ############################################################
@@ -103,18 +197,18 @@ prox_nuclear <- function(Y,c) {
 is_same <- function(SAME_THRESH, ...) {
   flag <- TRUE
   varargin <- list(...)
-  if (length(varargin) == 2) {
-    if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
+    if (length(varargin) == 2) {
+      if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
       flag <- FALSE
     }
   }
-  else if (length(varargin) == 3) {
-    if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
-        (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
-        (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
+    else if (length(varargin) == 3) {
+      if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
+         (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
+         (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
       flag <- FALSE
+      }
     }
-  }
   flag
 }
 
@@ -130,16 +224,16 @@ loss_lod <- function(X, D, Delta) {
   
   # % Pointwise boolean operation tricks for element-wise updating
   X_lod <- (X - D)     * (D >= 0) +
-    # % D>=0 will spit out 0/1 (no/yes)
-    # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
-    # Normal loss for >LOD measures (distance from original value)
+  # % D>=0 will spit out 0/1 (no/yes)
+  # % If D_ij >= 0, then X_lod = (X - D)_ij, else zero
+  # Normal loss for >LOD measures (distance from original value)
     
-    t(t(X) - Delta) * (D < 0 & t(t(X) > Delta)) +
-    # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
-    # % D is < 0 when < LOD
-    # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
+           ((X) - Delta) * (D < 0 & ((X) > Delta)) +
+  # % If D_ij < 0 AND X_ij > Delta, then X_lod = X_ij - Delta, else zero
+  # % D is < 0 when < LOD
+  # This should be penalized more because D <LOD but (L+S) >LOD (distance from LOD)
     
-    X          * (D < 0 & X < 0)
+            X          * (D < 0 & X < 0)
   # % If D_ij < 0 AND X_ij < 0, then X_lod = X, else zero
   
   l <- sum(X_lod^2) / 2
@@ -166,7 +260,7 @@ loss_lod <- function(X, D, Delta) {
 # %
 # % Below-LOD data input in D should be denoted as negative values, e.g. -1.
 
-pcp_lod <- function(D, lambda, mu, Delta) {
+lod_pcp <- function(D, lambda, mu, Delta) {
   
   m <- nrow(D)
   n <- ncol(D)
@@ -184,7 +278,7 @@ pcp_lod <- function(D, lambda, mu, Delta) {
   Z3 <- matrix(0, m, n)
   
   # Max iteration
-  MAX_ITER <- 10000
+  MAX_ITER <- 1000
   
   # Convergence Thresholds
   LOSS_THRESH <- 1e-5
@@ -200,35 +294,35 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     # % L, Z, S all start at zero, and change each iteration
     # % Prox_nuc is singular value thresholding
     # % L is low rank matrix
-    
+
     S1 <- prox_l1((S2 - Z3/rho), lambda/rho)
-    # % S is sparse matrix�
+    # % S is sparse matrix
     
     # These are all derivatives
     L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     L2_opt2 <- L1 + Z1/rho
-    L2_opt3 <- t((mu*rho*Delta + t(((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
+    L2_opt3 <- ((mu*rho*Delta + (((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
     L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
     
     L2_new <- (L2_opt1 * (D >= 0)) +
       # If D >= LOD, use opt1 (Good)
-      (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
+              (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
       # If D < LOD and new is between 0 and LOD, use opt2 (Good)
-      (L2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
+              (L2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
       # If D < LOD and new > LOD use opt3 (Bad)
-      (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
-    # If D < LOD and new < LOD, use opt4 (Bad)
-    # % L2_new becomes whichever of the 4 meets the conditions
+              (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+      # If D < LOD and new < LOD, use opt4 (Bad)
+      # % L2_new becomes whichever of the 4 meets the conditions
     
     S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     S2_opt2 <- S1 + (Z3/rho)
-    S2_opt3 <- t(((mu*rho*Delta) + t(((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
+    S2_opt3 <- (((mu*rho*Delta) + (((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
     S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
     
     S2 <- (S2_opt1 * (D >= 0)) +
-      (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & t(t(L2 + S2) <= Delta))) +
-      (S2_opt3 * ((D < 0) & t(t(L2 + S2) > Delta))) +
-      (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+          (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= Delta))) +
+          (S2_opt3 * ((D < 0) & ((L2 + S2) > Delta))) +
+          (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
     # % For data >LOD, use opt 1
     # % S2 becomes whichever of the 4 meets the conditions
     
@@ -259,7 +353,7 @@ pcp_lod <- function(D, lambda, mu, Delta) {
     # %     loss(i) = nuclearL1 + lambda*sum(sum(abs(S1))) + mu/2*sum(sum((L2+S2-D).^2)) ...
     # %         + sum(sum(Z1.*(L1-L2))) + sum(sum(Z2.*(L1-L3))) + sum(sum(Z3.*(S1-S2))) ...
     # %         + rho/2 * ( sum(sum((L1-L2).^2)) + sum(sum((L1-L3).^2)) + sum(sum((S1-S2).^2)) );
-    
+
     print(str_c("Iteration: ", i, "; Obj: ", round(loss[i], 7)))
     
     if ((i != 1) && 
@@ -269,10 +363,27 @@ pcp_lod <- function(D, lambda, mu, Delta) {
       break} # % Convergence criteria!
   }
   
-  L <- L3 # (L1 + L2 + L3) / 3
-  S <- S1 #(S1 + S2) / 2
+  L <- (L1 + L2 + L3) / 3 #L3
+  S <- (S1 + S2) / 2 #S1
   list(L = L, S = S, loss = loss)
 }
+```
+
+## Run PCP
+
+```{r}
+m <- nrow(mixture_data)
+n <- ncol(mixture_data)
+
+results_0  <- lod_pcp(mixture_data, 1/sqrt(m), 1/sqrt(n), Delta = lod_matrix)
+results_0$loss
+
+L_lod0 <- results_0[[1]]
+S_lod0 <- results_0[[2]]
+svd(L_lod0)$d
+
+length(L_lod0[L_lod0 >= 0])
+length(L_lod0)
 ```
 
 ## Vary $\mu$
@@ -280,15 +391,14 @@ pcp_lod <- function(D, lambda, mu, Delta) {
 Create function to output new low rank matrix, sparse matrix, singular values and rank of new low rank matrix, and $\lambda$ and $\mu$ parameters used
 
 ```{r mu_lam}
-mu_value <- seq(0.01, 20, by = 0.5)
-# Every mu > 3 has all 17 non-zero singular values.
+mu_value <- c(seq(0.01, 1/sqrt(n), by = 0.1), seq(1/sqrt(n), 10, by = 0.5))
 
-make_L_mu_l <- function(mu){ 
-  mixture_mu <- pcp_lod(mix, 1/sqrt(m), mu, 0)
+make_L_mu <- function(mu){ 
+  mixture_mu <- lod_pcp(as.matrix(mixture_data), 1/sqrt(m), mu, as.matrix(lod_matrix))
   L <- mixture_mu$L
   S <- mixture_mu$S
   sv_diag <- svd(L)$d # singular values on new low rank matrix
-  sv_count <- sum(sv_diag > 0.0001) # rank of new low rank matrix
+  sv_count <- sum(sv_diag > 0.001) # rank of new low rank matrix
   list(L = L, SV = sv_diag, S = S, Count = sv_count, Mu = mu, Lambda = 1/sqrt(m))
 }
 ```
@@ -296,7 +406,7 @@ make_L_mu_l <- function(mu){
 Loop over $\lambda$, $\mu$ pairs.
 
 ```{r looop, results = FALSE, cache = TRUE}
-range_out <- map(.x = mu_value, ~make_L_mu_l(mu = .x))
+range_out <- map(.x = mu_value, ~make_L_mu(mu = .x))
 ```
 
 ### Changing Low Rank Matrix
@@ -334,7 +444,7 @@ sparse <- range_out %>% list.map(.[3])
 
 loop.vector2 <- 1:length(mu_value)
 
-cells <- nrow(mix)*ncol(mix)
+cells <- m*n
 prop_not_zero <- vector(length = length(mu_value))
 
 for (i in loop.vector2) { # Loop over loop.vector2
@@ -352,7 +462,7 @@ sparseness %>% summary()
 ```
 
 ```{r}
-sparseness %>% 
+sparseness %>%
   ggplot(aes(x = mu, y = prop_not_zero)) +
   geom_point() + geom_line() +
   theme_bw() +
@@ -365,10 +475,11 @@ sparseness %>%
 
 ## Error
 
-Each PCP creates a low rank L matrix and a sparse matrix that sum to the original D matrix with some error. To choose the best value for $\lambda$ and $\mu$, we add the L and S matrices to form D', then subtract D - D' to get an error matrix for each $\lambda$ and $\mu$ pair. We then take the RMSE of the low rank matrix and the F norm of each error matrix, divided by the norm of the original matrix, to get relative error.
+Each PCP creates a low rank L matrix and a sparse matrix that sum to the original D matrix with some error. To choose the best value for $\mu$, we add the L and S matrices to form D', then subtract D - D' to get an error matrix for each $\mu$. We then take the RMSE of the low rank matrix and the F norm of each error matrix, divided by the norm of the original matrix, to get relative error.
 
 ```{r cv_both}
 # low_rank and sparse are lists of L and S matrices for each 
+mix <- as.matrix(mixture_data)
 
 loop.vector2 <- 1:length(mu_value)
 rmse <- vector(length = length(mu_value))
@@ -381,7 +492,7 @@ sparse_ml <- range_out %>% list.map(.[3])
 for (i in loop.vector2) { # Loop over loop.vector
   new_ml[[i]]  <- low_rank_ml[[i]]$L + sparse_ml[[i]]$S
   rmse[i]      <- sqrt(mean((mix - new_ml[[i]])^2))
-  rel_error[i] <- norm((mix - new_ml[[i]]), type = "F")/norm(mix, type = "F")
+  rel_error[i] <- norm((mixture_data - new_ml[[i]]), type = "F")/norm(mix, type = "F")
   }
 
 cv <- cbind(mu_value, rmse, rel_error) %>% as_tibble()
