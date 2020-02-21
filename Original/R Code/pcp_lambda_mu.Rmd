@@ -308,13 +308,12 @@ Loop over $\lambda$, $\mu$ pairs.
 ```{r looop, results = FALSE, cache = TRUE}
 range_out <- map2(.x = lambda_value, .y = mu_value, ~make_L_mu_l(lambda = .x, mu = .y))
 
-
-mu_value2 <- seq(11.1, 20, by = 0.1)
-parameters2 <- expand.grid(mu_value2, lambda_value)
+# mu_value2 <- seq(11.1, 20, by = 0.1)
+# parameters2 <- expand.grid(mu_value2, lambda_value)
 # combo of all mu and lambda pairs
-mu_value2 <- parameters2[,1]
-lambda_value2 <- parameters2[,2]
-range_out2 <- map2(.x = lambda_value2, .y = mu_value2, ~make_L_mu_l(lambda = .x, mu = .y))
+# mu_value2 <- parameters2[,1]
+# lambda_value2 <- parameters2[,2]
+# range_out2 <- map2(.x = lambda_value2, .y = mu_value2, ~make_L_mu_l(lambda = .x, mu = .y))
 ```
 
 ### Changing Low Rank Matrix

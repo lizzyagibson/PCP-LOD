@@ -16,7 +16,6 @@ stringr
 forcats
 janitor
 reshape2
-tableone
 ggcorrplot
 ggfortify
 gridExtra
