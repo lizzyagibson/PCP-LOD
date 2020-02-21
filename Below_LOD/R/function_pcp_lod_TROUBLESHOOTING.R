@@ -323,7 +323,7 @@ r_output50 <- pcp_lod(mix_data_lod_50, 4/sqrt(m), 10, delta50)
 lowrank_r50 <- r_output50$L
 sparse_r50 <- r_output50$S
 
-# NOPE
+# same-ish
 norm(lowrank_r50 - lowrank_m50, type = "F")
 norm(sparse_r50 - sparse_m50, type = "F")
 

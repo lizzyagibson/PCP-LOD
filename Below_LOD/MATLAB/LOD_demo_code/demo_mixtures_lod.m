@@ -1,7 +1,7 @@
 % demo_mixtures
 clear;
 
-load('mixtures_data.mat');
+load('../../../Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
 X = [Al As Ba bc Br Ca Cl Cr Cu Fe K  Mn  Ni  Pb  S  Se  Si Ti  V Zn];
