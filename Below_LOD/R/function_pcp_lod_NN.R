@@ -5,7 +5,7 @@
 # 5 functions total ########################################
 ############################################################
 # Updated: 2/19/2020, fixed matrix*matrix vs matrix*vector #
-# Updated: 3/24/2020, removed negative pre-processing <LOD #
+# Updated: 3/34/2020, removed negative pre-processing <LOD #
 ############################################################
 
 library(matconv)
@@ -15,7 +15,7 @@ library(tidyverse)
 ############################################################
 
 # Prox L1 norm function, soft thresholding
-# If Y < c (threshold), push to zero
+# if Y < c (threshold), push to zero
 prox_l1 <- function(Y, c) {
   
   myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
@@ -40,6 +40,7 @@ prox_nuclear <- function(Y,c) {
   # Threshold the singular values, if SV < c, push it to zero
   
   X <- U %*% diag(S_new) %*% t(V)
+  # this t(.) is for all scalar, vector, matrices
   # % X is the truncation of the original
   # % Multiply the thresholded SVD components back together
   
@@ -60,7 +61,6 @@ prox_nuclear <- function(Y,c) {
 # Compares L1, L2, L3 OR S1, S2
 # Need ... for function to handle different number of inputs
 # length(varargin) gives the number of function input arguments given in the call
-## this is kind of a MATLAB hack
 # for L1, L2, L3, THREE comparisons, L1/L2, L1/L3, and L2/L3
 # for S1, S2, one comparison
 is_same <- function(SAME_THRESH, ...) {
@@ -89,9 +89,9 @@ loss_lod <- function(X, D, LOD) {
   # % D is the original data
   # % X is the new thing (L + S)
   # # LOD is the LOD
-    X_lod <- (X - D)     * (D >= LOD) +
-            ((X) - LOD)  * (D < LOD & ((X) > LOD)) +
-              X          * (D < LOD & X < 0)
+    X_lod <- (X - D)     * (D >= 0) +
+            ((X) - LOD)  * (D < 0 & ((X) > LOD)) +
+              X          * (D < 0 & X < 0)
   
   l <- sum(X_lod^2) / 2
   # % L2 norm
@@ -107,14 +107,15 @@ loss_lod <- function(X, D, LOD) {
 ############################################################
 
 # % If the LOD threshold LOD = 0, solve the following ADMM splitting problem:
-# %  min_{L1,L2,L3,S1,S2}
+#   % min_{L1,L2,L3,S1,S2}
 # %      ||L1||_* + lambda * ||S1||_1 + mu/2 * ||L2+S2-D||_F^2 + I_{L3>=0}
-# %  s.t. L1 = L2
+# % s.t. L1 = L2
 # %      L1 = L3
 # %      S1 = S2.
 # %
 # % If LOD is not 0, replace ||L2+S2-D||_F^2 with LOD penalty.
 # %
+# % Below-LOD data input in D should be denoted as negative values, e.g. -1.
 
 pcp_lod <- function(D, lambda, mu, LOD) {
   
@@ -143,10 +144,9 @@ pcp_lod <- function(D, lambda, mu, LOD) {
   SAME_THRESH <- 1e-4
   
   if (is.vector(LOD)) {
-    LOD = matrix(rep(LOD, times = nrow(D)), nrow = nrow(D), byrow = TRUE)
+    t = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
+    LOD = t * LOD
   }
-  
-  if( any(LOD < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical Limits of Detection (LOD) cannot be negative. GTFO.")
   
   loss <- vector("numeric", MAX_ITER)
   
@@ -167,20 +167,20 @@ pcp_lod <- function(D, lambda, mu, LOD) {
       L2_opt3 <- ((mu*rho*LOD + (((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
       L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
 
-      L2_new <- (L2_opt1 * (D >= LOD)) +
-        (L2_opt2 * ((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-        (L2_opt3 * ((D < LOD) & ((L2 + S2) > LOD))) +
-        (L2_opt4 * ((D < LOD) & ((L2 + S2) < 0)))
+      L2_new <- (L2_opt1 * (D >= 0)) +
+        (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
+        (L2_opt3 * ((D < 0) & ((L2 + S2) > LOD))) +
+        (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
 
       S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
       S2_opt2 <- S1 + (Z3/rho)
       S2_opt3 <- (((mu*rho*LOD) + (((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
       S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
 
-      S2 <- (S2_opt1 * (D >= LOD)) +
-        (S2_opt2 * ((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-        (S2_opt3 * ((D < LOD) & ((L2 + S2) > LOD))) +
-        (S2_opt4 * ((D < LOD) & ((L2 + S2) < 0)))
+      S2 <- (S2_opt1 * (D >= 0)) +
+        (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
+        (S2_opt3 * ((D < 0) & ((L2 + S2) > LOD))) +
+        (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
    
     L2 <- L2_new
     
@@ -219,8 +219,5 @@ pcp_lod <- function(D, lambda, mu, LOD) {
 # x[2,3] <- -0.0000001
 # pcp_lod(x, 1, 1, 0)
 
-# v <- 1:5
-# if (is.vector(v)) {
-#   LOD = matrix(rep(v, times = nrow(x)), nrow = nrow(x), byrow = TRUE)
-# }
-
+# t = matrix(TRUE, nrow = nrow(x), ncol = ncol(x))
+# LOD = t * 0
