@@ -34,3 +34,7 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 .Rproj.user
+
+# Ignore cache files
+**/*cache*/**
+**/*files*/**
