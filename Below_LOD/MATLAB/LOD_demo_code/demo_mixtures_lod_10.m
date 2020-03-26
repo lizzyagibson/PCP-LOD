@@ -77,45 +77,45 @@ lambda = 1/sqrt(m);
 
 % delta = vector of 10% quantiles for 20 variables
 delta10 = [0.02037, 0, 0, 0.269848, 0, 0.0147, 6e-04, 0, 2e-04, 0.0274, ...
-    0.0167, 0, 1e-04, 0.0018, 0.29698, 0, 0.0256, 0.0012, 4e-04, 0.0032]
+    0.0167, 0, 1e-04, 0.0018, 0.29698, 0, 0.0256, 0.0012, 4e-04, 0.0032];
 
-[L,S] = pcp_lod(X, 4/sqrt(m), 10, delta10); 
+[L,S] = pcp_lod(X, 1/sqrt(m), 10, delta10); 
 % X is out dataset, set lambda and mu
 
-save('../LOD_demo_output/lowrank_lod10.mat', 'L')
-save('../LOD_demo_output/sparse_lod10.mat', 'S')
+%save('../LOD_demo_output/lowrank_lod10.mat', 'L')
+%save('../LOD_demo_output/sparse_lod10.mat', 'S')
 
-figure(1); imagesc(S((2417-3):(2417+5),:));
+%figure(1); imagesc(S((2417-3):(2417+5),:));
 
-dateLabels = {'5/28/10','5/29/10','5/30/10','5/31/10','6/1/10','6/2/10','6/3/10','6/4/10','6/5/10'};
-speciesLabels = {'Al','As', 'Ba', 'Bc', 'Br', 'Ca', 'Cl', 'Cr', 'Cu', 'Fe', 'K',  'Mn',  'Ni',  'Pb',  'S',  'Se',  'Si', 'Ti',  'V', 'Zn'};
-saveas(gcf,'../../IMAGES/fig1_lod_10.png')
+%dateLabels = {'5/28/10','5/29/10','5/30/10','5/31/10','6/1/10','6/2/10','6/3/10','6/4/10','6/5/10'};
+%speciesLabels = {'Al','As', 'Ba', 'Bc', 'Br', 'Ca', 'Cl', 'Cr', 'Cu', 'Fe', 'K',  'Mn',  'Ni',  'Pb',  'S',  'Se',  'Si', 'Ti',  'V', 'Zn'};
+%saveas(gcf,'../../IMAGES/fig1_lod_10.png')
 % gcf means current figure
 
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-set(gca,'YTickLabels',dateLabels);
-
-figure(2);
-[U,Sigma,V] = svd(L);
-subplot(2,3,1);
-stem(-V(:,1));
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-subplot(2,3,2);
-stem(V(:,2));
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-subplot(2,3,3);
-stem(V(:,3));
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-subplot(2,3,4);
-stem(V(:,4));
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-subplot(2,3,5);
-stem(V(:,5));
-set(gca,'XTick',1:size(L,2));
-set(gca,'XTickLabels',speciesLabels);
-saveas(gcf,'../../IMAGES/fig2_lod_10.png')
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% set(gca,'YTickLabels',dateLabels);
+% 
+% figure(2);
+% [U,Sigma,V] = svd(L);
+% subplot(2,3,1);
+% stem(-V(:,1));
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% subplot(2,3,2);
+% stem(V(:,2));
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% subplot(2,3,3);
+% stem(V(:,3));
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% subplot(2,3,4);
+% stem(V(:,4));
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% subplot(2,3,5);
+% stem(V(:,5));
+% set(gca,'XTick',1:size(L,2));
+% set(gca,'XTickLabels',speciesLabels);
+% saveas(gcf,'../../IMAGES/fig2_lod_10.png')
