@@ -20,7 +20,9 @@
 # produced vignettes
 **/*.html
 
-# PDFs
+# PDFs/Images/Figures
+**/*.png
+**/*.jpg
 **/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
