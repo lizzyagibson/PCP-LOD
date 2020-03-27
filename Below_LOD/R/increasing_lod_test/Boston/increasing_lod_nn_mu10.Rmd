@@ -19,6 +19,7 @@ library(tidyverse)
 library(gridExtra)
 library(Matrix)
 library(matconv)
+library(patchwork)
 ```
 
 ## Data
@@ -525,7 +526,7 @@ m <- nrow(mixture_data)
 p <- ncol(mixture_data)
 
 lambda_mix <- 1/sqrt(m)
-mu_mix <- sqrt(p/(2*log(m*p)))
+mu_mix <- 10
   
 results_0  <- pcp_lod(mix,             lambda_mix, mu_mix, 0)
 results_10 <- pcp_lod(mix_data_lod_10, lambda_mix, mu_mix, delta10)
@@ -885,20 +886,18 @@ ls_plot_nns2 <- rbind(nn_L_diff_sqrt2, nn_S_diff_sqrt2) %>% ggplot(aes(x = perce
 ```
 
 ```{r}
-(
-  (ls_plot_neg + 
+(ls_plot_neg + 
      ylim(0, 1) + 
      xlab("") + theme(legend.position = "none")) +
    (ls_plot_nn + 
       ylim(0, 1) + 
       xlab("") + ylab("") + theme(legend.position = "none"))
-  ) / (
-       (ls_plot_nn0 +
+
+(ls_plot_nn0 +
           ylim(0, 1) + theme(legend.position = "none")) + 
         (ls_plot_nns2 + 
            ylim(0, 1) + 
            ylab(""))
-       )
 ```
 
 ### Old PCP
@@ -1307,20 +1306,18 @@ ab_nns2 <- rbind(nn_above_diff_sqrt2, nn_less_diff_sqrt2) %>%
 ```
 
 ```{r}
-(
-  (ab_neg + 
+(ab_neg + 
      ylim(0, 1) + 
      xlab("") + theme(legend.position = "none")) +
    (ab_nn + 
       ylim(0, 1) + 
       xlab("") + ylab("") + theme(legend.position = "none"))
-  ) / (
-       (ab_nn0 +
+
+(ab_nn0 +
           ylim(0, 1) + theme(legend.position = "none")) + 
         (ab_nns2 + 
            ylim(0, 1) + 
            ylab(""))
-       )
 ```
 
 ### Old PCP
@@ -1496,6 +1493,14 @@ V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0
       lod50 =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
+head(V_lod0)
+head(V_lod10)
+head(V_lod20)
+head(V_lod30)
+head(V_lod40)
+head(V_lod50)
+V_diff
+
 right_neg <- V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
@@ -1519,6 +1524,8 @@ nn_V_diff <- as_tibble(cbind(lod0 =norm((nn_V_lod0 - nn_V_lod0), type = "F")/nor
       lod40 =norm((nn_V_lod40 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
       lod50 =norm((nn_V_lod50 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
+
+nn_V_diff
 
 right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1544,6 +1551,8 @@ nn_V_diff_0 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_0 - nn_V_lod0_0), type = "F
       lod50 =norm((nn_V_lod50_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
+nn_V_diff_0
+
 right_nn0 <- nn_V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
@@ -1568,6 +1577,8 @@ nn_V_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_sqrt2 - nn_V_lod0_sqrt2
       lod50 =norm((nn_V_lod50_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"))) %>% 
   gather(percent_blod, norm)
 
+nn_V_diff_sqrt2
+
 right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
@@ -1576,20 +1587,18 @@ right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-(
-  (right_neg + 
+(right_neg + 
      ylim(0, 1.1) + 
      xlab("")) +
    (right_nn + 
       ylim(0, 1.1) + 
       xlab("") + ylab(""))
-  ) / (
-       (right_nn0 +
+
+(right_nn0 +
           ylim(0, 1.1)) + 
         (right_nns2 + 
            ylim(0, 1.1) + 
            ylab(""))
-       )
 ```
 
 #### Old PCP
@@ -1745,20 +1754,18 @@ left_nns2 <- nn_u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-(
-  (left_neg + 
+(left_neg + 
      ylim(0, 1.1) + 
      xlab("")) +
    (left_nn + 
       ylim(0, 1.1) + 
       xlab("") + ylab(""))
-  ) / (
-       (left_nn0 +
+
+(left_nn0 +
           ylim(0, 1.1)) + 
         (left_nns2 + 
            ylim(0, 1.1) + 
            ylab(""))
-       )
 ```
 
 #### Old PCP
@@ -1914,20 +1921,18 @@ d_nns2 <- nn_d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-(
-  (d_neg + 
+(d_neg + 
      ylim(0, 0.9) + 
      xlab("")) +
    (d_nn + 
       ylim(0, 0.9) + 
       xlab("") + ylab(""))
-  ) / (
-       (d_nn0 +
+
+(d_nn0 +
           ylim(0, 0.9)) + 
         (d_nns2 + 
            ylim(0, 0.9) + 
            ylab(""))
-       )
 ```
 
 #### Old PCP
