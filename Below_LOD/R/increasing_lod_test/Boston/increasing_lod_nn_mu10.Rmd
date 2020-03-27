@@ -232,7 +232,7 @@ loss_lod_NN <- function(X, D, LOD) {
 
 pcp_lod_NN <- function(D, lambda, mu, LOD) {
   
-  if( any(D < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical concentration measurements cannot be negative. GTFO.")
+  if( any(D < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical concentration measurements cannot be negative.")
   
   m <- nrow(D)
   n <- ncol(D)
@@ -261,7 +261,7 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
     LOD = t * LOD
   }
   
-  if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative. GTFO.")
+  if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative.")
   
   loss <- vector("numeric", MAX_ITER)
   
@@ -316,6 +316,8 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
       (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
     # % The code block above takes LOD into account.
     
+    print(str_c(i, " Obj: ", loss[i]))
+      
     if ((i != 1) && 
         (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
         is_same(SAME_THRESH, L1, L2, L3) &&
@@ -445,6 +447,8 @@ pcp_lod <- function(D, lambda, mu, LOD) {
       (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
     # % The code block above takes LOD into account.
     
+    print(str_c(i, " Obj: ", loss[i]))
+        
     if ((i != 1) && 
         (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
         is_same(SAME_THRESH, L1, L2, L3) &&
@@ -498,6 +502,10 @@ original_pcp <- function(D, lambda, mu) {
   MAX_ITER <- 1000
   done <- FALSE
   
+  # Convergence Thresholds
+  LOSS_THRESH <- 1e-4
+  loss <- vector("numeric", MAX_ITER)
+  
   while (!done) {
     
     iter <- iter + 1
@@ -509,10 +517,12 @@ original_pcp <- function(D, lambda, mu) {
     S <- soft_thresholding((D - L), lambda/mu)
     
     obj <- v + lambda * sum(abs(S)) + (mu/2) * norm((D - L - S), type = "F")^2
+    loss[iter] <- obj
     
-    #print(str_c(iter, " Obj: ", obj))
+    print(str_c(iter, " Obj: ", obj))
     
-    if (iter >= MAX_ITER) {done <- TRUE}
+    if (iter >= MAX_ITER | 
+        (iter != 1) && (abs(loss[iter-1] - loss[iter]) < LOSS_THRESH)) {done <- TRUE}
     
   }
   list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj)
@@ -1485,6 +1495,16 @@ V_lod30 <- svd(L_lod30)$v[,1:2]
 V_lod40 <- svd(L_lod40)$v[,1:2]
 V_lod50 <- svd(L_lod50)$v[,1:2]
 
+# head(V_lod0)
+# head(V_lod10)
+# head(V_lod20)
+# head(V_lod30)
+# head(V_lod40)
+# head(V_lod50)
+
+# Hack -- flip 40
+V_lod40[,2] <- -V_lod40[,2]
+  
 V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod10 =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod20 =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
@@ -1493,13 +1513,7 @@ V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0
       lod50 =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-head(V_lod0)
-head(V_lod10)
-head(V_lod20)
-head(V_lod30)
-head(V_lod40)
-head(V_lod50)
-V_diff
+#V_diff
 
 right_neg <- V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1517,6 +1531,16 @@ nn_V_lod30 <- svd(nn_L_lod30)$v[,1:2]
 nn_V_lod40 <- svd(nn_L_lod40)$v[,1:2]
 nn_V_lod50 <- svd(nn_L_lod50)$v[,1:2]
 
+# head(nn_V_lod0)
+# head(nn_V_lod10)
+# head(nn_V_lod20)
+# head(nn_V_lod30)
+# head(nn_V_lod40)
+# head(nn_V_lod50)
+
+# Hack -- flip 0
+nn_V_lod0[,2] <- -nn_V_lod0[,2]
+
 nn_V_diff <- as_tibble(cbind(lod0 =norm((nn_V_lod0 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
       lod10 =norm((nn_V_lod10 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
       lod20 =norm((nn_V_lod20 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
@@ -1525,7 +1549,7 @@ nn_V_diff <- as_tibble(cbind(lod0 =norm((nn_V_lod0 - nn_V_lod0), type = "F")/nor
       lod50 =norm((nn_V_lod50 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-nn_V_diff
+#nn_V_diff
 
 right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1543,6 +1567,16 @@ nn_V_lod30_0 <- svd(nn_L_lod30_0)$v[,1:2]
 nn_V_lod40_0 <- svd(nn_L_lod40_0)$v[,1:2]
 nn_V_lod50_0 <- svd(nn_L_lod50_0)$v[,1:2]
 
+# head(nn_V_lod0_0)
+# head(nn_V_lod10_0)
+# head(nn_V_lod20_0)
+# head(nn_V_lod30_0)
+# head(nn_V_lod40_0)
+# head(nn_V_lod50_0)
+
+# Hack -- flip 0
+nn_V_lod0_0[,2] <- -nn_V_lod0_0[,2]
+
 nn_V_diff_0 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
       lod10 =norm((nn_V_lod10_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
       lod20 =norm((nn_V_lod20_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
@@ -1551,7 +1585,7 @@ nn_V_diff_0 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_0 - nn_V_lod0_0), type = "F
       lod50 =norm((nn_V_lod50_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-nn_V_diff_0
+#nn_V_diff_0
 
 right_nn0 <- nn_V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1569,6 +1603,16 @@ nn_V_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$v[,1:2]
 nn_V_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$v[,1:2]
 nn_V_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$v[,1:2]
 
+# head(nn_V_lod0_sqrt2)
+# head(nn_V_lod10_sqrt2)
+# head(nn_V_lod20_sqrt2)
+# head(nn_V_lod30_sqrt2)
+# head(nn_V_lod40_sqrt2)
+# head(nn_V_lod50_sqrt2)
+
+# Hack -- flip 0
+nn_V_lod0_sqrt2[,2] <- -nn_V_lod0_sqrt2[,2]
+
 nn_V_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
       lod10 =norm((nn_V_lod10_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
       lod20 =norm((nn_V_lod20_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
@@ -1577,7 +1621,7 @@ nn_V_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_sqrt2 - nn_V_lod0_sqrt2
       lod50 =norm((nn_V_lod50_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-nn_V_diff_sqrt2
+#nn_V_diff_sqrt2
 
 right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1588,16 +1632,16 @@ right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 (right_neg + 
-     ylim(0, 1.1) + 
+     ylim(0, 1.25) + 
      xlab("")) +
    (right_nn + 
-      ylim(0, 1.1) + 
+      ylim(0, 1.25) + 
       xlab("") + ylab(""))
 
 (right_nn0 +
-          ylim(0, 1.1)) + 
+          ylim(0, 1.25)) + 
         (right_nns2 + 
-           ylim(0, 1.1) + 
+           ylim(0, 1.25) + 
            ylab(""))
 ```
 
@@ -1669,6 +1713,16 @@ u_lod30 <- svd(L_lod30)$u[,1:2]
 u_lod40 <- svd(L_lod40)$u[,1:2]
 u_lod50 <- svd(L_lod50)$u[,1:2]
 
+# head(u_lod0)
+# head(u_lod10)
+# head(u_lod20)
+# head(u_lod30)
+# head(u_lod40)
+# head(u_lod50)
+
+# Hack -- flip 0
+u_lod40[,2] <- -u_lod40[,2]
+
 u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
       lod10 =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
       lod20 =norm((u_lod20 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
@@ -1677,6 +1731,7 @@ u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0
       lod50 =norm((u_lod50 - u_lod0), type = "F")/norm((u_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
 
+# u_diff
 left_neg <- u_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
@@ -1691,6 +1746,16 @@ nn_u_lod20 <- svd(nn_L_lod20)$u[,1:2]
 nn_u_lod30 <- svd(nn_L_lod30)$u[,1:2]
 nn_u_lod40 <- svd(nn_L_lod40)$u[,1:2]
 nn_u_lod50 <- svd(nn_L_lod50)$u[,1:2]
+
+# head(nn_u_lod0)
+# head(nn_u_lod10)
+# head(nn_u_lod20)
+# head(nn_u_lod30)
+# head(nn_u_lod40)
+# head(nn_u_lod50)
+
+# Hack -- flip 0
+nn_u_lod0[,2] <- -nn_u_lod0[,2]
 
 nn_u_diff <- as_tibble(cbind(lod0 =norm((nn_u_lod0 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
       lod10 =norm((nn_u_lod10 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
@@ -1715,6 +1780,16 @@ nn_u_lod30_0 <- svd(nn_L_lod30_0)$u[,1:2]
 nn_u_lod40_0 <- svd(nn_L_lod40_0)$u[,1:2]
 nn_u_lod50_0 <- svd(nn_L_lod50_0)$u[,1:2]
 
+# head(nn_u_lod0_0)
+# head(nn_u_lod10_0)
+# head(nn_u_lod20_0)
+# head(nn_u_lod30_0)
+# head(nn_u_lod40_0)
+# head(nn_u_lod50_0)
+
+# Hack -- flip 0
+nn_u_lod0_0[,2] <- -nn_u_lod0_0[,2]
+
 nn_u_diff_0 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
       lod10 =norm((nn_u_lod10_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
       lod20 =norm((nn_u_lod20_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
@@ -1737,6 +1812,16 @@ nn_u_lod20_sqrt2 <- svd(nn_L_lod20_sqrt2)$u[,1:2]
 nn_u_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$u[,1:2]
 nn_u_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$u[,1:2]
 nn_u_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$u[,1:2]
+
+head(nn_u_lod0_sqrt2)
+head(nn_u_lod10_sqrt2)
+head(nn_u_lod20_sqrt2)
+head(nn_u_lod30_sqrt2)
+head(nn_u_lod40_sqrt2)
+head(nn_u_lod50_sqrt2)
+
+# Hack -- flip 0
+nn_u_lod0_sqrt2[,2] <- -nn_u_lod0_sqrt2[,2]
 
 nn_u_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
       lod10 =norm((nn_u_lod10_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
