@@ -700,7 +700,7 @@ nn_F_norm <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0 - nn_S_lod0), type = "
 rel_error_nn <- nn_F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with measured values")
+       title = "<LOD PCP with measured values")
 ```
 
 ```{r}
@@ -716,7 +716,7 @@ nn_F_norm_0 <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0_0 - nn_S_lod0_0), ty
 rel_error_nn0 <- nn_F_norm_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with constant zero")
+       title = "<LOD PCP with constant zero")
 ```
 
 ```{r}
@@ -732,25 +732,22 @@ nn_F_norm_sqrt2 <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0_sqrt2 - nn_S_lod
 rel_error_nns2 <- nn_F_norm_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with constant LOD/sqrt(2)")
+       title = "<LOD PCP with LOD/sqrt(2)")
 ```
 
 ```{r}
-(
-  (rel_error_neg + 
+(rel_error_neg + 
      ylim(0, 0.3) + 
      xlab("")) +
    (rel_error_nn + 
       ylim(0, 0.3) + 
       xlab("") + ylab(""))
-  ) / 
-     (
-       (rel_error_nn0 +
+
+(rel_error_nn0 +
           ylim(0, 0.3)) + 
         (rel_error_nns2 + 
            ylim(0, 0.3) + 
            ylab(""))
-       )
 ```
 
 ### Old PCP
@@ -841,7 +838,7 @@ nn_S_diff <- as_tibble(cbind(lod0 = norm((nn_S_lod0 - nn_S_lod0), type = "F")/no
 ls_plot_nn <- rbind(nn_L_diff, nn_S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
-       title = "LOD PCP with measured values") + theme(legend.position = "bottom")
+       title = "<LOD PCP with measured values") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -866,7 +863,7 @@ nn_S_diff_0 <- as_tibble(cbind(lod0 = norm((nn_S_lod0_0 - nn_S_lod0_0), type = "
 ls_plot_nn0 <- rbind(nn_L_diff_0, nn_S_diff_0) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
-       title = "LOD PCP with constant zero") + theme(legend.position = "bottom")
+       title = "<LOD PCP with constant zero") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -892,7 +889,7 @@ nn_S_diff_sqrt2 <- as_tibble(cbind(lod0 = norm((nn_S_lod0_sqrt2 - nn_S_lod0_sqrt
 ls_plot_nns2 <- rbind(nn_L_diff_sqrt2, nn_S_diff_sqrt2) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0_sqrt2))",
-       title = "LOD PCP with constant LOD/sqrt(2)") + theme(legend.position = "bottom")
+       title = "<LOD PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -1171,7 +1168,7 @@ ab_nn <- rbind(nn_above_diff, nn_less_diff) %>%
   geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with measured values") + theme(legend.position = "bottom")
+       title = "<LOD PCP with measured values") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -1242,7 +1239,7 @@ ab_nn0 <- rbind(nn_above_diff_0, nn_less_diff_0) %>%
   geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with constant zero") + theme(legend.position = "bottom")
+       title = "<LOD PCP with constant zero") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -1312,7 +1309,7 @@ ab_nns2 <- rbind(nn_above_diff_sqrt2, nn_less_diff_sqrt2) %>%
   geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
-       title = "LOD PCP with constant LOD/sqrt(2)") + theme(legend.position = "bottom")
+       title = "<LOD PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -1555,7 +1552,7 @@ right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with measured values")
+       title = "<LOD PCP with measured values")
 ```
 
 ```{r}
@@ -1591,7 +1588,7 @@ right_nn0 <- nn_V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant zero")
+       title = "<LOD PCP with constant zero")
 ```
 
 ```{r}
@@ -1627,7 +1624,7 @@ right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant LOD/sqrt(2)")
+       title = "<LOD PCP with LOD/sqrt(2)")
 ```
 
 ```{r}
@@ -1769,7 +1766,7 @@ left_nn <- nn_u_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with measured values")
+       title = "<LOD PCP with measured values")
 ```
 
 ```{r}
@@ -1802,7 +1799,7 @@ left_nn0 <- nn_u_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant zero")
+       title = "<LOD PCP with constant zero")
 ```
 
 ```{r}
@@ -1813,12 +1810,12 @@ nn_u_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$u[,1:2]
 nn_u_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$u[,1:2]
 nn_u_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$u[,1:2]
 
-head(nn_u_lod0_sqrt2)
-head(nn_u_lod10_sqrt2)
-head(nn_u_lod20_sqrt2)
-head(nn_u_lod30_sqrt2)
-head(nn_u_lod40_sqrt2)
-head(nn_u_lod50_sqrt2)
+# head(nn_u_lod0_sqrt2)
+# head(nn_u_lod10_sqrt2)
+# head(nn_u_lod20_sqrt2)
+# head(nn_u_lod30_sqrt2)
+# head(nn_u_lod40_sqrt2)
+# head(nn_u_lod50_sqrt2)
 
 # Hack -- flip 0
 nn_u_lod0_sqrt2[,2] <- -nn_u_lod0_sqrt2[,2]
@@ -1835,7 +1832,7 @@ left_nns2 <- nn_u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant LOD/sqrt(2)")
+       title = "<LOD PCP with LOD/sqrt(2)")
 ```
 
 ```{r}
@@ -1956,7 +1953,7 @@ d_nn <- nn_d_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with measured values")
+       title = "<LOD PCP with measured values")
 ```
 
 ```{r}
@@ -1979,7 +1976,7 @@ d_nn0 <- nn_d_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant zero")
+       title = "<LOD PCP with constant zero")
 ```
 
 ```{r}
@@ -2002,7 +1999,7 @@ d_nns2 <- nn_d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "LOD PCP with constant LOD/sqrt(2)")
+       title = "<LOD PCP with LOD/sqrt(2)")
 ```
 
 ```{r}

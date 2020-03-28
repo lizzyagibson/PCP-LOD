@@ -35,7 +35,7 @@ mixture_data <- as.data.frame(mixture) %>% as_tibble() %>%
   select(Al, As, Ba, bc, Br, Ca, Cl,
          Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
          Ti,  V, Zn) %>% 
-  drop_na()
+  drop_na() %>% mutate_all(scale, center = FALSE)
 
 mix <- as.matrix(mixture_data)
 ```
@@ -2073,3 +2073,4 @@ d_s2 <- d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
            ylim(0, 0.9) + 
            ylab(""))
 ```
+

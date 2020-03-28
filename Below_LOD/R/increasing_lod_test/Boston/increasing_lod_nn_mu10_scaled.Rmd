@@ -35,7 +35,7 @@ mixture_data <- as.data.frame(mixture) %>% as_tibble() %>%
   select(Al, As, Ba, bc, Br, Ca, Cl,
          Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
          Ti,  V, Zn) %>% 
-  drop_na()
+  drop_na() %>% mutate_all(scale, center = FALSE)
 
 mix <- as.matrix(mixture_data)
 ```
@@ -128,7 +128,6 @@ delta50 <- mixture_data %>%
 ```
 
 ## Fuctions
-
 
 ```{r, nn_function}
 # Prox L1 norm function, soft thresholding
@@ -537,7 +536,7 @@ m <- nrow(mixture_data)
 p <- ncol(mixture_data)
 
 lambda_mix <- 1/sqrt(m)
-mu_mix <- sqrt(p/(2*log(m*p)))
+mu_mix <- 10
   
 results_0  <- pcp_lod(mix,             lambda_mix, mu_mix, 0)
 results_10 <- pcp_lod(mix_data_lod_10, lambda_mix, mu_mix, delta10)
@@ -603,7 +602,7 @@ nn_S_lod50_0 <- nn_results_50_0[[2]]
 ```
 
 ```{r, sqrt2, cache = TRUE}
-nn_results_0_sqrt2  <- pcp_lod_NN(mix,                   lambda_mix, mu_mix, 0)
+nn_results_0_sqrt2  <- pcp_lod_NN(mix,               lambda_mix, mu_mix, 0)
 nn_results_10_sqrt2 <- pcp_lod_NN(mix_data_lod_10_sqrt2, lambda_mix, mu_mix, delta10)
 nn_results_20_sqrt2 <- pcp_lod_NN(mix_data_lod_20_sqrt2, lambda_mix, mu_mix, delta20)
 nn_results_30_sqrt2 <- pcp_lod_NN(mix_data_lod_30_sqrt2, lambda_mix, mu_mix, delta30)
@@ -669,7 +668,6 @@ S_lod40_sqrt2 <- results_40_sqrt2[[2]]
 L_lod50_sqrt2 <- results_50_sqrt2[[1]]
 S_lod50_sqrt2 <- results_50_sqrt2[[2]]
 ```
-
 
 ## X - L - S
 
@@ -2073,3 +2071,4 @@ d_s2 <- d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
            ylim(0, 0.9) + 
            ylab(""))
 ```
+
