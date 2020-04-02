@@ -149,7 +149,8 @@ pcp_lod <- function(D, lambda, mu, LOD) {
   
   if (is.vector(LOD)) {
     t = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
-    LOD = t * LOD
+    LOD = t(t(t) * delta10)
+    #LOD = t * LOD
   }
   
   loss <- vector("numeric", MAX_ITER)

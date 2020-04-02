@@ -143,7 +143,8 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
   
   if (is.vector(LOD)) {
     t = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
-    LOD = t * LOD
+    #LOD = t * LOD
+    LOD = t(t(t) * delta10)
   }
   
   if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative.")
