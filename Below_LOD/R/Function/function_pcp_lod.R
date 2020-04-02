@@ -89,9 +89,10 @@ loss_lod <- function(X, D, LOD) {
   # % D is the original data
   # % X is the new thing (L + S)
   # # LOD is the LOD
-    X_lod <- (X - D)     * (D >= 0) +
-            ((X) - LOD)  * (D < 0 & ((X) > LOD)) +
-              X          * (D < 0 & X < 0)
+    X_lod <- (X - D)   * (D >= 0) +
+            (X - LOD)  * ((D < 0) & (X > LOD)) +
+              X        * ((D < 0) & (X < 0)) #+
+            #(X - D)    * (D < LOD & (X > 0 && X <= LOD )) # or should it be zero
   
   l <- sum(X_lod^2) / 2
   # % L2 norm
@@ -141,9 +142,14 @@ pcp_lod <- function(D, lambda, mu, LOD) {
   LOSS_THRESH <- 1e-5
   SAME_THRESH <- 1e-4
   
+  # if (is.vector(LOD)) {
+  #   tf = ifelse(D < 0, TRUE, FALSE)
+  #   LOD = t(t(tf) * LOD)
+  # }
+  
   if (is.vector(LOD)) {
-    tf = ifelse(D < 0, TRUE, FALSE)
-    LOD = t(t(tf) * LOD)
+    t = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
+    LOD = t * LOD
   }
   
   loss <- vector("numeric", MAX_ITER)
@@ -166,9 +172,9 @@ pcp_lod <- function(D, lambda, mu, LOD) {
       L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
 
       L2_new <- (L2_opt1 * (D >= 0)) +
-        (L2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-        (L2_opt3 * ((D < 0) & ((L2 + S2) > LOD))) +
-        (L2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+                (L2_opt2 * (((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+                (L2_opt3 * (((D < 0) & ((L2 + S2) > LOD)))) +
+                (L2_opt4 * (((D < 0) & ((L2 + S2) < 0))))
 
       S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
       S2_opt2 <- S1 + (Z3/rho)
@@ -176,9 +182,9 @@ pcp_lod <- function(D, lambda, mu, LOD) {
       S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
 
       S2 <- (S2_opt1 * (D >= 0)) +
-        (S2_opt2 * ((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-        (S2_opt3 * ((D < 0) & ((L2 + S2) > LOD))) +
-        (S2_opt4 * ((D < 0) & ((L2 + S2) < 0)))
+            (S2_opt2 * ((D < 0) & (((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+            (S2_opt3 * ((D < 0) & (((L2 + S2) > LOD)))) +
+            (S2_opt4 * ((D < 0) & (((L2 + S2) < 0))))
    
     L2 <- L2_new
     
