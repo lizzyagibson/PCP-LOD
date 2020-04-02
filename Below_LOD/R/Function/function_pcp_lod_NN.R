@@ -88,9 +88,10 @@ loss_lod_NN <- function(X, D, LOD) {
   # % D is the original data
   # % X is the new thing (L + S)
   # # LOD is the LOD
-    X_lod <- (X - D)     * (D >= LOD) +
-            ((X) - LOD)  * (D < LOD & (X > LOD)) +
-              X          * (D < LOD & X < 0)
+    X_lod <- (X - D)   * (D >= LOD) +
+             (X - LOD) * ((D < LOD) & (X > LOD)) +
+              X        * ((D < LOD) & (X < 0)) #+
+             #(X - D)   * (D < LOD & (X > 0 && X <= LOD )) # or should it be zero
   
   l <- sum(X_lod^2) / 2
   # % L2 norm
@@ -116,7 +117,7 @@ loss_lod_NN <- function(X, D, LOD) {
 
 pcp_lod_NN <- function(D, lambda, mu, LOD) {
   
-  if( any(D < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical concentration measurements cannot be negative. GTFO.")
+  if( any(D < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical concentration measurements cannot be negative.")
   
   m <- nrow(D)
   n <- ncol(D)
@@ -145,7 +146,7 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
     LOD = t * LOD
   }
   
-  if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative. GTFO.")
+  if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative.")
   
   loss <- vector("numeric", MAX_ITER)
   
@@ -167,9 +168,9 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
       L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
 
       L2_new <- (L2_opt1 * ( D >= LOD)) +
-                (L2_opt2 * ((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-                (L2_opt3 * ((D < LOD) & ((L2 + S2) > LOD))) +
-                (L2_opt4 * ((D < LOD) & ((L2 + S2) < 0)))
+                (L2_opt2 * ((D < LOD) & (((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+                (L2_opt3 * ((D < LOD) & (((L2 + S2) > LOD)))) +
+                (L2_opt4 * ((D < LOD) & (((L2 + S2) < 0))))
 
       S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
       S2_opt2 <- S1 + (Z3/rho)
@@ -177,9 +178,9 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
       S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
 
       S2 <- (S2_opt1 * ( D >= LOD)) +
-            (S2_opt2 * ((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD))) +
-            (S2_opt3 * ((D < LOD) & ((L2 + S2) > LOD))) +
-            (S2_opt4 * ((D < LOD) & ((L2 + S2) < 0)))
+            (S2_opt2 * ((D < LOD) & (((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+            (S2_opt3 * ((D < LOD) & (((L2 + S2) > LOD)))) +
+            (S2_opt4 * ((D < LOD) & (((L2 + S2) < 0))))
    
     L2 <- L2_new
     
@@ -222,88 +223,86 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
 # colSums(nn_out$L)
 # colSums(reg_out$L)
 
-# Read air pollution data
-library(R.matlab)
-# mixture <- readMat(here::here("Data/mixtures_data.mat"))
- 
-mix <- as.data.frame(mixture) %>% as_tibble() %>%
-  select(Al, As, Ba, bc, Br, Ca, Cl,
-         Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
-         Ti,  V, Zn) %>%
-  drop_na(.)
-
-m <- nrow(mix)
-n <- ncol(mix)
-lambda_mix = 1/sqrt(m)
- 
-# m_nn_out <- pcp_lod_NN(mix, lambda_mix, 10, 0)
-# m_reg_out <- pcp_lod(mix, lambda_mix, 10, 0)
-
-# colSums(m_nn_out$L)
-# colSums(m_reg_out$L)
-
-# Increasing
-mix <- as_tibble(mix)
-
-mix_data_lod_10 <- mix %>% 
-  mutate_all(~ifelse(. < quantile(., probs = .10), 0, .)) %>% as.matrix()
-
-mix_data_lod_20 <- mix %>% 
-  mutate_all(~ifelse(. < quantile(., probs = .20), 0, .)) %>% as.matrix()
-
-mix_data_lod_30 <- mix %>% 
-  mutate_all(~ifelse(. < quantile(., probs = .30), 0, .)) %>% as.matrix()
-
-mix_data_lod_40 <- mix %>% 
-  mutate_all(~ifelse(. < quantile(., probs = .40), 0, .)) %>% as.matrix()
-
-mix_data_lod_50 <- mix %>% 
-  mutate_all(~ifelse(. < quantile(., probs = .50), 0, .)) %>% as.matrix()
-
-delta10 <- mix %>% 
-  summarise_all(quantile, probs = .10) %>% as_vector()
-
-delta20 <- mix %>% 
-  summarise_all(quantile, probs = .20) %>% as_vector()
-
-delta30 <- mix %>% 
-  summarise_all(quantile, probs = .30) %>% as_vector()
-
-delta40 <- mix %>% 
-  summarise_all(quantile, probs = .40) %>% as_vector()
-
-delta50 <- mix %>% 
-  summarise_all(quantile, probs = .50) %>% as_vector()
-
-mix <- as.matrix(mix)
-results_0  <- pcp_lod(mix,             lambda_mix, 10, 0)
-results_10 <- pcp_lod(mix_data_lod_10, lambda_mix, 10, delta10)
-results_20 <- pcp_lod(mix_data_lod_20, lambda_mix, 10, delta20)
-results_30 <- pcp_lod(mix_data_lod_30, lambda_mix, 10, delta30)
-results_40 <- pcp_lod(mix_data_lod_40, lambda_mix, 10, delta40)
-results_50 <- pcp_lod(mix_data_lod_50, lambda_mix, 10, delta50)
-
-nn_results_0  <- pcp_lod_NN(mix, lambda_mix, 10, 0)
-nn_results_10 <- pcp_lod_NN(mix_data_lod_10, lambda_mix, 10, delta10)
-nn_results_20 <- pcp_lod_NN(mix_data_lod_20, lambda_mix, 10, delta20)
-nn_results_30 <- pcp_lod_NN(mix_data_lod_30, lambda_mix, 10, delta30)
-nn_results_40 <- pcp_lod_NN(mix_data_lod_40, lambda_mix, 10, delta40)
-nn_results_50 <- pcp_lod_NN(mix_data_lod_50, lambda_mix, 10, delta50)
-
-all.equal(colSums(results_0$L),  colSums(nn_results_0$L))
-all.equal(colSums(results_10$L), colSums(nn_results_10$L))
-all.equal(colSums(results_20$L), colSums(nn_results_20$L))
-all.equal(colSums(results_30$L), colSums(nn_results_30$L))
-all.equal(colSums(results_40$L), colSums(nn_results_40$L))
-all.equal(colSums(results_50$L), colSums(nn_results_50$L))
-
-# Diff negative pre-processing gives same results
-# mix_data_lod_50_100 <- as_tibble(mix) %>%
-#   mutate_all(~ifelse(. <= quantile(., probs = .50), -100, .)) %>% as.matrix()
-# results_50_1 <-   pcp_lod(mix_data_lod_50, lambda_mix, 10, delta50)
-# results_50_100 <- pcp_lod(mix_data_lod_50_100, lambda_mix, 10, delta50)
-# all.equal(colSums(results_50_1$L),  colSums(results_50_100$L))
-
-
+# # Read air pollution data
+# library(R.matlab)
+# # mixture <- readMat(here::here("Data/mixtures_data.mat"))
+#  
+# mix <- as.data.frame(mixture) %>% as_tibble() %>%
+#   select(Al, As, Ba, bc, Br, Ca, Cl,
+#          Cr, Cu, Fe, K,  Mn,  Ni,  Pb,  S,  Se,  Si,
+#          Ti,  V, Zn) %>%
+#   drop_na(.)
+# 
+# m <- nrow(mix)
+# n <- ncol(mix)
+# lambda_mix = 1/sqrt(m)
+#  
+# # m_nn_out <- pcp_lod_NN(mix, lambda_mix, 10, 0)
+# # m_reg_out <- pcp_lod(mix, lambda_mix, 10, 0)
+# 
+# # colSums(m_nn_out$L)
+# # colSums(m_reg_out$L)
+# 
+# # Increasing
+# mix <- as_tibble(mix)
+# 
+# mix_data_lod_10 <- mix %>% 
+#   mutate_all(~ifelse(. < quantile(., probs = .10), 0, .)) %>% as.matrix()
+# 
+# mix_data_lod_20 <- mix %>% 
+#   mutate_all(~ifelse(. < quantile(., probs = .20), 0, .)) %>% as.matrix()
+# 
+# mix_data_lod_30 <- mix %>% 
+#   mutate_all(~ifelse(. < quantile(., probs = .30), 0, .)) %>% as.matrix()
+# 
+# mix_data_lod_40 <- mix %>% 
+#   mutate_all(~ifelse(. < quantile(., probs = .40), 0, .)) %>% as.matrix()
+# 
+# mix_data_lod_50 <- mix %>% 
+#   mutate_all(~ifelse(. < quantile(., probs = .50), 0, .)) %>% as.matrix()
+# 
+# delta10 <- mix %>% 
+#   summarise_all(quantile, probs = .10) %>% as_vector()
+# 
+# delta20 <- mix %>% 
+#   summarise_all(quantile, probs = .20) %>% as_vector()
+# 
+# delta30 <- mix %>% 
+#   summarise_all(quantile, probs = .30) %>% as_vector()
+# 
+# delta40 <- mix %>% 
+#   summarise_all(quantile, probs = .40) %>% as_vector()
+# 
+# delta50 <- mix %>% 
+#   summarise_all(quantile, probs = .50) %>% as_vector()
+# 
+# mix <- as.matrix(mix)
+# results_0  <- pcp_lod(mix,             lambda_mix, 10, 0)
+# results_10 <- pcp_lod(mix_data_lod_10, lambda_mix, 10, delta10)
+# results_20 <- pcp_lod(mix_data_lod_20, lambda_mix, 10, delta20)
+# results_30 <- pcp_lod(mix_data_lod_30, lambda_mix, 10, delta30)
+# results_40 <- pcp_lod(mix_data_lod_40, lambda_mix, 10, delta40)
+# results_50 <- pcp_lod(mix_data_lod_50, lambda_mix, 10, delta50)
+# 
+# nn_results_0  <- pcp_lod_NN(mix, lambda_mix, 10, 0)
+# nn_results_10 <- pcp_lod_NN(mix_data_lod_10, lambda_mix, 10, delta10)
+# nn_results_20 <- pcp_lod_NN(mix_data_lod_20, lambda_mix, 10, delta20)
+# nn_results_30 <- pcp_lod_NN(mix_data_lod_30, lambda_mix, 10, delta30)
+# nn_results_40 <- pcp_lod_NN(mix_data_lod_40, lambda_mix, 10, delta40)
+# nn_results_50 <- pcp_lod_NN(mix_data_lod_50, lambda_mix, 10, delta50)
+# 
+# all.equal(colSums(results_0$L),  colSums(nn_results_0$L))
+# all.equal(colSums(results_10$L), colSums(nn_results_10$L))
+# all.equal(colSums(results_20$L), colSums(nn_results_20$L))
+# all.equal(colSums(results_30$L), colSums(nn_results_30$L))
+# all.equal(colSums(results_40$L), colSums(nn_results_40$L))
+# all.equal(colSums(results_50$L), colSums(nn_results_50$L))
+# 
+# # Diff negative pre-processing gives same results
+# # mix_data_lod_50_100 <- as_tibble(mix) %>%
+# #   mutate_all(~ifelse(. <= quantile(., probs = .50), -100, .)) %>% as.matrix()
+# # results_50_1 <-   pcp_lod(mix_data_lod_50, lambda_mix, 10, delta50)
+# # results_50_100 <- pcp_lod(mix_data_lod_50_100, lambda_mix, 10, delta50)
+# # all.equal(colSums(results_50_1$L),  colSums(results_50_100$L))
 
 
