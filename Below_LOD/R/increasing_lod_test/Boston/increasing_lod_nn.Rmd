@@ -1,5 +1,5 @@
 ---
-title: "PCP w/ <LOD Penalty"
+title: "<LOD, best mu, unscaled"
 subtitle: "Boston air pollution example"
 author: "Lizzy Gibson"
 date: "3/27/2020"
@@ -128,7 +128,6 @@ delta50 <- mixture_data %>%
 ```
 
 ## Fuctions
-
 
 ```{r, nn_function}
 # Prox L1 norm function, soft thresholding
@@ -669,7 +668,6 @@ S_lod40_sqrt2 <- results_40_sqrt2[[2]]
 L_lod50_sqrt2 <- results_50_sqrt2[[1]]
 S_lod50_sqrt2 <- results_50_sqrt2[[2]]
 ```
-
 
 ## X - L - S
 
@@ -1486,6 +1484,10 @@ ab_s2 <- rbind(above_diff_sqrt2, less_diff_sqrt2) %>%
 ### Right singular vectors
 
 ```{r}
+svd(L_lod0)$d
+```
+
+```{r}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0  <-  svd(L_lod0)$v[,1:2]
 V_lod10 <- svd(L_lod10)$v[,1:2]
@@ -1501,9 +1503,6 @@ V_lod50 <- svd(L_lod50)$v[,1:2]
 # head(V_lod40)
 # head(V_lod50)
 
-# Hack -- flip 40
-V_lod40[,2] <- -V_lod40[,2]
-  
 V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod10 =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
       lod20 =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
@@ -1522,6 +1521,43 @@ right_neg <- V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
+as_tibble(V_lod0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(V_lod10) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(V_lod20) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(V_lod30) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(V_lod40) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(V_lod50) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Jingkai's <LOD PCP") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r}
 # Extract right singular vectors from each low rank solution matrix
 nn_V_lod0  <-  svd(nn_L_lod0)$v[,1:2]
 nn_V_lod10 <- svd(nn_L_lod10)$v[,1:2]
@@ -1536,9 +1572,6 @@ nn_V_lod50 <- svd(nn_L_lod50)$v[,1:2]
 # head(nn_V_lod30)
 # head(nn_V_lod40)
 # head(nn_V_lod50)
-
-# Hack -- flip 0
-nn_V_lod0[,2] <- -nn_V_lod0[,2]
 
 nn_V_diff <- as_tibble(cbind(lod0 =norm((nn_V_lod0 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
       lod10 =norm((nn_V_lod10 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
@@ -1558,6 +1591,43 @@ right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
+as_tibble(nn_V_lod0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(nn_V_lod10) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(nn_V_lod20) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(nn_V_lod30) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(nn_V_lod40) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(nn_V_lod50) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with measured values") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r}
 # Extract right singular vectors from each low rank solution matrix
 nn_V_lod0_0  <-  svd(nn_L_lod0_0)$v[,1:2]
 nn_V_lod10_0 <- svd(nn_L_lod10_0)$v[,1:2]
@@ -1572,9 +1642,6 @@ nn_V_lod50_0 <- svd(nn_L_lod50_0)$v[,1:2]
 # head(nn_V_lod30_0)
 # head(nn_V_lod40_0)
 # head(nn_V_lod50_0)
-
-# Hack -- flip 0
-nn_V_lod0_0[,2] <- -nn_V_lod0_0[,2]
 
 nn_V_diff_0 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
       lod10 =norm((nn_V_lod10_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
@@ -1594,6 +1661,43 @@ right_nn0 <- nn_V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
+as_tibble(nn_V_lod0_0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(nn_V_lod10_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(nn_V_lod20_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(nn_V_lod30_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(nn_V_lod40_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(nn_V_lod50_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with constant zero") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r}
 # Extract right singular vectors from each low rank solution matrix
 nn_V_lod0_sqrt2  <-  svd(nn_L_lod0_sqrt2)$v[,1:2]
 nn_V_lod10_sqrt2 <- svd(nn_L_lod10_sqrt2)$v[,1:2]
@@ -1608,9 +1712,6 @@ nn_V_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$v[,1:2]
 # head(nn_V_lod30_sqrt2)
 # head(nn_V_lod40_sqrt2)
 # head(nn_V_lod50_sqrt2)
-
-# Hack -- flip 0
-nn_V_lod0_sqrt2[,2] <- -nn_V_lod0_sqrt2[,2]
 
 nn_V_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
       lod10 =norm((nn_V_lod10_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
@@ -1627,6 +1728,43 @@ right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "<LOD PCP with LOD/sqrt(2)")
+```
+
+```{r}
+as_tibble(nn_V_lod0_sqrt2) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(nn_V_lod10_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(nn_V_lod20_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(nn_V_lod30_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(nn_V_lod40_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(nn_V_lod50_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with LOD/sqrt(2)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
 ```
 
 ```{r}
@@ -1671,6 +1809,43 @@ right_0 <- V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
+as_tibble(V_lod0_0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(V_lod10_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(V_lod20_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(V_lod30_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(V_lod40_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(V_lod50_0) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Original PCP with constant zero") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_sqrt2  <-  svd(L_lod0_sqrt2)$v[,1:2]
 V_lod10_sqrt2 <- svd(L_lod10_sqrt2)$v[,1:2]
@@ -1692,6 +1867,43 @@ right_s2 <- V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Original PCP with LOD/sqrt(2)")
+```
+
+```{r}
+as_tibble(V_lod0_sqrt2) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(V_lod10_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(V_lod20_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(V_lod30_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(V_lod40_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(V_lod50_sqrt2) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V2) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Original PCP with LOD/sqrt(2)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
 ```
 
 ```{r}
@@ -1719,9 +1931,6 @@ u_lod50 <- svd(L_lod50)$u[,1:2]
 # head(u_lod40)
 # head(u_lod50)
 
-# Hack -- flip 0
-u_lod40[,2] <- -u_lod40[,2]
-
 u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
       lod10 =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
       lod20 =norm((u_lod20 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
@@ -1731,6 +1940,7 @@ u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0
   gather(percent_blod, norm)
 
 # u_diff
+
 left_neg <- u_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", 
@@ -1753,9 +1963,6 @@ nn_u_lod50 <- svd(nn_L_lod50)$u[,1:2]
 # head(nn_u_lod40)
 # head(nn_u_lod50)
 
-# Hack -- flip 0
-nn_u_lod0[,2] <- -nn_u_lod0[,2]
-
 nn_u_diff <- as_tibble(cbind(lod0 =norm((nn_u_lod0 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
       lod10 =norm((nn_u_lod10 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
       lod20 =norm((nn_u_lod20 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
@@ -1763,6 +1970,8 @@ nn_u_diff <- as_tibble(cbind(lod0 =norm((nn_u_lod0 - nn_u_lod0), type = "F")/nor
       lod40 =norm((nn_u_lod40 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
       lod50 =norm((nn_u_lod50 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"))) %>% 
   gather(percent_blod, norm)
+
+# nn_u_diff
 
 left_nn <- nn_u_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1786,9 +1995,6 @@ nn_u_lod50_0 <- svd(nn_L_lod50_0)$u[,1:2]
 # head(nn_u_lod40_0)
 # head(nn_u_lod50_0)
 
-# Hack -- flip 0
-nn_u_lod0_0[,2] <- -nn_u_lod0_0[,2]
-
 nn_u_diff_0 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
       lod10 =norm((nn_u_lod10_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
       lod20 =norm((nn_u_lod20_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
@@ -1796,6 +2002,8 @@ nn_u_diff_0 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_0 - nn_u_lod0_0), type = "F
       lod40 =norm((nn_u_lod40_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
       lod50 =norm((nn_u_lod50_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"))) %>% 
   gather(percent_blod, norm)
+
+# nn_u_diff_0
 
 left_nn0 <- nn_u_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1819,9 +2027,6 @@ nn_u_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$u[,1:2]
 # head(nn_u_lod40_sqrt2)
 # head(nn_u_lod50_sqrt2)
 
-# Hack -- flip 0
-nn_u_lod0_sqrt2[,2] <- -nn_u_lod0_sqrt2[,2]
-
 nn_u_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
       lod10 =norm((nn_u_lod10_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
       lod20 =norm((nn_u_lod20_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
@@ -1829,6 +2034,8 @@ nn_u_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_sqrt2 - nn_u_lod0_sqrt2
       lod40 =norm((nn_u_lod40_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
       lod50 =norm((nn_u_lod50_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"))) %>% 
   gather(percent_blod, norm)
+
+# nn_u_diff_sqrt2
 
 left_nns2 <- nn_u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
