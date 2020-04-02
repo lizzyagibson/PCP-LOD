@@ -976,51 +976,46 @@ ls_plot_s2 <- rbind(L_diff_sqrt2, S_diff_sqrt2) %>% ggplot(aes(x = percent_blod,
     * Wider range -> more error
 
 ```{r}
-# This one is all zeros bc nothing is <LOD to begin with
+# BELOW LOD
+# TRUE = <LOD
 tf_lod_0 <- mixture_data %>% 
   as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
 s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
 true_0 <- as.matrix(mixture_data*tf_lod_0)
 
-
 tf_lod_10 <- mix_data_lod_10 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
-# T/F dataset, T = <LOD
+  as_tibble() %>%
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_10 <- as.matrix(tf_lod_10*L_lod10)
 s_blod_10 <- as.matrix(tf_lod_10*S_lod10)
-# keep <LOD predictions, >LOD predictions are zero
-# Solution L matrix with >LOD values as zero
 true_10 <- as.matrix(mixture_data*tf_lod_10)
-# keep 10% lowest true values, push >LOD values to zero
-# Original matrix with only bottom 10percent, all >LOD set to zero
 
 tf_lod_20 <- mix_data_lod_20 %>% 
   as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_20 <- as.matrix(tf_lod_20*L_lod20)
 s_blod_20 <- as.matrix(tf_lod_20*S_lod20)
 true_20 <- as.matrix(mixture_data*tf_lod_20)
 
 tf_lod_30 <- mix_data_lod_30 %>% 
   as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_30 <- as.matrix(tf_lod_30*L_lod30)
 s_blod_30 <- as.matrix(tf_lod_30*S_lod30)
 true_30 <- as.matrix(mixture_data*tf_lod_30)
 
 tf_lod_40 <- mix_data_lod_40 %>% 
   as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_40 <- as.matrix(tf_lod_40*L_lod40)
 s_blod_40 <- as.matrix(tf_lod_40*S_lod40)
 true_40 <- as.matrix(mixture_data*tf_lod_40)
 
 tf_lod_50 <- mix_data_lod_50 %>% 
   as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, TRUE, FALSE))
+  mutate_all(function(x) ifelse(x == -1, TRUE, FALSE))
 l_blod_50 <- as.matrix(tf_lod_50*L_lod50)
 s_blod_50 <- as.matrix(tf_lod_50*S_lod50)
 true_50 <- as.matrix(mixture_data*tf_lod_50) 
@@ -1037,61 +1032,37 @@ less_diff <- as_tibble(cbind(lod0 = norm((true_0 - l_blod_0 - s_blod_0), type = 
 ```
 
 ```{r}
-above_lod_0 <- mixture_data %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-l_above_blod_0 <- as.matrix(above_lod_0*L_lod0)
-s_above_blod_0 <- as.matrix(above_lod_0*S_lod0)
-above_true_0 <- as.matrix(mixture_data*above_lod_0)
+l_above_blod_0 <- as.matrix((!tf_lod_0)*L_lod0)
+s_above_blod_0 <- as.matrix((!tf_lod_0)*S_lod0)
 
-above_lod_10 <- mix_data_lod_10 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-# T/F dataset, T = >LOD
-l_above_blod_10 <- as.matrix(above_lod_10*L_lod10)
-s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
-# keep >LOD predictions, BLOD predictions are zero
-above_true_10 <- as.matrix(mixture_data*above_lod_10)
-# keep 10% lowest true values, push >LOD values to zero
+norm(l_above_blod_0,  type = "F")
+norm(s_above_blod_0,  type = "F")
 
-above_lod_20 <- mix_data_lod_20 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-l_above_blod_20 <- as.matrix(above_lod_20*L_lod20)
-s_above_blod_20 <- as.matrix(above_lod_20*S_lod20)
-above_true_20 <- as.matrix(mixture_data*above_lod_20)
+l_above_blod_10 <- as.matrix((!tf_lod_10)*L_lod10)
+s_above_blod_10 <- as.matrix((!tf_lod_10)*S_lod10)
 
-above_lod_30 <- mix_data_lod_30 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-l_above_blod_30 <- as.matrix(above_lod_30*L_lod30)
-s_above_blod_30 <- as.matrix(above_lod_30*S_lod30)
-above_true_30 <- as.matrix(mixture_data*above_lod_30)
+l_above_blod_20 <- as.matrix((!tf_lod_20)*L_lod20)
+s_above_blod_20 <- as.matrix((!tf_lod_20)*S_lod20)
 
-above_lod_40 <- mix_data_lod_40 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-l_above_blod_40 <- as.matrix(above_lod_40*L_lod40)
-s_above_blod_40 <- as.matrix(above_lod_40*S_lod40)
-above_true_40 <- as.matrix(mixture_data*above_lod_40)
+l_above_blod_30 <- as.matrix((!tf_lod_30)*L_lod30)
+s_above_blod_30 <- as.matrix((!tf_lod_30)*S_lod30)
 
-above_lod_50 <- mix_data_lod_50 %>% 
-  as_tibble() %>% 
-  mutate_all(~ifelse(. == -1, FALSE, TRUE))
-l_above_blod_50 <- as.matrix(above_lod_50*L_lod50)
-s_above_blod_50 <- as.matrix(above_lod_50*S_lod50)
-above_true_50 <- as.matrix(mixture_data*above_lod_50) 
+l_above_blod_40 <- as.matrix((!tf_lod_40)*L_lod40)
+s_above_blod_40 <- as.matrix((!tf_lod_40)*S_lod40)
+
+l_above_blod_50 <- as.matrix((!tf_lod_50)*L_lod50)
+s_above_blod_50 <- as.matrix((!tf_lod_50)*S_lod50)
 ```
 
 ```{r}
 #divide by true values
 above_diff <- as_tibble(cbind(
-  lod0  = norm((above_true_0  - l_above_blod_0  - s_above_blod_0),  type = "F")/norm(above_true_0,  type = "F"),
-  lod10 = norm((above_true_10 - l_above_blod_10 - s_above_blod_10), type = "F")/norm(above_true_10, type = "F"),
-  lod20 = norm((above_true_20 - l_above_blod_20 - s_above_blod_20), type = "F")/norm(above_true_20, type = "F"),
-  lod30 = norm((above_true_30 - l_above_blod_30 - s_above_blod_30), type = "F")/norm(above_true_30, type = "F"),
-  lod40 = norm((above_true_40 - l_above_blod_40 - s_above_blod_40), type = "F")/norm(above_true_40, type = "F"),
-  lod50 = norm((above_true_50 - l_above_blod_50 - s_above_blod_50), type = "F")/norm(above_true_50, type = "F"))) %>% 
+  lod0  = norm((mix  - l_above_blod_0  - s_above_blod_0),  type = "F")/norm(mix,  type = "F"),
+  lod10 = norm((mix_data_lod_10_0 - l_above_blod_10 - s_above_blod_10), type = "F")/norm(mix_data_lod_10_0, type = "F"),
+  lod20 = norm((mix_data_lod_20_0 - l_above_blod_20 - s_above_blod_20), type = "F")/norm(mix_data_lod_20_0, type = "F"),
+  lod30 = norm((mix_data_lod_30_0 - l_above_blod_30 - s_above_blod_30), type = "F")/norm(mix_data_lod_30_0, type = "F"),
+  lod40 = norm((mix_data_lod_40_0 - l_above_blod_40 - s_above_blod_40), type = "F")/norm(mix_data_lod_40_0, type = "F"),
+  lod50 = norm((mix_data_lod_50_0 - l_above_blod_50 - s_above_blod_50), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "> LOD")
 
@@ -1134,34 +1105,43 @@ nn_less_diff <- as_tibble(cbind(lod0 = norm((true_0 - nn_l_blod_0 - nn_s_blod_0)
 ```
 
 ```{r}
-nn_l_above_blod_0 <- as.matrix(above_lod_0*nn_L_lod0)
-nn_s_above_blod_0 <- as.matrix(above_lod_0*nn_S_lod0)
+nn_l_above_blod_0 <- as.matrix((!tf_lod_0)*nn_L_lod0)
+nn_s_above_blod_0 <- as.matrix((!tf_lod_0)*nn_S_lod0)
 
-nn_l_above_blod_10 <- as.matrix(above_lod_10*nn_L_lod10)
-nn_s_above_blod_10 <- as.matrix(above_lod_10*nn_S_lod10)
+norm(nn_l_above_blod_0 - l_above_blod_0, "F")
+norm(nn_s_above_blod_0 - s_above_blod_0, "F")
 
-nn_l_above_blod_20 <- as.matrix(above_lod_20*nn_L_lod20)
-nn_s_above_blod_20 <- as.matrix(above_lod_20*nn_S_lod20)
+nn_l_above_blod_10 <- as.matrix((!tf_lod_10)*nn_L_lod10)
+nn_s_above_blod_10 <- as.matrix((!tf_lod_10)*nn_S_lod10)
 
-nn_l_above_blod_30 <- as.matrix(above_lod_30*nn_L_lod30)
-nn_s_above_blod_30 <- as.matrix(above_lod_30*nn_S_lod30)
+norm(nn_l_above_blod_10 - l_above_blod_10, "F")
+norm(nn_s_above_blod_10 - s_above_blod_10, "F")
 
-nn_l_above_blod_40 <- as.matrix(above_lod_40*nn_L_lod40)
-nn_s_above_blod_40 <- as.matrix(above_lod_40*nn_S_lod40)
+nn_l_above_blod_20 <- as.matrix((!tf_lod_20)*nn_L_lod20)
+nn_s_above_blod_20 <- as.matrix((!tf_lod_20)*nn_S_lod20)
 
-nn_l_above_blod_50 <- as.matrix(above_lod_50*nn_L_lod50)
-nn_s_above_blod_50 <- as.matrix(above_lod_50*nn_S_lod50)
+nn_l_above_blod_30 <- as.matrix((!tf_lod_30)*nn_L_lod30)
+nn_s_above_blod_30 <- as.matrix((!tf_lod_30)*nn_S_lod30)
+
+nn_l_above_blod_40 <- as.matrix((!tf_lod_40)*nn_L_lod40)
+nn_s_above_blod_40 <- as.matrix((!tf_lod_40)*nn_S_lod40)
+
+nn_l_above_blod_50 <- as.matrix((!tf_lod_50)*nn_L_lod50)
+nn_s_above_blod_50 <- as.matrix((!tf_lod_50)*nn_S_lod50)
+
+norm(nn_l_above_blod_50 - l_above_blod_50, "F")
+norm(nn_s_above_blod_50 - s_above_blod_50, "F")
 ```
 
 ```{r}
 #divide by true values
 nn_above_diff <- as_tibble(cbind(
-  lod0  = norm((above_true_0  - nn_l_above_blod_0  - nn_s_above_blod_0),  type = "F")/norm(above_true_0,  type = "F"),
-  lod10 = norm((above_true_10 - nn_l_above_blod_10 - nn_s_above_blod_10), type = "F")/norm(above_true_10, type = "F"),
-  lod20 = norm((above_true_20 - nn_l_above_blod_20 - nn_s_above_blod_20), type = "F")/norm(above_true_20, type = "F"),
-  lod30 = norm((above_true_30 - nn_l_above_blod_30 - nn_s_above_blod_30), type = "F")/norm(above_true_30, type = "F"),
-  lod40 = norm((above_true_40 - nn_l_above_blod_40 - nn_s_above_blod_40), type = "F")/norm(above_true_40, type = "F"),
-  lod50 = norm((above_true_50 - nn_l_above_blod_50 - nn_s_above_blod_50), type = "F")/norm(above_true_50, type = "F"))) %>% 
+  lod0  = norm((mix  - nn_l_above_blod_0  - nn_s_above_blod_0),  type = "F")/norm(mix,  type = "F"),
+  lod10 = norm((mix_data_lod_10_0 - nn_l_above_blod_10 - nn_s_above_blod_10), type = "F")/norm(mix_data_lod_10_0, type = "F"),
+  lod20 = norm((mix_data_lod_20_0 - nn_l_above_blod_20 - nn_s_above_blod_20), type = "F")/norm(mix_data_lod_20_0, type = "F"),
+  lod30 = norm((mix_data_lod_30_0 - nn_l_above_blod_30 - nn_s_above_blod_30), type = "F")/norm(mix_data_lod_30_0, type = "F"),
+  lod40 = norm((mix_data_lod_40_0 - nn_l_above_blod_40 - nn_s_above_blod_40), type = "F")/norm(mix_data_lod_40_0, type = "F"),
+  lod50 = norm((mix_data_lod_50_0 - nn_l_above_blod_50 - nn_s_above_blod_50), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "> LOD")
 
