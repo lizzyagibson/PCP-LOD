@@ -62,9 +62,7 @@ mix_data_lod_40 <- mixture_data %>%
 # Create version with 50% lowest values for each variable as below the LOD
 mix_data_lod_50 <- mixture_data %>% 
   mutate_all(~ifelse(. < quantile(., probs = .50), -1, .)) %>% as.matrix()
-```
 
-```{r, zero}
 # Create version with 10% lowest values for each variable as below the LOD
 mix_data_lod_10_0 <- mixture_data %>% 
   mutate_all(~ifelse(. < quantile(., probs = .10), 0, .)) %>% as.matrix()
@@ -84,9 +82,7 @@ mix_data_lod_40_0 <- mixture_data %>%
 # Create version with 50% lowest values for each variable as below the LOD
 mix_data_lod_50_0 <- mixture_data %>% 
   mutate_all(~ifelse(. < quantile(., probs = .50), 0, .)) %>% as.matrix()
-```
 
-```{r, square}
 # Create version with 10% lowest values for each variable as below the LOD
 mix_data_lod_10_sqrt2 <- mixture_data %>% 
   mutate_all(~ifelse(. <= quantile(., probs = .10), (quantile(., probs = .10)/sqrt(2)), .)) %>% as.matrix()
@@ -463,8 +459,9 @@ original_pcp <- function(D, lambda, mu) {
 ```
 
 ## Run PCP
+### LOD PCP
 
-```{r, jingkai_leave, cache = TRUE, message=FALSE}
+```{r, jingkai_leave, cache = TRUE, include=FALSE}
 m <- nrow(mixture_data)
 p <- ncol(mixture_data)
 
@@ -521,7 +518,7 @@ all_equal(nn_L_lod50, L_lod50)
 
 ### Old PCP
 
-```{r, subzero_old, cache = TRUE, message=FALSE}
+```{r, subzero_old, cache = TRUE, include=FALSE}
 results_0_0  <- original_pcp(mix,               lambda_mix, mu_mix)
 results_10_0 <- original_pcp(mix_data_lod_10_0, lambda_mix, mu_mix)
 results_20_0 <- original_pcp(mix_data_lod_20_0, lambda_mix, mu_mix)
@@ -541,9 +538,7 @@ L_lod40_0 <- results_40_0[[1]]
 S_lod40_0 <- results_40_0[[2]]
 L_lod50_0 <- results_50_0[[1]]
 S_lod50_0 <- results_50_0[[2]]
-```
 
-```{r, sqrt2_old, cache = TRUE, message=FALSE}
 results_0_sqrt2  <- original_pcp(mix,                   lambda_mix, mu_mix)
 results_10_sqrt2 <- original_pcp(mix_data_lod_10_sqrt2, lambda_mix, mu_mix)
 results_20_sqrt2 <- original_pcp(mix_data_lod_20_sqrt2, lambda_mix, mu_mix)
@@ -581,9 +576,7 @@ rel_error_neg <- F_norm %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
        title = "Jingkai's <LOD PCP")
-```
 
-```{r}
 nn_F_norm <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0 - nn_S_lod0), type = "F")/norm((mix), type = "F"),
       lod10 = norm((mix - nn_L_lod10 - nn_S_lod10), type = "F")/norm((mix), type = "F"),
       lod20 = norm((mix - nn_L_lod20 - nn_S_lod20), type = "F")/norm((mix), type = "F"),
@@ -597,9 +590,7 @@ rel_error_nn <- nn_F_norm %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
        title = "<LOD PCP with measured values")
-```
 
-```{r}
 F_norm_0 <- as_tibble(cbind(lod0 = norm((mix - L_lod0_0 - S_lod0_0), type = "F")/norm((mix), type = "F"),
       lod10 = norm((mix - L_lod10_0 - S_lod10_0), type = "F")/norm((mix), type = "F"),
       lod20 = norm((mix - L_lod20_0 - S_lod20_0), type = "F")/norm((mix), type = "F"),
@@ -613,9 +604,7 @@ rel_error_0 <- F_norm_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
        title = "Original PCP with constant zero")
-```
 
-```{r}
 F_norm_sqrt2 <- as_tibble(cbind(lod0 = norm((mix - L_lod0_sqrt2 - S_lod0_sqrt2), type = "F")/norm((mix), type = "F"),
       lod10 = norm((mix - L_lod10_sqrt2 - S_lod10_sqrt2), type = "F")/norm((mix), type = "F"),
       lod20 = norm((mix - L_lod20_sqrt2 - S_lod20_sqrt2), type = "F")/norm((mix), type = "F"),
@@ -670,9 +659,7 @@ ls_plot_neg <- rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm))
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
        title = "Jingkai's <LOD PCP") + theme(legend.position = "bottom")
-```
 
-```{r}
 nn_L_diff <- as_tibble(cbind(lod0 = norm((nn_L_lod0 - nn_L_lod0), type = "F")/norm((nn_L_lod0), type = "F"),
       lod10 = norm((nn_L_lod10 - nn_L_lod0), type = "F")/norm((nn_L_lod0), type = "F"),
       lod20 = norm((nn_L_lod20 - nn_L_lod0), type = "F")/norm((nn_L_lod0), type = "F"),
@@ -695,9 +682,7 @@ ls_plot_nn <- rbind(nn_L_diff, nn_S_diff) %>% ggplot(aes(x = percent_blod, y = n
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
        title = "<LOD PCP with measured values") + theme(legend.position = "bottom")
-```
 
-```{r}
 L_diff_0 <- as_tibble(cbind(lod0 = norm((L_lod0_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
       lod10 = norm((L_lod10_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
       lod20 = norm((L_lod20_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
@@ -720,9 +705,7 @@ ls_plot_0 <- rbind(L_diff_0, S_diff_0) %>% ggplot(aes(x = percent_blod, y = norm
   geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
        title = "Original PCP with constant zero") + theme(legend.position = "bottom")
-```
 
-```{r}
 L_diff_sqrt2 <- as_tibble(cbind(lod0 = norm((L_lod0_sqrt2 - L_lod0_sqrt2), type = "F")/norm((L_lod0_sqrt2), type = "F"),
       lod10 = norm((L_lod10_sqrt2 - L_lod0_sqrt2), type = "F")/norm((L_lod0_sqrt2), type = "F"),
       lod20 = norm((L_lod20_sqrt2 - L_lod0_sqrt2), type = "F")/norm((L_lod0_sqrt2), type = "F"),
@@ -856,9 +839,7 @@ ab_neg <- rbind(above_diff, less_diff) %>%
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
        title = "Jingkai's <LOD PCP") + theme(legend.position = "bottom")
-```
 
-```{r}
 nn_l_blod_0 <- as.matrix(tf_lod_0*nn_L_lod0)
 nn_s_blod_0 <- as.matrix(tf_lod_0*nn_S_lod0)
 
@@ -922,9 +903,7 @@ ab_nn <- rbind(nn_above_diff, nn_less_diff) %>%
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
        title = "<LOD PCP with measured values") + theme(legend.position = "bottom")
-```
 
-```{r}
 l_blod_0_0 <- as.matrix(tf_lod_0*L_lod0_0)
 s_blod_0_0 <- as.matrix(tf_lod_0*S_lod0_0)
 
@@ -989,9 +968,7 @@ ab_0 <- rbind(above_diff_0, less_diff_0) %>%
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
        title = "Original PCP with constant zero") + theme(legend.position = "bottom")
-```
 
-```{r}
 L_blod_0_sqrt2 <- as.matrix(tf_lod_0*L_lod0_sqrt2)
 S_blod_0_sqrt2 <- as.matrix(tf_lod_0*S_lod0_sqrt2)
 
@@ -1120,9 +1097,7 @@ right_neg <- V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Jingkai's <LOD PCP")
-```
 
-```{r}
 # Extract right singular vectors from each low rank solution matrix
 nn_V_lod0  <-  svd(nn_L_lod0)$v[,1:5]
 nn_V_lod10 <- svd(nn_L_lod10)$v[,1:5]
@@ -1162,9 +1137,7 @@ right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "<LOD PCP with measured values")
-```
 
-```{r}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_0  <-  svd(L_lod0_0)$v[,1:5]
 V_lod10_0 <- svd(L_lod10_0)$v[,1:5]
@@ -1200,9 +1173,7 @@ right_0 <- V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Original PCP with constant zero")
-```
 
-```{r}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_sqrt2  <-  svd(L_lod0_sqrt2)$v[,1:5]
 V_lod10_sqrt2 <- svd(L_lod10_sqrt2)$v[,1:5]
@@ -1231,7 +1202,7 @@ V_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((V_lod0_sqrt2 - V_lod0_sqrt2), type =
       lod50 =norm((V_lod50_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"))) %>% 
   gather(percent_blod, norm)
 
-V_diff_sqrt2
+#V_diff_sqrt2
 
 right_s2 <- V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point() + geom_path(aes(group = 1)) + theme_bw() +
@@ -1242,7 +1213,7 @@ right_s2 <- V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 #### Viz
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 as_tibble(V_lod0) %>% 
   mutate(PM = colnames(mix),
          LOD = "LOD 0") %>% 
@@ -1439,9 +1410,7 @@ left_neg <- u_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Jingkai's <LOD PCP")
-```
 
-```{r}
 nn_u_lod0  <-  svd(nn_L_lod0)$u[,1:5]
 nn_u_lod10 <- svd(nn_L_lod10)$u[,1:5]
 nn_u_lod20 <- svd(nn_L_lod20)$u[,1:5]
@@ -1472,9 +1441,7 @@ left_nn <- nn_u_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "<LOD PCP with measured values")
-```
 
-```{r}
 u_lod0_0  <-  svd(L_lod0_0)$u[,1:5]
 u_lod10_0 <- svd(L_lod10_0)$u[,1:5]
 u_lod20_0 <- svd(L_lod20_0)$u[,1:5]
@@ -1501,9 +1468,7 @@ left_0 <- u_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Original PCP with constant zero")
-```
 
-```{r}
 u_lod0_sqrt2  <-  svd(L_lod0_sqrt2)$u[,1:5]
 u_lod10_sqrt2 <- svd(L_lod10_sqrt2)$u[,1:5]
 u_lod20_sqrt2 <- svd(L_lod20_sqrt2)$u[,1:5]
@@ -1573,9 +1538,7 @@ d_neg <- d_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Jingkai's <LOD PCP")
-```
 
-```{r}
 nn_d_lod0  <- svd(nn_L_lod0)$d[1:5]
 nn_d_lod10 <- svd(nn_L_lod10)$d[1:5]
 nn_d_lod20 <- svd(nn_L_lod20)$d[1:5]
@@ -1596,9 +1559,7 @@ d_nn <- nn_d_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "<LOD PCP with measured values")
-```
 
-```{r}
 d_lod0_0  <- svd(L_lod0_0)$d[1:5]
 d_lod10_0 <- svd(L_lod10_0)$d[1:5]
 d_lod20_0 <- svd(L_lod20_0)$d[1:5]
@@ -1619,9 +1580,7 @@ d_0 <- d_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) +
   labs(x = "Percent Below LOD", 
        y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
        title = "Original PCP with constant zero")
-```
 
-```{r}
 d_lod0_sqrt2  <- svd(L_lod0_sqrt2)$d[1:5]
 d_lod10_sqrt2 <- svd(L_lod10_sqrt2)$d[1:5]
 d_lod20_sqrt2 <- svd(L_lod20_sqrt2)$d[1:5]
