@@ -149,7 +149,7 @@ pcp_lod <- function(D, lambda, mu, LOD) {
   
   if (is.vector(LOD)) {
     t = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
-    LOD = t(t(t) * delta10)
+    LOD = t(t(t) * LOD)
     #LOD = t * LOD
   }
   
