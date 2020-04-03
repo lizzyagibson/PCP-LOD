@@ -79,7 +79,10 @@ lambda = 1/sqrt(m);
 delta10 = [0.02037, 0, 0, 0.269848, 0, 0.0147, 6e-04, 0, 2e-04, 0.0274, ...
     0.0167, 0, 1e-04, 0.0018, 0.29698, 0, 0.0256, 0.0012, 4e-04, 0.0032];
 
-[L,S] = pcp_lod(X, 1/sqrt(m), 10, delta10); 
+[L, S, loss] = pcp_lod(X, 1/sqrt(m), 10, delta10); 
+
+[Lnn, Snn, lossnn] = pcp_lod_nn(X, 1/sqrt(m), 10, delta10); 
+
 % X is out dataset, set lambda and mu
 
 %save('../LOD_demo_output/lowrank_lod10.mat', 'L')
