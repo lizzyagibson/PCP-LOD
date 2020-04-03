@@ -1720,16 +1720,16 @@ as_tibble(nn_V_lod0_sqrt2) %>%
 
 ```{r}
 (right_neg + 
-     ylim(0, 1.25) + 
+     ylim(0, 1) + 
      xlab("")) +
    (right_nn + 
-      ylim(0, 1.25) + 
+      ylim(0, 1) + 
       xlab("") + ylab(""))
 
 (right_nn0 +
-          ylim(0, 1.25)) + 
+          ylim(0, 1)) + 
         (right_nns2 + 
-           ylim(0, 1.25) + 
+           ylim(0, 1) + 
            ylab(""))
 ```
 
@@ -1887,9 +1887,9 @@ as_tibble(V_lod0_sqrt2) %>%
 
 ```{r}
 (right_0 + 
-     ylim(0, 1.5)) +
+     ylim(0, 1)) +
    (right_s2 + 
-      ylim(0, 1.5) + 
+      ylim(0, 1) + 
       ylab(""))
 ```
 
@@ -2027,17 +2027,17 @@ left_nns2 <- nn_u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 (left_neg + 
-     ylim(0, 1.1) + 
-     xlab("")) +
+     ylim(0, 1.25)) +
    (left_nn + 
-      ylim(0, 1.1) + 
-      xlab("") + ylab(""))
+      ylim(0, 1.25) + 
+      ylab(""))
 
 (left_nn0 +
-          ylim(0, 1.1)) + 
+          ylim(0, 1.25) + 
+     xlab("")) +
         (left_nns2 + 
-           ylim(0, 1.1) + 
-           ylab(""))
+           ylim(0, 1.25) + 
+      xlab("") + ylab(""))
 ```
 
 #### Old PCP
@@ -2102,9 +2102,9 @@ left_s2 <- u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 (left_0 + 
-     ylim(0, 1.1)) +
+     ylim(0, 1.25)) +
    (left_s2 + 
-      ylim(0, 1.1) + 
+      ylim(0, 1.25) + 
       ylab(""))
 ```
 
@@ -2206,16 +2206,16 @@ d_nns2 <- nn_d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 (d_neg + 
-     ylim(0, 0.9) + 
+     ylim(0, 0.3) + 
      xlab("")) +
    (d_nn + 
-      ylim(0, 0.9) + 
+      ylim(0, 0.3) + 
       xlab("") + ylab(""))
 
 (d_nn0 +
-          ylim(0, 0.9)) + 
+          ylim(0, 0.3)) + 
         (d_nns2 + 
-           ylim(0, 0.9) + 
+           ylim(0, 0.3) + 
            ylab(""))
 ```
 
@@ -2268,9 +2268,9 @@ d_s2 <- d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-(d_0 + ylim(0, 0.9)) + 
+(d_0 + ylim(0, 0.3)) + 
         (d_s2 + 
-           ylim(0, 0.9) + 
+           ylim(0, 0.3) + 
            ylab(""))
 ```
 
