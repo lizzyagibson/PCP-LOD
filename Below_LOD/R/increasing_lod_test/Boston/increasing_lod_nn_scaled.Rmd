@@ -464,7 +464,7 @@ original_pcp <- function(D, lambda, mu) {
 
 ## Run PCP
 
-```{r, jingkai_leave, cache = TRUE}
+```{r, jingkai_leave, cache = TRUE, message=FALSE}
 m <- nrow(mixture_data)
 p <- ncol(mixture_data)
 
@@ -519,53 +519,9 @@ all_equal(nn_L_lod40, L_lod40)
 all_equal(nn_L_lod50, L_lod50)
 ```
 
-```{r, subzero, cache=TRUE}
-nn_results_0_0  <- pcp_lod_NN(mix,               lambda_mix, mu_mix, 0)
-nn_results_10_0 <- pcp_lod_NN(mix_data_lod_10_0, lambda_mix, mu_mix, delta10)
-nn_results_20_0 <- pcp_lod_NN(mix_data_lod_20_0, lambda_mix, mu_mix, delta20)
-nn_results_30_0 <- pcp_lod_NN(mix_data_lod_30_0, lambda_mix, mu_mix, delta30)
-nn_results_40_0 <- pcp_lod_NN(mix_data_lod_40_0, lambda_mix, mu_mix, delta40)
-nn_results_50_0 <- pcp_lod_NN(mix_data_lod_50_0, lambda_mix, mu_mix, delta50)
-
-nn_L_lod0_0 <- nn_results_0_0[[1]]
-nn_S_lod0_0 <- nn_results_0_0[[2]]
-nn_L_lod10_0 <- nn_results_10_0[[1]]
-nn_S_lod10_0 <- nn_results_10_0[[2]]
-nn_L_lod20_0 <- nn_results_20_0[[1]]
-nn_S_lod20_0 <- nn_results_20_0[[2]]
-nn_L_lod30_0 <- nn_results_30_0[[1]]
-nn_S_lod30_0 <- nn_results_30_0[[2]]
-nn_L_lod40_0 <- nn_results_40_0[[1]]
-nn_S_lod40_0 <- nn_results_40_0[[2]]
-nn_L_lod50_0 <- nn_results_50_0[[1]]
-nn_S_lod50_0 <- nn_results_50_0[[2]]
-```
-
-```{r, sqrt2, cache = TRUE}
-nn_results_0_sqrt2  <- pcp_lod_NN(mix,                   lambda_mix, mu_mix, 0)
-nn_results_10_sqrt2 <- pcp_lod_NN(mix_data_lod_10_sqrt2, lambda_mix, mu_mix, delta10)
-nn_results_20_sqrt2 <- pcp_lod_NN(mix_data_lod_20_sqrt2, lambda_mix, mu_mix, delta20)
-nn_results_30_sqrt2 <- pcp_lod_NN(mix_data_lod_30_sqrt2, lambda_mix, mu_mix, delta30)
-nn_results_40_sqrt2 <- pcp_lod_NN(mix_data_lod_40_sqrt2, lambda_mix, mu_mix, delta40)
-nn_results_50_sqrt2 <- pcp_lod_NN(mix_data_lod_50_sqrt2, lambda_mix, mu_mix, delta50)
-
-nn_L_lod0_sqrt2 <- nn_results_0_sqrt2[[1]]
-nn_S_lod0_sqrt2 <- nn_results_0_sqrt2[[2]]
-nn_L_lod10_sqrt2 <- nn_results_10_sqrt2[[1]]
-nn_S_lod10_sqrt2 <- nn_results_10_sqrt2[[2]]
-nn_L_lod20_sqrt2 <- nn_results_20_sqrt2[[1]]
-nn_S_lod20_sqrt2 <- nn_results_20_sqrt2[[2]]
-nn_L_lod30_sqrt2 <- nn_results_30_sqrt2[[1]]
-nn_S_lod30_sqrt2 <- nn_results_30_sqrt2[[2]]
-nn_L_lod40_sqrt2 <- nn_results_40_sqrt2[[1]]
-nn_S_lod40_sqrt2 <- nn_results_40_sqrt2[[2]]
-nn_L_lod50_sqrt2 <- nn_results_50_sqrt2[[1]]
-nn_S_lod50_sqrt2 <- nn_results_50_sqrt2[[2]]
-```
-
 ### Old PCP
 
-```{r, subzero_old, cache = TRUE}
+```{r, subzero_old, cache = TRUE, message=FALSE}
 results_0_0  <- original_pcp(mix,               lambda_mix, mu_mix)
 results_10_0 <- original_pcp(mix_data_lod_10_0, lambda_mix, mu_mix)
 results_20_0 <- original_pcp(mix_data_lod_20_0, lambda_mix, mu_mix)
@@ -587,7 +543,7 @@ L_lod50_0 <- results_50_0[[1]]
 S_lod50_0 <- results_50_0[[2]]
 ```
 
-```{r, sqrt2_old, cache = TRUE}
+```{r, sqrt2_old, cache = TRUE, message=FALSE}
 results_0_sqrt2  <- original_pcp(mix,                   lambda_mix, mu_mix)
 results_10_sqrt2 <- original_pcp(mix_data_lod_10_sqrt2, lambda_mix, mu_mix)
 results_20_sqrt2 <- original_pcp(mix_data_lod_20_sqrt2, lambda_mix, mu_mix)
@@ -608,7 +564,6 @@ S_lod40_sqrt2 <- results_40_sqrt2[[2]]
 L_lod50_sqrt2 <- results_50_sqrt2[[1]]
 S_lod50_sqrt2 <- results_50_sqrt2[[2]]
 ```
-
 
 ## X - L - S
 
@@ -645,55 +600,6 @@ rel_error_nn <- nn_F_norm %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-nn_F_norm_0 <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0_0 - nn_S_lod0_0), type = "F")/norm((mix), type = "F"),
-      lod10 = norm((mix - nn_L_lod10_0 - nn_S_lod10_0), type = "F")/norm((mix), type = "F"),
-      lod20 = norm((mix - nn_L_lod20_0 - nn_S_lod20_0), type = "F")/norm((mix), type = "F"),
-      lod30 = norm((mix - nn_L_lod30_0 - nn_S_lod30_0), type = "F")/norm((mix), type = "F"),
-      lod40 = norm((mix - nn_L_lod40_0 - nn_S_lod40_0), type = "F")/norm((mix), type = "F"),
-      lod50 = norm((mix - nn_L_lod50_0 - nn_S_lod50_0), type = "F")/norm((mix), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Both")
-
-rel_error_nn0 <- nn_F_norm_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
-       title = "<LOD PCP with constant zero")
-```
-
-```{r}
-nn_F_norm_sqrt2 <- as_tibble(cbind(lod0 = norm((mix - nn_L_lod0_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((mix), type = "F"),
-      lod10 = norm((mix - nn_L_lod10_sqrt2 - nn_S_lod10_sqrt2), type = "F")/norm((mix), type = "F"),
-      lod20 = norm((mix - nn_L_lod20_sqrt2 - nn_S_lod20_sqrt2), type = "F")/norm((mix), type = "F"),
-      lod30 = norm((mix - nn_L_lod30_sqrt2 - nn_S_lod30_sqrt2), type = "F")/norm((mix), type = "F"),
-      lod40 = norm((mix - nn_L_lod40_sqrt2 - nn_S_lod40_sqrt2), type = "F")/norm((mix), type = "F"),
-      lod50 = norm((mix - nn_L_lod50_sqrt2 - nn_S_lod50_sqrt2), type = "F")/norm((mix), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Both")
-
-rel_error_nns2 <- nn_F_norm_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
-       title = "<LOD PCP with LOD/sqrt(2)")
-```
-
-```{r}
-(rel_error_neg + 
-     ylim(0, 0.3) + 
-     xlab("")) +
-   (rel_error_nn + 
-      ylim(0, 0.3) + 
-      xlab("") + ylab(""))
-
-(rel_error_nn0 +
-          ylim(0, 0.3)) + 
-        (rel_error_nns2 + 
-           ylim(0, 0.3) + 
-           ylab(""))
-```
-
-### Old PCP
-
-```{r}
 F_norm_0 <- as_tibble(cbind(lod0 = norm((mix - L_lod0_0 - S_lod0_0), type = "F")/norm((mix), type = "F"),
       lod10 = norm((mix - L_lod10_0 - S_lod10_0), type = "F")/norm((mix), type = "F"),
       lod20 = norm((mix - L_lod20_0 - S_lod20_0), type = "F")/norm((mix), type = "F"),
@@ -725,7 +631,16 @@ rel_error_s2 <- F_norm_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
        title = "Original PCP with LOD/sqrt(2)")
 ```
 
+### Viz
+
 ```{r}
+(rel_error_neg + 
+     ylim(0, 0.3) + 
+     xlab("")) +
+   (rel_error_nn + 
+      ylim(0, 0.3) + 
+      xlab("") + ylab(""))
+
 ((rel_error_0  + ylim(0, 0.3)) + 
  (rel_error_s2 + ylim(0, 0.3) + ylab("")))
 ```
@@ -783,74 +698,6 @@ ls_plot_nn <- rbind(nn_L_diff, nn_S_diff) %>% ggplot(aes(x = percent_blod, y = n
 ```
 
 ```{r}
-nn_L_diff_0 <- as_tibble(cbind(lod0 = norm((nn_L_lod0_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"),
-      lod10 = norm((nn_L_lod10_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"),
-      lod20 = norm((nn_L_lod20_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"),
-      lod30 = norm((nn_L_lod30_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"),
-      lod40 = norm((nn_L_lod40_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"),
-      lod50 = norm((nn_L_lod50_0 - nn_L_lod0_0), type = "F")/norm((nn_L_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Low-Rank")
-
-nn_S_diff_0 <- as_tibble(cbind(lod0 = norm((nn_S_lod0_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"),
-      lod10 = norm((nn_S_lod10_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"),
-      lod20 = norm((nn_S_lod20_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"),
-      lod30 = norm((nn_S_lod30_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"),
-      lod40 = norm((nn_S_lod40_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"),
-      lod50 = norm((nn_S_lod50_0 - nn_S_lod0_0), type = "F")/norm((nn_S_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Sparse")
-
-ls_plot_nn0 <- rbind(nn_L_diff_0, nn_S_diff_0) %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
-       title = "<LOD PCP with constant zero") + theme(legend.position = "bottom")
-```
-
-```{r}
-nn_L_diff_sqrt2 <- as_tibble(cbind(
-      lod0 = norm((nn_L_lod0_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"),
-      lod10 = norm((nn_L_lod10_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"),
-      lod20 = norm((nn_L_lod20_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"),
-      lod30 = norm((nn_L_lod30_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"),
-      lod40 = norm((nn_L_lod40_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"),
-      lod50 = norm((nn_L_lod50_sqrt2 - nn_L_lod0_sqrt2), type = "F")/norm((nn_L_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Low-Rank")
-
-nn_S_diff_sqrt2 <- as_tibble(cbind(lod0 = norm((nn_S_lod0_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"),
-      lod10 = norm((nn_S_lod10_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"),
-      lod20 = norm((nn_S_lod20_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"),
-      lod30 = norm((nn_S_lod30_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"),
-      lod40 = norm((nn_S_lod40_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"),
-      lod50 = norm((nn_S_lod50_sqrt2 - nn_S_lod0_sqrt2), type = "F")/norm((nn_S_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Matrix = "Sparse")
-
-ls_plot_nns2 <- rbind(nn_L_diff_sqrt2, nn_S_diff_sqrt2) %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0_sqrt2))",
-       title = "<LOD PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
-```
-
-```{r}
-(ls_plot_neg + 
-     ylim(0, 0.6) + 
-     xlab("") + theme(legend.position = "none")) +
-   (ls_plot_nn + 
-      ylim(0, 0.6) + 
-      xlab("") + ylab("") + theme(legend.position = "none"))
-
-(ls_plot_nn0 +
-          ylim(0, 0.6) + theme(legend.position = "none")) + 
-        (ls_plot_nns2 + 
-           ylim(0, 0.6) + 
-           ylab(""))
-```
-
-### Old PCP
-
-```{r}
 L_diff_0 <- as_tibble(cbind(lod0 = norm((L_lod0_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
       lod10 = norm((L_lod10_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
       lod20 = norm((L_lod20_0 - L_lod0_0), type = "F")/norm((L_lod0_0), type = "F"),
@@ -900,7 +747,16 @@ ls_plot_s2 <- rbind(L_diff_sqrt2, S_diff_sqrt2) %>% ggplot(aes(x = percent_blod,
        title = "Original PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
 ```
 
+### Viz
+
 ```{r}
+(ls_plot_neg + 
+     ylim(0, 0.6) + 
+     xlab("") + theme(legend.position = "none")) +
+   (ls_plot_nn + 
+      ylim(0, 0.6) + 
+      xlab("") + ylab("") + theme(legend.position = "none"))
+
 (ls_plot_0 +
           ylim(0, 0.6) + theme(legend.position = "none")) + 
         (ls_plot_s2 + 
@@ -909,10 +765,6 @@ ls_plot_s2 <- rbind(L_diff_sqrt2, S_diff_sqrt2) %>% ggplot(aes(x = percent_blod,
 ```
 
 ## Values \<LOD vs \>LOD
-
-* Are values \<LOD estimated more poorly than those \>LOD? Are \<LOD driving the increased error?
-* Rescale by range/variance of values \<LOD.
-    * Wider range -> more error
 
 ```{r}
 # BELOW LOD
@@ -968,9 +820,7 @@ less_diff <- as_tibble(cbind(lod0 = norm((blod_0 - l_blod_0 - s_blod_0), type = 
       lod50 = norm((blod_50 - l_blod_50 - s_blod_50), type = "F")/norm((blod_50), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "< LOD")
-```
 
-```{r}
 l_above_blod_0 <- as.matrix((!tf_lod_0)*L_lod0)
 s_above_blod_0 <- as.matrix((!tf_lod_0)*S_lod0)
 
@@ -1036,26 +886,15 @@ nn_less_diff <- as_tibble(cbind(lod0 = norm((blod_0 - nn_l_blod_0 - nn_s_blod_0)
       lod50 = norm((blod_50 - nn_l_blod_50 - nn_s_blod_50), type = "F")/norm((blod_50), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "< LOD")
-```
 
-```{r}
 nn_l_above_blod_0 <- as.matrix((!tf_lod_0)*nn_L_lod0)
 nn_s_above_blod_0 <- as.matrix((!tf_lod_0)*nn_S_lod0)
-
-norm(nn_l_above_blod_0 - l_above_blod_0, "F")
-norm(nn_s_above_blod_0 - s_above_blod_0, "F")
 
 nn_l_above_blod_10 <- as.matrix((!tf_lod_10)*nn_L_lod10)
 nn_s_above_blod_10 <- as.matrix((!tf_lod_10)*nn_S_lod10)
 
-norm(nn_l_above_blod_10 - l_above_blod_10, "F")
-norm(nn_s_above_blod_10 - s_above_blod_10, "F")
-
 nn_l_above_blod_20 <- as.matrix((!tf_lod_20)*nn_L_lod20)
 nn_s_above_blod_20 <- as.matrix((!tf_lod_20)*nn_S_lod20)
-
-norm(nn_l_above_blod_20 - l_above_blod_20, "F")
-norm(nn_s_above_blod_20 - s_above_blod_20, "F")
 
 nn_l_above_blod_30 <- as.matrix((!tf_lod_30)*nn_L_lod30)
 nn_s_above_blod_30 <- as.matrix((!tf_lod_30)*nn_S_lod30)
@@ -1066,11 +905,6 @@ nn_s_above_blod_40 <- as.matrix((!tf_lod_40)*nn_S_lod40)
 nn_l_above_blod_50 <- as.matrix((!tf_lod_50)*nn_L_lod50)
 nn_s_above_blod_50 <- as.matrix((!tf_lod_50)*nn_S_lod50)
 
-norm(nn_l_above_blod_50 - l_above_blod_50, "F")
-norm(nn_s_above_blod_50 - s_above_blod_50, "F")
-```
-
-```{r}
 #divide by true values
 nn_above_diff <- as_tibble(cbind(
   lod0  = norm((mix  - nn_l_above_blod_0  - nn_s_above_blod_0),  type = "F")/norm(mix,  type = "F"),
@@ -1089,164 +923,6 @@ ab_nn <- rbind(nn_above_diff, nn_less_diff) %>%
        y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
        title = "<LOD PCP with measured values") + theme(legend.position = "bottom")
 ```
-
-```{r}
-nn_l_blod_0_0 <- as.matrix(tf_lod_0*nn_L_lod0_0)
-nn_s_blod_0_0 <- as.matrix(tf_lod_0*nn_S_lod0_0)
-
-nn_l_blod_10_0 <- as.matrix(tf_lod_10*nn_L_lod10_0)
-nn_s_blod_10_0 <- as.matrix(tf_lod_10*nn_S_lod10_0)
-
-nn_l_blod_20_0 <- as.matrix(tf_lod_20*nn_L_lod20_0)
-nn_s_blod_20_0 <- as.matrix(tf_lod_20*nn_S_lod20_0)
-
-nn_l_blod_30_0 <- as.matrix(tf_lod_30*nn_L_lod30_0)
-nn_s_blod_30_0 <- as.matrix(tf_lod_30*nn_S_lod30_0)
-
-nn_l_blod_40_0 <- as.matrix(tf_lod_40*nn_L_lod40_0)
-nn_s_blod_40_0 <- as.matrix(tf_lod_40*nn_S_lod40_0)
-
-nn_l_blod_50_0 <- as.matrix(tf_lod_50*nn_L_lod50_0)
-nn_s_blod_50_0 <- as.matrix(tf_lod_50*nn_S_lod50_0)
-
-#Subtract true values and divide by norm of true
-nn_less_diff_0 <- as_tibble(cbind(
-      lod0 = norm((blod_0 - nn_l_blod_0_0 - nn_s_blod_0_0), type = "F"), #/norm((blod_0), type = "F"),
-      lod10 = norm((blod_10 - nn_l_blod_10_0 - nn_s_blod_10_0), type = "F")/norm((blod_10), type = "F"),
-      lod20 = norm((blod_20 - nn_l_blod_20_0 - nn_s_blod_20_0), type = "F")/norm((blod_20), type = "F"),
-      lod30 = norm((blod_30 - nn_l_blod_30_0 - nn_s_blod_30_0), type = "F")/norm((blod_30), type = "F"),
-      lod40 = norm((blod_40 - nn_l_blod_40_0 - nn_s_blod_40_0), type = "F")/norm((blod_40), type = "F"),
-      lod50 = norm((blod_50 - nn_l_blod_50_0 - nn_s_blod_50_0), type = "F")/norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD")
-```
-
-```{r}
-nn_l_above_blod_0_0 <- as.matrix((!tf_lod_0)*nn_L_lod0_0)
-nn_s_above_blod_0_0 <- as.matrix((!tf_lod_0)*nn_S_lod0_0)
-
-nn_l_above_blod_10_0 <- as.matrix((!tf_lod_10)*nn_L_lod10_0)
-nn_s_above_blod_10_0 <- as.matrix((!tf_lod_10)*nn_S_lod10_0)
-
-nn_l_above_blod_20_0 <- as.matrix((!tf_lod_20)*nn_L_lod20_0)
-nn_s_above_blod_20_0 <- as.matrix((!tf_lod_20)*nn_S_lod20_0)
-
-nn_l_above_blod_30_0 <- as.matrix((!tf_lod_30)*nn_L_lod30_0)
-nn_s_above_blod_30_0 <- as.matrix((!tf_lod_30)*nn_S_lod30_0)
-
-nn_l_above_blod_40_0 <- as.matrix((!tf_lod_40)*nn_L_lod40_0)
-nn_s_above_blod_40_0 <- as.matrix((!tf_lod_40)*nn_S_lod40_0)
-
-nn_l_above_blod_50_0 <- as.matrix((!tf_lod_50)*nn_L_lod50_0)
-nn_s_above_blod_50_0 <- as.matrix((!tf_lod_50)*nn_S_lod50_0)
-```
-
-```{r}
-#divide by true values
-nn_above_diff_0 <- as_tibble(cbind(
-  lod0  = norm((mix  - nn_l_above_blod_0_0  - nn_s_above_blod_0_0),  type = "F")/norm(mix,  type = "F"),
-  lod10 = norm((mix_data_lod_10_0 - nn_l_above_blod_10_0 - nn_s_above_blod_10_0), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  lod20 = norm((mix_data_lod_20_0 - nn_l_above_blod_20_0 - nn_s_above_blod_20_0), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  lod30 = norm((mix_data_lod_30_0 - nn_l_above_blod_30_0 - nn_s_above_blod_30_0), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  lod40 = norm((mix_data_lod_40_0 - nn_l_above_blod_40_0 - nn_s_above_blod_40_0), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  lod50 = norm((mix_data_lod_50_0 - nn_l_above_blod_50_0 - nn_s_above_blod_50_0), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD")
-
-ab_nn0 <- rbind(nn_above_diff_0, nn_less_diff_0) %>% 
-  ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
-       title = "<LOD PCP with constant zero") + theme(legend.position = "bottom")
-```
-
-```{r}
-nn_L_blod_0_sqrt2 <- as.matrix(tf_lod_0*nn_L_lod0_sqrt2)
-nn_S_blod_0_sqrt2 <- as.matrix(tf_lod_0*nn_S_lod0_sqrt2)
-
-nn_L_blod_10_sqrt2 <- as.matrix(tf_lod_10*nn_L_lod10_sqrt2)
-nn_S_blod_10_sqrt2 <- as.matrix(tf_lod_10*nn_S_lod10_sqrt2)
-
-nn_L_blod_20_sqrt2 <- as.matrix(tf_lod_20*nn_L_lod20_sqrt2)
-nn_S_blod_20_sqrt2 <- as.matrix(tf_lod_20*nn_S_lod20_sqrt2)
-
-nn_L_blod_30_sqrt2 <- as.matrix(tf_lod_30*nn_L_lod30_sqrt2)
-nn_S_blod_30_sqrt2 <- as.matrix(tf_lod_30*nn_S_lod30_sqrt2)
-
-nn_L_blod_40_sqrt2 <- as.matrix(tf_lod_40*nn_L_lod40_sqrt2)
-nn_S_blod_40_sqrt2 <- as.matrix(tf_lod_40*nn_S_lod40_sqrt2)
-
-nn_L_blod_50_sqrt2 <- as.matrix(tf_lod_50*nn_L_lod50_sqrt2)
-nn_S_blod_50_sqrt2 <- as.matrix(tf_lod_50*nn_S_lod50_sqrt2)
-
-nn_less_diff_sqrt2 <- as_tibble(
-  cbind(lod0  = norm((blod_0  - nn_L_blod_0_sqrt2  - nn_S_blod_0_sqrt2),  type = "F"), #/norm((blod_0), type = "F"),
-        lod10 = norm((blod_10 - nn_L_blod_10_sqrt2 - nn_S_blod_10_sqrt2), type = "F")/norm((blod_10), type = "F"),
-        lod20 = norm((blod_20 - nn_L_blod_20_sqrt2 - nn_S_blod_20_sqrt2), type = "F")/norm((blod_20), type = "F"),
-        lod30 = norm((blod_30 - nn_L_blod_30_sqrt2 - nn_S_blod_30_sqrt2), type = "F")/norm((blod_30), type = "F"),
-        lod40 = norm((blod_40 - nn_L_blod_40_sqrt2 - nn_S_blod_40_sqrt2), type = "F")/norm((blod_40), type = "F"),
-        lod50 = norm((blod_50 - nn_L_blod_50_sqrt2 - nn_S_blod_50_sqrt2), type = "F")/norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD")
-```
-
-```{r}
-nn_L_above_blod_0_sqrt2 <- nn_L_lod0_sqrt2
-nn_S_above_blod_0_sqrt2 <- nn_S_lod0_sqrt2
-
-nn_L_above_blod_10_sqrt2 <- as.matrix((!tf_lod_10)*nn_L_lod10_sqrt2)
-nn_S_above_blod_10_sqrt2 <- as.matrix((!tf_lod_10)*nn_S_lod10_sqrt2)
-
-nn_L_above_blod_20_sqrt2 <- as.matrix((!tf_lod_20)*nn_L_lod20_sqrt2)
-nn_S_above_blod_20_sqrt2 <- as.matrix((!tf_lod_20)*nn_S_lod20_sqrt2)
-
-nn_L_above_blod_30_sqrt2 <- as.matrix((!tf_lod_30)*nn_L_lod30_sqrt2)
-nn_S_above_blod_30_sqrt2 <- as.matrix((!tf_lod_30)*nn_S_lod30_sqrt2)
-
-nn_L_above_blod_40_sqrt2 <- as.matrix((!tf_lod_40)*nn_L_lod40_sqrt2)
-nn_S_above_blod_40_sqrt2 <- as.matrix((!tf_lod_40)*nn_S_lod40_sqrt2)
-
-nn_L_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*nn_L_lod50_sqrt2)
-nn_S_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*nn_S_lod50_sqrt2)
-```
-
-```{r}
-#divide by true values
-nn_above_diff_sqrt2 <- as_tibble(cbind(
-  lod0  = norm((mix  - nn_L_above_blod_0_sqrt2  - nn_S_above_blod_0_sqrt2),  type = "F")/norm(mix,  type = "F"),
-  lod10 = norm((mix_data_lod_10_0 - nn_L_above_blod_10_sqrt2 - nn_S_above_blod_10_sqrt2), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  lod20 = norm((mix_data_lod_20_0 - nn_L_above_blod_20_sqrt2 - nn_S_above_blod_20_sqrt2), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  lod30 = norm((mix_data_lod_30_0 - nn_L_above_blod_30_sqrt2 - nn_S_above_blod_30_sqrt2), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  lod40 = norm((mix_data_lod_40_0 - nn_L_above_blod_40_sqrt2 - nn_S_above_blod_40_sqrt2), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  lod50 = norm((mix_data_lod_50_0 - nn_L_above_blod_50_sqrt2 - nn_S_above_blod_50_sqrt2), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD")
-
-ab_nns2 <- rbind(nn_above_diff_sqrt2, nn_less_diff_sqrt2) %>% 
-  ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
-       title = "<LOD PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
-```
-
-```{r}
-(ab_neg + 
-     ylim(0, 1) + 
-     xlab("") + theme(legend.position = "none")) +
-   (ab_nn + 
-      ylim(0, 1) + 
-      xlab("") + ylab("") + theme(legend.position = "none"))
-
-(ab_nn0 +
-          ylim(0, 1) + theme(legend.position = "none")) + 
-        (ab_nns2 + 
-           ylim(0, 1) + 
-           ylab(""))
-```
-
-### Old PCP
 
 ```{r}
 l_blod_0_0 <- as.matrix(tf_lod_0*L_lod0_0)
@@ -1277,9 +953,7 @@ less_diff_0 <- as_tibble(cbind(
       lod50 = norm((blod_50 - l_blod_50_0 - s_blod_50_0), type = "F")/norm((blod_50), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "< LOD")
-```
 
-```{r}
 l_above_blod_0_0 <- as.matrix((!tf_lod_0)*L_lod0_0)
 s_above_blod_0_0 <- as.matrix((!tf_lod_0)*S_lod0_0)
 
@@ -1297,9 +971,7 @@ s_above_blod_40_0 <- as.matrix((!tf_lod_40)*S_lod40_0)
 
 l_above_blod_50_0 <- as.matrix((!tf_lod_50)*L_lod50_0)
 s_above_blod_50_0 <- as.matrix((!tf_lod_50)*S_lod50_0)
-```
 
-```{r}
 #divide by true values
 above_diff_0 <- as_tibble(cbind(
   lod0  = norm((mix  - l_above_blod_0_0  - s_above_blod_0_0),  type = "F")/norm(mix,  type = "F"),
@@ -1347,9 +1019,7 @@ less_diff_sqrt2 <- as_tibble(
         lod50 = norm((blod_50 - L_blod_50_sqrt2 - S_blod_50_sqrt2), type = "F")/norm((blod_50), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Values = "< LOD")
-```
 
-```{r}
 L_above_blod_0_sqrt2 <- as.matrix((!tf_lod_0)*L_lod0_sqrt2)
 S_above_blod_0_sqrt2 <- as.matrix((!tf_lod_0)*S_lod0_sqrt2)
 
@@ -1367,9 +1037,7 @@ S_above_blod_40_sqrt2 <- as.matrix((!tf_lod_40)*S_lod40_sqrt2)
 
 L_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*L_lod50_sqrt2)
 S_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*S_lod50_sqrt2)
-```
 
-```{r}
 #divide by true values
 above_diff_sqrt2 <- as_tibble(cbind(
   lod0  = norm((mix  - L_above_blod_0_sqrt2  - S_above_blod_0_sqrt2),  type = "F")/norm(mix,  type = "F"),
@@ -1389,7 +1057,16 @@ ab_s2 <- rbind(above_diff_sqrt2, less_diff_sqrt2) %>%
        title = "Original PCP with LOD/sqrt(2)") + theme(legend.position = "bottom")
 ```
 
+### Viz
+
 ```{r}
+(ab_neg + 
+     ylim(0, 1) + 
+     xlab("") + theme(legend.position = "none")) +
+   (ab_nn + 
+      ylim(0, 1) + 
+      xlab("") + ylab("") + theme(legend.position = "none"))
+
 (ab_0 + 
      ylim(0, 1) + 
      theme(legend.position = "none")) +
@@ -1489,254 +1166,6 @@ right_nn <- nn_V_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 
 ```{r}
 # Extract right singular vectors from each low rank solution matrix
-nn_V_lod0_0  <-  svd(nn_L_lod0_0)$v[,1:5]
-nn_V_lod10_0 <- svd(nn_L_lod10_0)$v[,1:5]
-nn_V_lod20_0 <- svd(nn_L_lod20_0)$v[,1:5]
-nn_V_lod30_0 <- svd(nn_L_lod30_0)$v[,1:5]
-nn_V_lod40_0 <- svd(nn_L_lod40_0)$v[,1:5]
-nn_V_lod50_0 <- svd(nn_L_lod50_0)$v[,1:5]
-
-# cor(nn_V_lod0_0, nn_V_lod10_0)
-# cor(nn_V_lod0_0, nn_V_lod20_0)
-# cor(nn_V_lod0_0, nn_V_lod30_0)
-# cor(nn_V_lod0_0, nn_V_lod40_0)
-# cor(nn_V_lod0_0, nn_V_lod50_0)
-
-# Hack -- Flip
-nn_V_lod30_0[,3] <- -nn_V_lod30_0[,3]
-nn_V_lod30_0[,4] <- -nn_V_lod30_0[,4]
-nn_V_lod40_0[,3] <- -nn_V_lod40_0[,3]
-nn_V_lod40_0[,4] <- -nn_V_lod40_0[,4]
-nn_V_lod40_0[,5] <- -nn_V_lod40_0[,5]
-nn_V_lod50_0[,3] <- -nn_V_lod50_0[,3]
-nn_V_lod50_0[,4] <- -nn_V_lod50_0[,4]
-nn_V_lod50_0[,5] <- -nn_V_lod50_0[,5]
-
-nn_V_diff_0 <- as_tibble(cbind(lod0 =norm((nn_V_lod0_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
-      lod10 =norm((nn_V_lod10_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
-      lod20 =norm((nn_V_lod20_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
-      lod30 =norm((nn_V_lod30_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
-      lod40 =norm((nn_V_lod40_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"),
-      lod50 =norm((nn_V_lod50_0 - nn_V_lod0_0), type = "F")/norm((nn_V_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-#nn_V_diff_0
-
-right_nn0 <- nn_V_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with constant zero")
-```
-
-```{r}
-# Extract right singular vectors from each low rank solution matrix
-nn_V_lod0_sqrt2  <-  svd(nn_L_lod0_sqrt2)$v[,1:5]
-nn_V_lod10_sqrt2 <- svd(nn_L_lod10_sqrt2)$v[,1:5]
-nn_V_lod20_sqrt2 <- svd(nn_L_lod20_sqrt2)$v[,1:5]
-nn_V_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$v[,1:5]
-nn_V_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$v[,1:5]
-nn_V_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$v[,1:5]
-
-cor(nn_V_lod0_sqrt2, nn_V_lod10_sqrt2)
-cor(nn_V_lod0_sqrt2, nn_V_lod20_sqrt2)
-cor(nn_V_lod0_sqrt2, nn_V_lod30_sqrt2)
-cor(nn_V_lod0_sqrt2, nn_V_lod40_sqrt2)
-cor(nn_V_lod0_sqrt2, nn_V_lod50_sqrt2)
-
-# Hack -- Flip
-nn_V_lod30_sqrt2[,3] <- -nn_V_lod30_sqrt2[,3]
-nn_V_lod30_sqrt2[,4] <- -nn_V_lod30_sqrt2[,4]
-nn_V_lod40_sqrt2[,3] <- -nn_V_lod40_sqrt2[,3]
-nn_V_lod50_sqrt2[,3] <- -nn_V_lod50_sqrt2[,3]
-nn_V_lod50_sqrt2[,4] <- -nn_V_lod50_sqrt2[,4]
-
-
-nn_V_diff_sqrt2 <- as_tibble(cbind(
-      lod0 =norm((nn_V_lod0_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
-      lod10 =norm((nn_V_lod10_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
-      lod20 =norm((nn_V_lod20_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
-      lod30 =norm((nn_V_lod30_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
-      lod40 =norm((nn_V_lod40_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"),
-      lod50 =norm((nn_V_lod50_sqrt2 - nn_V_lod0_sqrt2), type = "F")/norm((nn_V_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-#nn_V_diff_sqrt2
-
-right_nns2 <- nn_V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with LOD/sqrt(2)")
-```
-
-```{r}
-as_tibble(V_lod0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(V_lod10) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(V_lod20) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(V_lod30) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(V_lod40) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(V_lod50) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Jingkai's <LOD PCP") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r}
-as_tibble(nn_V_lod0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(nn_V_lod10) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(nn_V_lod20) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(nn_V_lod30) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(nn_V_lod40) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(nn_V_lod50) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with measured values") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r}
-as_tibble(nn_V_lod0_0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(nn_V_lod10_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(nn_V_lod20_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(nn_V_lod30_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(nn_V_lod40_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(nn_V_lod50_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with constant zero") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r}
-as_tibble(nn_V_lod0_sqrt2) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(nn_V_lod10_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(nn_V_lod20_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(nn_V_lod30_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(nn_V_lod40_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(nn_V_lod50_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with LOD/sqrt(2)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r}
-(right_neg + 
-     ylim(0, 1) + 
-     xlab("")) +
-   (right_nn + 
-      ylim(0, 1) + 
-      xlab("") + ylab(""))
-
-(right_nn0 +
-          ylim(0, 1)) + 
-        (right_nns2 + 
-           ylim(0, 1) + 
-           ylab(""))
-```
-
-#### Old PCP
-
-```{r}
-# Extract right singular vectors from each low rank solution matrix
 V_lod0_0  <-  svd(L_lod0_0)$v[,1:5]
 V_lod10_0 <- svd(L_lod10_0)$v[,1:5]
 V_lod20_0 <- svd(L_lod20_0)$v[,1:5]
@@ -1811,7 +1240,83 @@ right_s2 <- V_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
        title = "Original PCP with LOD/sqrt(2)")
 ```
 
-```{r}
+#### Viz
+
+```{r, message=FALSE}
+as_tibble(V_lod0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(V_lod10) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(V_lod20) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(V_lod30) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(V_lod40) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(V_lod50) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V5) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Jingkai's <LOD PCP") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r, message=FALSE}
+as_tibble(nn_V_lod0) %>% 
+  mutate(PM = colnames(mix),
+         LOD = "LOD 0") %>% 
+  full_join(., as_tibble(nn_V_lod10) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 10")) %>%
+  full_join(., as_tibble(nn_V_lod20) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 20")) %>%
+  full_join(., as_tibble(nn_V_lod30) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 30")) %>%
+  full_join(., as_tibble(nn_V_lod40) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 40")) %>%
+  full_join(., as_tibble(nn_V_lod50) %>%
+  mutate(PM = colnames(mix),
+         LOD = "LOD 50")) %>%
+  gather(key = singular_vector, value = magnitude, V1:V5) %>%
+  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
+  geom_segment(aes(xend = PM, yend = 0)) +
+  facet_grid(LOD ~ singular_vector) +
+  geom_hline(yintercept = 0, linetype = "dashed", 
+             color = "red") +
+  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with measured values") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, size = 0.2) + 
+  theme(legend.position = c(0.85, 0.10), 
+                legend.background = element_rect(fill = "white", colour = NA),
+        legend.text=element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 13),
+        axis.title.y = element_text(size = 18))
+```
+
+```{r, message=FALSE}
 as_tibble(V_lod0_0) %>% 
   mutate(PM = colnames(mix),
          LOD = "LOD 0") %>% 
@@ -1848,7 +1353,7 @@ as_tibble(V_lod0_0) %>%
         axis.title.y = element_text(size = 18))
 ```
 
-```{r}
+```{r, message=FALSE}
 as_tibble(V_lod0_sqrt2) %>% 
   mutate(PM = colnames(mix),
          LOD = "LOD 0") %>% 
@@ -1886,6 +1391,13 @@ as_tibble(V_lod0_sqrt2) %>%
 ```
 
 ```{r}
+(right_neg + 
+     ylim(0, 1) + 
+     xlab("")) +
+   (right_nn + 
+      ylim(0, 1) + 
+      xlab("") + ylab(""))
+
 (right_0 + 
      ylim(0, 1)) +
    (right_s2 + 
@@ -1963,86 +1475,6 @@ left_nn <- nn_u_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-nn_u_lod0_0  <-  svd(nn_L_lod0_0)$u[,1:5]
-nn_u_lod10_0 <- svd(nn_L_lod10_0)$u[,1:5]
-nn_u_lod20_0 <- svd(nn_L_lod20_0)$u[,1:5]
-nn_u_lod30_0 <- svd(nn_L_lod30_0)$u[,1:5]
-nn_u_lod40_0 <- svd(nn_L_lod40_0)$u[,1:5]
-nn_u_lod50_0 <- svd(nn_L_lod50_0)$u[,1:5]
-
-# Hack -- Flip
-nn_u_lod30_0[,4] <- -nn_u_lod30_0[,4]
-nn_u_lod30_0[,3] <- -nn_u_lod30_0[,3]
-nn_u_lod40_0[,3] <- -nn_u_lod40_0[,3]
-nn_u_lod40_0[,4] <- -nn_u_lod40_0[,4]
-nn_u_lod40_0[,5] <- -nn_u_lod40_0[,5]
-nn_u_lod50_0[,3] <- -nn_u_lod50_0[,3]
-nn_u_lod50_0[,4] <- -nn_u_lod50_0[,4]
-nn_u_lod50_0[,5] <- -nn_u_lod50_0[,5]
-
-nn_u_diff_0 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
-      lod10 =norm((nn_u_lod10_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
-      lod20 =norm((nn_u_lod20_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
-      lod30 =norm((nn_u_lod30_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
-      lod40 =norm((nn_u_lod40_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"),
-      lod50 =norm((nn_u_lod50_0 - nn_u_lod0_0), type = "F")/norm((nn_u_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-left_nn0 <- nn_u_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with constant zero")
-```
-
-```{r}
-nn_u_lod0_sqrt2  <-  svd(nn_L_lod0_sqrt2)$u[,1:5]
-nn_u_lod10_sqrt2 <- svd(nn_L_lod10_sqrt2)$u[,1:5]
-nn_u_lod20_sqrt2 <- svd(nn_L_lod20_sqrt2)$u[,1:5]
-nn_u_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$u[,1:5]
-nn_u_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$u[,1:5]
-nn_u_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$u[,1:5]
-
-# Hack -- Flip
-nn_V_lod30_sqrt2[,3] <- -nn_V_lod30_sqrt2[,3]
-nn_V_lod30_sqrt2[,4] <- -nn_V_lod30_sqrt2[,4]
-nn_V_lod40_sqrt2[,3] <- -nn_V_lod40_sqrt2[,3]
-nn_V_lod50_sqrt2[,3] <- -nn_V_lod50_sqrt2[,3]
-nn_V_lod50_sqrt2[,4] <- -nn_V_lod50_sqrt2[,4]
-
-nn_u_diff_sqrt2 <- as_tibble(cbind(lod0 =norm((nn_u_lod0_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
-      lod10 =norm((nn_u_lod10_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
-      lod20 =norm((nn_u_lod20_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
-      lod30 =norm((nn_u_lod30_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
-      lod40 =norm((nn_u_lod40_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"),
-      lod50 =norm((nn_u_lod50_sqrt2 - nn_u_lod0_sqrt2), type = "F")/norm((nn_u_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-left_nns2 <- nn_u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with LOD/sqrt(2)")
-```
-
-```{r}
-(left_neg + 
-     ylim(0, 1.25)) +
-   (left_nn + 
-      ylim(0, 1.25) + 
-      ylab(""))
-
-(left_nn0 +
-          ylim(0, 1.25) + 
-     xlab("")) +
-        (left_nns2 + 
-           ylim(0, 1.25) + 
-      xlab("") + ylab(""))
-```
-
-#### Old PCP
-
-```{r}
 u_lod0_0  <-  svd(L_lod0_0)$u[,1:5]
 u_lod10_0 <- svd(L_lod10_0)$u[,1:5]
 u_lod20_0 <- svd(L_lod20_0)$u[,1:5]
@@ -2100,7 +1532,15 @@ left_s2 <- u_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
        title = "Original PCP with LOD/sqrt(2)")
 ```
 
+#### Viz
+
 ```{r}
+(left_neg + 
+     ylim(0, 1.25) + xlab("")) +
+   (left_nn + 
+      ylim(0, 1.25) + 
+      xlab("") + ylab(""))
+
 (left_0 + 
      ylim(0, 1.25)) +
    (left_s2 + 
@@ -2159,69 +1599,6 @@ d_nn <- nn_d_diff %>% ggplot(aes(x = percent_blod, y = norm)) +
 ```
 
 ```{r}
-nn_d_lod0_0  <- svd(nn_L_lod0_0)$d[1:5]
-nn_d_lod10_0 <- svd(nn_L_lod10_0)$d[1:5]
-nn_d_lod20_0 <- svd(nn_L_lod20_0)$d[1:5]
-nn_d_lod30_0 <- svd(nn_L_lod30_0)$d[1:5]
-nn_d_lod40_0 <- svd(nn_L_lod40_0)$d[1:5]
-nn_d_lod50_0 <- svd(nn_L_lod50_0)$d[1:5]
-
-nn_d_diff_0 <- as_tibble(cbind(lod0 = norm_vec(nn_d_lod0_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0),
-      lod10 = norm_vec(nn_d_lod10_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0),
-      lod20 = norm_vec(nn_d_lod20_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0),
-      lod30 = norm_vec(nn_d_lod30_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0),
-      lod40 = norm_vec(nn_d_lod40_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0),
-      lod50 = norm_vec(nn_d_lod50_0 - nn_d_lod0_0)/norm_vec(nn_d_lod0_0))) %>% 
-  gather(percent_blod, norm)
-
-d_nn0 <- nn_d_diff_0 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with constant zero")
-```
-
-```{r}
-nn_d_lod0_sqrt2  <- svd(nn_L_lod0_sqrt2)$d[1:5]
-nn_d_lod10_sqrt2 <- svd(nn_L_lod10_sqrt2)$d[1:5]
-nn_d_lod20_sqrt2 <- svd(nn_L_lod20_sqrt2)$d[1:5]
-nn_d_lod30_sqrt2 <- svd(nn_L_lod30_sqrt2)$d[1:5]
-nn_d_lod40_sqrt2 <- svd(nn_L_lod40_sqrt2)$d[1:5]
-nn_d_lod50_sqrt2 <- svd(nn_L_lod50_sqrt2)$d[1:5]
-
-nn_d_diff_sqrt2 <- as_tibble(cbind(lod0 = norm_vec(nn_d_lod0_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2),
-      lod10 = norm_vec(nn_d_lod10_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2),
-      lod20 = norm_vec(nn_d_lod20_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2),
-      lod30 = norm_vec(nn_d_lod30_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2),
-      lod40 = norm_vec(nn_d_lod40_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2),
-      lod50 = norm_vec(nn_d_lod50_sqrt2 - nn_d_lod0_sqrt2)/norm_vec(nn_d_lod0_sqrt2))) %>% 
-  gather(percent_blod, norm)
-
-d_nns2 <- nn_d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
-       title = "<LOD PCP with LOD/sqrt(2)")
-```
-
-```{r}
-(d_neg + 
-     ylim(0, 0.3) + 
-     xlab("")) +
-   (d_nn + 
-      ylim(0, 0.3) + 
-      xlab("") + ylab(""))
-
-(d_nn0 +
-          ylim(0, 0.3)) + 
-        (d_nns2 + 
-           ylim(0, 0.3) + 
-           ylab(""))
-```
-
-#### Old PCP
-
-```{r}
 d_lod0_0  <- svd(L_lod0_0)$d[1:5]
 d_lod10_0 <- svd(L_lod10_0)$d[1:5]
 d_lod20_0 <- svd(L_lod20_0)$d[1:5]
@@ -2267,7 +1644,16 @@ d_s2 <- d_diff_sqrt2 %>% ggplot(aes(x = percent_blod, y = norm)) +
        title = "Original PCP with LOD/sqrt(2)")
 ```
 
+#### Viz
+
 ```{r}
+(d_neg + 
+     ylim(0, 0.3) + 
+     xlab("")) +
+   (d_nn + 
+      ylim(0, 0.3) + 
+      xlab("") + ylab(""))
+
 (d_0 + ylim(0, 0.3)) + 
         (d_s2 + 
            ylim(0, 0.3) + 
