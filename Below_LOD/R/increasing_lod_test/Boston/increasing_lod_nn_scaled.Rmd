@@ -1,5 +1,5 @@
 ---
-title: "<LOD, best mu, scaled"
+title: "<LOD PCP, Best Mu, Scaled"
 subtitle: "Boston air pollution example"
 author: "Lizzy Gibson"
 date: "3/27/2020"
@@ -458,8 +458,7 @@ original_pcp <- function(D, lambda, mu) {
 }
 ```
 
-## Run PCP
-### LOD PCP
+## PCP
 
 ```{r, jingkai_leave, cache = TRUE, include=FALSE}
 m <- nrow(mixture_data)
@@ -515,8 +514,6 @@ all_equal(nn_L_lod30, L_lod30)
 all_equal(nn_L_lod40, L_lod40)
 all_equal(nn_L_lod50, L_lod50)
 ```
-
-### Old PCP
 
 ```{r, subzero_old, cache = TRUE, include=FALSE}
 results_0_0  <- original_pcp(mix,               lambda_mix, mu_mix)
