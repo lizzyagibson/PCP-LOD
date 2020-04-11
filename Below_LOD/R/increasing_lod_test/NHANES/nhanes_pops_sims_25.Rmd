@@ -1585,3 +1585,149 @@ rbind(d_diff_sqrt2,
        y = "norm(SV - SV_lod0) / norm(SV_lod0)",
        title = "Relative Error in Low-Rank \nSolution Singular Values")
 ```
+
+
+## PCA
+
+```{r}
+pca_0  <- prcomp(mix)
+pca_10 <- prcomp(mix_data_lod_10_sqrt2)
+pca_20 <- prcomp(mix_data_lod_20_sqrt2)
+pca_30 <- prcomp(mix_data_lod_30_sqrt2)
+pca_40 <- prcomp(mix_data_lod_40_sqrt2)
+pca_50 <- prcomp(mix_data_lod_50_sqrt2)
+```
+
+```{r}
+cor(pca_0$rotation[,1:7], pca_10$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_20$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_30$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_40$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_50$rotation[,1:7])
+
+pca_40$rotation[,7] <- -pca_40$rotation[,7]
+pca_50$rotation[,7] <- -pca_50$rotation[,7]
+
+rotation_norm <- as_tibble(cbind(lod0 = norm((pca_0$rotation[,1:7] - pca_0$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod10 = norm((pca_0$rotation[,1:7] - pca_10$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod20 = norm((pca_0$rotation[,1:7] - pca_20$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod30 = norm((pca_0$rotation[,1:7] - pca_30$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod40 = norm((pca_0$rotation[,1:7] - pca_40$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod50 = norm((pca_0$rotation[,1:7] - pca_50$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+cor(pca_0$x[,1:7], pca_10$x[,1:7])
+cor(pca_0$x[,1:7], pca_20$x[,1:7])
+cor(pca_0$x[,1:7], pca_30$x[,1:7])
+cor(pca_0$x[,1:7], pca_40$x[,1:7])
+cor(pca_0$x[,1:7], pca_50$x[,1:7])
+
+pca_40$x[,7] <- -pca_40$x[,7]
+pca_50$x[,7] <- -pca_50$x[,7]
+
+score_norm <- as_tibble(cbind(lod0 = norm((pca_0$x[,1:7] - pca_0$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod10 = norm((pca_0$x[,1:7] - pca_10$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod20 = norm((pca_0$x[,1:7] - pca_20$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod30 = norm((pca_0$x[,1:7] - pca_30$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod40 = norm((pca_0$x[,1:7] - pca_40$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod50 = norm((pca_0$x[,1:7] - pca_50$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+sdev_norm <- as_tibble(cbind(lod0 = norm_vec(pca_0$sdev[1:7] - pca_0$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod10 = norm_vec(pca_0$sdev[1:7] - pca_10$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod20 = norm_vec(pca_0$sdev[1:7] - pca_20$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod30 = norm_vec(pca_0$sdev[1:7] - pca_30$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod40 = norm_vec(pca_0$sdev[1:7] - pca_40$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod50 = norm_vec(pca_0$sdev[1:7] - pca_50$sdev[1:7])/norm_vec(pca_0$sdev[1:7]))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+pcp_pca_0  <- prcomp(L_lod0)
+pcp_pca_10 <- prcomp(L_lod10)
+pcp_pca_20 <- prcomp(L_lod20)
+pcp_pca_30 <- prcomp(L_lod30)
+pcp_pca_40 <- prcomp(L_lod40)
+pcp_pca_50 <- prcomp(L_lod50)
+```
+
+```{r}
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_10$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_20$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_30$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_40$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_50$rotation[,1:7])
+
+pcp_pca_40$rotation[,4] <- -pcp_pca_40$rotation[,4]
+pcp_pca_50$rotation[,7] <- -pcp_pca_50$rotation[,7]
+
+pcp_rotation_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_0$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod10 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_10$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod20 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_20$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod30 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_30$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod40 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_40$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod50 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_50$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+```{r}
+cor(pcp_pca_0$x[,1:7], pcp_pca_10$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_20$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_30$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_40$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_50$x[,1:7])
+
+pcp_pca_40$x[,4] <- -pcp_pca_40$x[,4]
+pcp_pca_50$x[,7] <- -pcp_pca_50$x[,7]
+
+pcp_score_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$x[,1:7] - pcp_pca_0$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod10 = norm((pcp_pca_0$x[,1:7] - pcp_pca_10$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod20 = norm((pcp_pca_0$x[,1:7] - pcp_pca_20$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod30 = norm((pcp_pca_0$x[,1:7] - pcp_pca_30$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod40 = norm((pcp_pca_0$x[,1:7] - pcp_pca_40$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod50 = norm((pcp_pca_0$x[,1:7] - pcp_pca_50$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+```{r}
+pcp_sdev_norm <- as_tibble(cbind(lod0 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_0$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod10 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_10$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod20 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_20$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod30 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_30$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod40 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_40$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod50 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_50$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+### Viz
+
+```{r, fig.height = 5, fig.width = 5, fig.align = "center"}
+rbind(rotation_norm, pcp_rotation_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Prediction Error")
+```
+
+```{r, fig.height = 5, fig.width = 5, fig.align = "center"}
+rbind(score_norm, pcp_score_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Prediction Error")
+```
+
+```{r, fig.height = 5, fig.width = 5, fig.align = "center"}
+rbind(sdev_norm, pcp_sdev_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Prediction Error")
+```
