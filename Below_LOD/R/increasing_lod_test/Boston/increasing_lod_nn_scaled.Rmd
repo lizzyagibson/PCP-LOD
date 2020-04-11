@@ -1051,6 +1051,12 @@ ab_s2 <- rbind(above_diff_sqrt2, less_diff_sqrt2) %>%
 
 ## SVD
 
+```{r}
+svd(L_lod0)$d
+
+svd(L_lod50)$d
+```
+
 ### Right singular vectors
 
 ```{r}
