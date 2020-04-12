@@ -1605,9 +1605,6 @@ cor(pca_0$rotation[,1:7], pca_30$rotation[,1:7])
 cor(pca_0$rotation[,1:7], pca_40$rotation[,1:7])
 cor(pca_0$rotation[,1:7], pca_50$rotation[,1:7])
 
-pca_40$rotation[,7] <- -pca_40$rotation[,7]
-pca_50$rotation[,7] <- -pca_50$rotation[,7]
-
 rotation_norm <- as_tibble(cbind(lod0 = norm((pca_0$rotation[,1:7] - pca_0$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
       lod10 = norm((pca_0$rotation[,1:7] - pca_10$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
       lod20 = norm((pca_0$rotation[,1:7] - pca_20$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
@@ -1624,9 +1621,6 @@ cor(pca_0$x[,1:7], pca_20$x[,1:7])
 cor(pca_0$x[,1:7], pca_30$x[,1:7])
 cor(pca_0$x[,1:7], pca_40$x[,1:7])
 cor(pca_0$x[,1:7], pca_50$x[,1:7])
-
-pca_40$x[,7] <- -pca_40$x[,7]
-pca_50$x[,7] <- -pca_50$x[,7]
 
 score_norm <- as_tibble(cbind(lod0 = norm((pca_0$x[,1:7] - pca_0$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
       lod10 = norm((pca_0$x[,1:7] - pca_10$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
@@ -1665,8 +1659,9 @@ cor(pcp_pca_0$rotation[,1:7], pcp_pca_30$rotation[,1:7])
 cor(pcp_pca_0$rotation[,1:7], pcp_pca_40$rotation[,1:7])
 cor(pcp_pca_0$rotation[,1:7], pcp_pca_50$rotation[,1:7])
 
-pcp_pca_40$rotation[,4] <- -pcp_pca_40$rotation[,4]
-pcp_pca_50$rotation[,7] <- -pcp_pca_50$rotation[,7]
+pcp_pca_20$rotation[,5] <- -pcp_pca_20$rotation[,5]
+pcp_pca_50$rotation[,4] <- -pcp_pca_50$rotation[,4]
+pcp_pca_50$rotation[,6] <- -pcp_pca_50$rotation[,6]
 
 pcp_rotation_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_0$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
       lod10 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_10$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
@@ -1685,8 +1680,9 @@ cor(pcp_pca_0$x[,1:7], pcp_pca_30$x[,1:7])
 cor(pcp_pca_0$x[,1:7], pcp_pca_40$x[,1:7])
 cor(pcp_pca_0$x[,1:7], pcp_pca_50$x[,1:7])
 
-pcp_pca_40$x[,4] <- -pcp_pca_40$x[,4]
-pcp_pca_50$x[,7] <- -pcp_pca_50$x[,7]
+pcp_pca_20$x[,5] <- -pcp_pca_20$x[,5]
+pcp_pca_50$x[,4] <- -pcp_pca_50$x[,4]
+pcp_pca_50$x[,6] <- -pcp_pca_50$x[,6]
 
 pcp_score_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$x[,1:7] - pcp_pca_0$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
       lod10 = norm((pcp_pca_0$x[,1:7] - pcp_pca_10$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
@@ -1715,19 +1711,31 @@ pcp_sdev_norm <- as_tibble(cbind(lod0 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_0
 rbind(rotation_norm, pcp_rotation_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Prediction Error")
+       title = "Relative Error in Rotations")
 ```
 
 ```{r, fig.height = 5, fig.width = 5, fig.align = "center"}
 rbind(score_norm, pcp_score_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Prediction Error")
+       title = "Relative Error in Scores")
 ```
 
 ```{r, fig.height = 5, fig.width = 5, fig.align = "center"}
 rbind(sdev_norm, pcp_sdev_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Prediction Error")
+       title = "Relative Error in Singular Values")
 ```
+
+### Variance Explained
+
+```{r}
+PCP_0 <- pcp_pca_0$sdev^2/sum(pcp_pca_0$sdev^2) *100
+PCA_0 <- pca_0$sdev^2/sum(pca_0$sdev^2) *100
+
+PCP_50 <- pcp_pca_50$sdev^2/sum(pcp_pca_50$sdev^2) *100
+PCA_50 <- pca_50$sdev^2/sum(pca_50$sdev^2) *100
+round(cbind(Component = 1:27, PCP_0, PCA_0, PCP_50, PCA_50), 4) %>% stargazer::stargazer(., summary = NULL)
+```
+

@@ -1224,156 +1224,6 @@ rbind(V_diff,
        title = "Relative Error in Low-Rank \nSolution Right Singular Vectors")
 ```
 
-##### Loadings
-
-```{r, message=FALSE, warning=FALSE}
-as_tibble(V_lod0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(V_lod10) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(V_lod20) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(V_lod30) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(V_lod40) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(V_lod50) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Jingkai's <LOD PCP") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r, message=FALSE}
-as_tibble(nn_V_lod0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(nn_V_lod10) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(nn_V_lod20) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(nn_V_lod30) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(nn_V_lod40) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(nn_V_lod50) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "<LOD PCP with measured values") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r, message=FALSE}
-as_tibble(V_lod0_0) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(V_lod10_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(V_lod20_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(V_lod30_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(V_lod40_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(V_lod50_0) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Original PCP with constant zero") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
-```{r, message=FALSE}
-as_tibble(V_lod0_sqrt2) %>% 
-  mutate(PM = colnames(mix),
-         LOD = "LOD 0") %>% 
-  full_join(., as_tibble(V_lod10_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 10")) %>%
-  full_join(., as_tibble(V_lod20_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 20")) %>%
-  full_join(., as_tibble(V_lod30_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 30")) %>%
-  full_join(., as_tibble(V_lod40_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 40")) %>%
-  full_join(., as_tibble(V_lod50_sqrt2) %>%
-  mutate(PM = colnames(mix),
-         LOD = "LOD 50")) %>%
-  gather(key = singular_vector, value = magnitude, V1:V5) %>%
-  ggplot(aes(x = PM, y = magnitude)) + geom_point() + 
-  geom_segment(aes(xend = PM, yend = 0)) +
-  facet_grid(LOD ~ singular_vector) +
-  geom_hline(yintercept = 0, linetype = "dashed", 
-             color = "red") +
-  theme_bw(base_size = 12) + labs(x = "", y = "Magnitude", title = "Original PCP with LOD/sqrt(2)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, size = 0.2) + 
-  theme(legend.position = c(0.85, 0.10), 
-                legend.background = element_rect(fill = "white", colour = NA),
-        legend.text=element_text(size=15),
-        legend.title = element_blank(),
-        strip.text.x = element_text(size = 13),
-        axis.title.y = element_text(size = 18))
-```
-
 ### Left singular vectors
 
 ```{r}
@@ -1585,3 +1435,156 @@ rbind(d_diff_sqrt2,
        y = "norm(SV - SV_lod0) / norm(SV_lod0)",
        title = "Relative Error in Low-Rank \nSolution Singular Values")
 ```
+
+## PCA
+
+```{r}
+pca_0  <- prcomp(mix)
+pca_10 <- prcomp(mix_data_lod_10_sqrt2)
+pca_20 <- prcomp(mix_data_lod_20_sqrt2)
+pca_30 <- prcomp(mix_data_lod_30_sqrt2)
+pca_40 <- prcomp(mix_data_lod_40_sqrt2)
+pca_50 <- prcomp(mix_data_lod_50_sqrt2)
+```
+
+```{r}
+cor(pca_0$rotation[,1:7], pca_10$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_20$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_30$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_40$rotation[,1:7])
+cor(pca_0$rotation[,1:7], pca_50$rotation[,1:7])
+
+rotation_norm <- as_tibble(cbind(lod0 = norm((pca_0$rotation[,1:7] - pca_0$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod10 = norm((pca_0$rotation[,1:7] - pca_10$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod20 = norm((pca_0$rotation[,1:7] - pca_20$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod30 = norm((pca_0$rotation[,1:7] - pca_30$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod40 = norm((pca_0$rotation[,1:7] - pca_40$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
+      lod50 = norm((pca_0$rotation[,1:7] - pca_50$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+cor(pca_0$x[,1:7], pca_10$x[,1:7])
+cor(pca_0$x[,1:7], pca_20$x[,1:7])
+cor(pca_0$x[,1:7], pca_30$x[,1:7])
+cor(pca_0$x[,1:7], pca_40$x[,1:7])
+cor(pca_0$x[,1:7], pca_50$x[,1:7])
+
+score_norm <- as_tibble(cbind(lod0 = norm((pca_0$x[,1:7] - pca_0$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod10 = norm((pca_0$x[,1:7] - pca_10$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod20 = norm((pca_0$x[,1:7] - pca_20$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod30 = norm((pca_0$x[,1:7] - pca_30$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod40 = norm((pca_0$x[,1:7] - pca_40$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
+      lod50 = norm((pca_0$x[,1:7] - pca_50$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+sdev_norm <- as_tibble(cbind(lod0 = norm_vec(pca_0$sdev[1:7] - pca_0$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod10 = norm_vec(pca_0$sdev[1:7] - pca_10$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod20 = norm_vec(pca_0$sdev[1:7] - pca_20$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod30 = norm_vec(pca_0$sdev[1:7] - pca_30$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod40 = norm_vec(pca_0$sdev[1:7] - pca_40$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
+      lod50 = norm_vec(pca_0$sdev[1:7] - pca_50$sdev[1:7])/norm_vec(pca_0$sdev[1:7]))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCA")
+```
+
+```{r}
+pcp_pca_0  <- prcomp(L_lod0)
+pcp_pca_10 <- prcomp(L_lod10)
+pcp_pca_20 <- prcomp(L_lod20)
+pcp_pca_30 <- prcomp(L_lod30)
+pcp_pca_40 <- prcomp(L_lod40)
+pcp_pca_50 <- prcomp(L_lod50)
+```
+
+```{r}
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_10$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_20$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_30$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_40$rotation[,1:7])
+cor(pcp_pca_0$rotation[,1:7], pcp_pca_50$rotation[,1:7])
+
+pcp_pca_20$rotation[,5] <- -pcp_pca_20$rotation[,5]
+pcp_pca_50$rotation[,4] <- -pcp_pca_50$rotation[,4]
+pcp_pca_50$rotation[,6] <- -pcp_pca_50$rotation[,6]
+
+pcp_rotation_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_0$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod10 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_10$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod20 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_20$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod30 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_30$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod40 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_40$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
+      lod50 = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_50$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+```{r}
+cor(pcp_pca_0$x[,1:7], pcp_pca_10$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_20$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_30$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_40$x[,1:7])
+cor(pcp_pca_0$x[,1:7], pcp_pca_50$x[,1:7])
+
+pcp_pca_20$x[,5] <- -pcp_pca_20$x[,5]
+pcp_pca_50$x[,4] <- -pcp_pca_50$x[,4]
+pcp_pca_50$x[,6] <- -pcp_pca_50$x[,6]
+
+pcp_score_norm <- as_tibble(cbind(lod0 = norm((pcp_pca_0$x[,1:7] - pcp_pca_0$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod10 = norm((pcp_pca_0$x[,1:7] - pcp_pca_10$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod20 = norm((pcp_pca_0$x[,1:7] - pcp_pca_20$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod30 = norm((pcp_pca_0$x[,1:7] - pcp_pca_30$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod40 = norm((pcp_pca_0$x[,1:7] - pcp_pca_40$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
+      lod50 = norm((pcp_pca_0$x[,1:7] - pcp_pca_50$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+```{r}
+pcp_sdev_norm <- as_tibble(cbind(lod0 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_0$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod10 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_10$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod20 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_20$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod30 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_30$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod40 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_40$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
+      lod50 = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_50$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "PCP")
+```
+
+### Viz
+
+```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+rbind(rotation_norm, pcp_rotation_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Error in Rotations")
+```
+
+```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+rbind(score_norm, pcp_score_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Error in Scores")
+```
+
+```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+rbind(sdev_norm, pcp_sdev_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
+       title = "Relative Error in Singular Values")
+```
+
+### Variance Explained
+
+```{r}
+PCP_0 <- pcp_pca_0$sdev^2/sum(pcp_pca_0$sdev^2) *100
+PCA_0 <- pca_0$sdev^2/sum(pca_0$sdev^2) *100
+
+PCP_50 <- pcp_pca_50$sdev^2/sum(pcp_pca_50$sdev^2) *100
+PCA_50 <- pca_50$sdev^2/sum(pca_50$sdev^2) *100
+round(cbind(Component = 1:27, PCP_0, PCA_0, PCP_50, PCA_50), 4) %>% stargazer::stargazer(., summary = NULL)
+```
+
