@@ -27,6 +27,7 @@ library(mvtnorm)
 library(reshape2)
 library(GGally)
 library(grDevices)
+library(gplots)
 
 options(scipen = 999)
 ```
@@ -439,6 +440,38 @@ cv %>%
 
 ## Best $\mu$
 
+### Sparse Matrix
+
+```{r}
+plot_sparse <- S_lod0 %>% as_tibble() %>% 
+  mutate(id = 1:nrow(S_lod0)) %>% 
+  select(id, everything()) %>% 
+  gather(key = exposure, value = value, -id) %>%
+  mutate(binary = ifelse(value < 0.00001, 0, 1))
+
+sparse_matrix <- plot_sparse %>% 
+  select(id, exposure, binary) %>% 
+  spread(exposure, binary) %>% 
+  select(-id) %>% as.matrix()
+
+sum(sparse_matrix)/(nrow(sparse_matrix)*ncol(sparse_matrix))
+```
+
+```{r fig.width = 10}
+## Plot heatmap 
+heatmap.2(sparse_matrix, key.xlab = "Sparsity", 
+                               margins =c(4,8), keysize = 1.25,
+          col = c("white", "red"), density.info="none", trace="none", dendrogram = "column", key.title = "")
+
+plot_sparse %>% 
+ggplot(aes(x = exposure, y = id)) +
+  geom_tile(aes(fill = as.factor(binary))) + 
+  labs(x = "Exposure", y = "Participant", title = "Sparse matrix of rare events", legend = "Magnitude") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+```
+
 ### Patterns
 
 ```{r}
@@ -579,7 +612,4 @@ PCA <- just_pca$sdev^2/sum(just_pca$sdev^2) *100
 round(cbind(Component = 1:27, PCP, PCA), 4) %>% stargazer::stargazer(., summary = NULL)
 ```
 
-```{r}
-
-```
 
