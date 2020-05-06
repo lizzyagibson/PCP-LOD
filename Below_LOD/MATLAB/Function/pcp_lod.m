@@ -25,7 +25,7 @@ rho = 1; % Augmented Lagrangian coefficient
 
 [L1,L2,L3,S1,S2,Z1,Z2,Z3] = deal(zeros(m,n));
 
-MAX_ITER = 100;
+MAX_ITER = 5000;
 LOSS_THRESH = 1e-5;
 SAME_THRESH = 1e-4;
 loss = zeros(MAX_ITER, 1);

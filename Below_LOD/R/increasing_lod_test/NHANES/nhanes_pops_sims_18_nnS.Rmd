@@ -1,0 +1,664 @@
+---
+title: "NHANES POP Simulations"
+author: "Lizzy Gibson"
+date: "4/8/2020"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    toc_depth: 5
+    code_folding: 'hide'
+---
+
+```{r setup, include=FALSE}
+require("knitr")
+opts_chunk$set(echo = TRUE)
+options(scipen = 999)
+library(R.matlab)
+library(tidyverse)
+library(gridExtra)
+library(Matrix)
+library(matconv)
+library(patchwork)
+library(janitor)
+library(ggcorrplot)
+library(ggfortify)  
+library(factoextra)
+library(knitr)
+library(haven)
+library(rlist)
+library(mvtnorm)
+library(reshape2)
+library(GGally)
+library(grDevices)
+library(plotly)
+library(Cairo)
+```
+
+## NHANES
+
+NHANES 2001-2002 POP data.
+
+```{r}
+nhanes <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
+  clean_names()
+
+head(nhanes)[1:7]
+```
+
+LA = lipid adjusted  
+LC = comment code  
+
+### Select
+
+CDC imputes values \<LOD as LOD/sqrt(2). Here, if comment code = "below detectable limit", LC = 1.
+
+```{r}
+prop <- function (x) {1 - (sum(x, na.rm = TRUE)/nrow(nhanes))}
+
+names <- nhanes %>% select(names(.)[grep("lc", names(.))]) %>% 
+  summarize_all(prop) %>% select_if(~. > 0.6) %>% names() %>% str_sub(., 4, 6) %>% str_c("lbx", ., "la") %>% as.vector()
+
+pops <- nhanes %>% 
+  select(!!names) %>% na.omit(.)
+
+names(pops) <- str_sub(names(pops), 1, 6)
+names(pops) <- str_replace(names(pops), "lbxd", "D")
+names(pops) <- str_replace(names(pops), "lbxf", "F")
+names(pops) <- str_replace(names(pops), "lbx", "PCB")
+pops
+
+ggcorr(pops, method = c("everything", "spearman"), limits = FALSE,
+       label = TRUE, label_size = 3, label_alpha = TRUE,
+       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Persistent organic pollutants \n in NHANES 2001-2002")
+```
+
+### Simulate
+
+Remove comment codes for simulations.  
+Remove NA for simulations.
+
+```{r}
+# Vector of NHANES means
+# log to approx normal dist
+means <- as_vector(map(log(pops), function(x) mean(x, na.rm = TRUE)))
+
+# Covariance matrix from NHANES
+# log to approx normal dist
+covs <- cov(log(pops))
+
+# Simulate with multivariate normal function
+# exp multi-normal to get multi-log normal
+set.seed(1988)
+sim_all <- exp(rmvnorm(1000, mean = means, sigma = covs)) %>% as_tibble()
+```
+
+```{r}
+ggcorr(sim_all, method = c("everything", "spearman"), limits = FALSE,
+       label = TRUE, label_size = 3, label_alpha = TRUE,
+       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Simulated Data")
+```
+
+### Scale Simulations
+
+Divide by standard deviation, do not mean center.  
+
+```{r}
+sim_all <- sim_all %>% 
+  mutate_all(scale, center = FALSE)
+```
+
+### Create \<LOD Datasets
+
+```{r, neg}
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .10), -1, .)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .20), -1, .)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .30), -1, .)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .40), -1, .)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .50), -1, .)) %>% as.matrix()
+#write_csv(as_tibble(mix_data_lod_50), "sim_nhanes_lod50.csv")
+
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_0 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .10), 0, .)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_0 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .20), 0, .)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_0 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .30), 0, .)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_0 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .40), 0, .)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_0 <- sim_all %>% 
+  mutate_all(~ifelse(. < quantile(., probs = .50), 0, .)) %>% as.matrix()
+
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_sqrt2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .10), (quantile(., probs = .10)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_sqrt2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .20), (quantile(., probs = .20)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_sqrt2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .30), (quantile(., probs = .30)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_sqrt2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .40), (quantile(., probs = .40)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_sqrt2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .50), (quantile(., probs = .50)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .10), (quantile(., probs = .10)/2), .)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .20), (quantile(., probs = .20)/2), .)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .30), (quantile(., probs = .30)/2), .)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .40), (quantile(., probs = .40)/2), .)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_2 <- sim_all %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .50), (quantile(., probs = .50)/2), .)) %>% as.matrix()
+```
+
+### Quantiles = LOD
+
+```{r}
+delta10 <- sim_all %>% 
+  summarise_all(quantile, probs = .10) %>% as_vector()
+
+delta20 <- sim_all %>% 
+  summarise_all(quantile, probs = .20) %>% as_vector()
+
+delta30 <- sim_all %>% 
+  summarise_all(quantile, probs = .30) %>% as_vector()
+
+delta40 <- sim_all %>% 
+  summarise_all(quantile, probs = .40) %>% as_vector()
+
+delta50 <- sim_all %>% 
+  summarise_all(quantile, probs = .50) %>% as_vector()
+```
+
+## Fuctions
+
+```{r, nn_function}
+prox_l1 <- function(Y, c) {
+  
+  myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
+  X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
+  X
+} 
+
+############################################################
+
+prox_nuclear <- function(Y, c) {
+  
+  USV <- svd(Y)
+  U <- USV$u
+  S <- USV$d
+  V <- USV$v
+  
+  myzero <- vector("numeric", length = length(S))
+  S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
+  X <- U %*% diag(S_new) %*% t(V)
+  nuclearX  <- sum(abs(S_new))
+
+    list(X = X, nuclearX = nuclearX)
+}
+
+############################################################
+
+is_same <- function(SAME_THRESH, ...) {
+  flag <- TRUE
+  varargin <- list(...)
+  if (length(varargin) == 2) {
+    if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
+      flag <- FALSE
+    }
+  }
+  else if (length(varargin) == 3) {
+    if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
+        (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
+        (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
+      flag <- FALSE
+    }
+  }
+  flag
+}
+
+```
+
+```{r, older}
+loss_lod <- function(X, D, LOD) {
+
+    X_lod <- ((X - D)     * (D >= 0)) +
+             ((X - LOD)   * (D < 0 & (X > LOD))) +
+              (X          * (D < 0 & X < 0))
+  
+  l <- sum(X_lod^2) / 2
+  l
+}
+
+############################################################
+
+pcp_lod <- function(D, lambda, mu, LOD) {
+  
+  m <- nrow(D)
+  n <- ncol(D)
+  rho <- 1 # Augmented Lagrangian coefficient (rate)
+  
+  L1 <- matrix(0, m, n)
+  L2 <- matrix(0, m, n)
+  L3 <- matrix(0, m, n)
+  
+  S1 <- matrix(0, m, n)
+  S2 <- matrix(0, m, n)
+  S3 <- matrix(0, m, n) # ADDED
+  
+  Z1 <- matrix(0, m, n)
+  Z2 <- matrix(0, m, n)
+  Z3 <- matrix(0, m, n)
+  Z4 <- matrix(0, m, n) # ADDED
+  
+  # Max iteration
+  MAX_ITER <- 5000
+  
+  # Convergence Thresholds
+  LOSS_THRESH <- 1e-5
+  SAME_THRESH <- 1e-4
+  
+  if (is.vector(LOD)) {
+  #tf = ifelse(D < 0, TRUE, FALSE)
+  #LOD = t(t(tf) * LOD)
+    empty = matrix(1, nrow = nrow(D), ncol = ncol(D))
+    LOD = t(t(empty) * LOD)
+    }
+  
+  loss <- vector("numeric", MAX_ITER)
+  
+  for (i in 1:MAX_ITER) {
+    
+    nuc <- prox_nuclear(((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
+    L1 <- nuc[[1]]
+    nuclearL1 <- nuc[[2]] #nuclearX
+    
+    S1 <- prox_l1((S2 + S3 - (Z3 + Z4)/rho), lambda/rho) # ADDED
+    
+      L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+      L2_opt2 <- L1 + Z1/rho
+      L2_opt3 <- ((mu*rho*LOD + (((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
+      L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
+
+      L2 <- (L2_opt1 * (D >= 0)) +
+        (L2_opt2 * ((D < 0) & (((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+        (L2_opt3 * ((D < 0) & (((L2 + S2) > LOD)))) +
+        (L2_opt4 * ((D < 0) & (((L2 + S2) < 0))))
+
+      S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+      S2_opt2 <- S1 + (Z3/rho)
+      S2_opt3 <- (((mu*rho*LOD) + (((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
+      S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
+
+      S2 <- (S2_opt1 * (D >= 0)) +
+        (S2_opt2 * (((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
+        (S2_opt3 * (((D < 0) & ((L2 + S2) > LOD)))) +
+        (S2_opt4 * (((D < 0) & ((L2 + S2) < 0))))
+    
+    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
+    # % Non-Negativity constraint!
+    
+    ## ADDED
+    S3 <- pmax(S1 + Z4/rho, 0, na.rm = TRUE)
+    
+    Z1 <- Z1 + rho*(L1 - L2)
+    Z2 <- Z2 + rho*(L1 - L3)
+    Z3 <- Z3 + rho*(S1 - S2)
+    Z4 <- Z4 + rho*(S1 - S3) # ADDED
+    # % Z accumulate differnces between L and L and between S and S
+    
+    loss[i] <- nuclearL1 + 
+      (lambda*sum(abs(S1))) +
+      (mu*loss_lod((L2 + S2), D, LOD)) +
+      sum(Z1*(L1 - L2)) +
+      sum(Z2*(L1 - L3)) +
+      sum(Z3*(S1 - S2)) +
+      sum(Z4*(S1 - S3)) + # ADDED
+      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2) + sum((S1 - S3)^2))) # ADDED
+    # % The code block above takes LOD into account.
+    
+    print(str_c(i, " Obj: ", loss[i]))
+        
+    if ((i != 1) && 
+        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
+        is_same(SAME_THRESH, L1, L2, L3) &&
+        is_same(SAME_THRESH, S1, S2, S3)) {
+      break} # % Convergence criteria!
+  }
+  
+  L <- L3 # (L1 + L2 + L3) / 3
+  S <- S3 #(S1 + S2) / 2
+  list(L = L, S = S, loss = loss)
+}
+```
+
+## PCP
+
+```{r, jingkai_leave}
+m <- nrow(sim_all)
+p <- ncol(sim_all)
+
+lambda_mix <- 1/sqrt(m)
+mu_mix <- sqrt(p/(2*log(m*p)))
+
+mix <- as.matrix(sim_all)
+  
+results_0  <- pcp_lod(mix,             lambda_mix, mu_mix, 0)
+results_10 <- pcp_lod(mix_data_lod_10, lambda_mix, mu_mix, delta10)
+results_20 <- pcp_lod(mix_data_lod_20, lambda_mix, mu_mix, delta20)
+results_30 <- pcp_lod(mix_data_lod_30, lambda_mix, mu_mix, delta30)
+results_40 <- pcp_lod(mix_data_lod_40, lambda_mix, mu_mix, delta40)
+results_50 <- pcp_lod(mix_data_lod_50, lambda_mix, mu_mix, delta50)
+
+L_lod0 <- results_0[[1]]
+S_lod0 <- results_0[[2]]
+L_lod10 <- results_10[[1]]
+S_lod10 <- results_10[[2]]
+L_lod20 <- results_20[[1]]
+S_lod20 <- results_20[[2]]
+L_lod30 <- results_30[[1]]
+S_lod30 <- results_30[[2]]
+L_lod40 <- results_40[[1]]
+S_lod40 <- results_40[[2]]
+L_lod50 <- results_50[[1]]
+S_lod50 <- results_50[[2]]
+
+sum(L_lod50)
+sum(S_lod50)
+```
+
+## X - L - S
+
+```{r}
+F_norm <- as_tibble(cbind(`0%` = norm((mix - L_lod0 - S_lod0), type = "F")/norm((mix), type = "F"),
+      `10%` = norm((mix - L_lod10 - S_lod10), type = "F")/norm((mix), type = "F"),
+      `20%` = norm((mix - L_lod20 - S_lod20), type = "F")/norm((mix), type = "F"),
+      `30%` = norm((mix - L_lod30 - S_lod30), type = "F")/norm((mix), type = "F"),
+      `40%` = norm((mix - L_lod40 - S_lod40), type = "F")/norm((mix), type = "F"),
+      `50%` = norm((mix - L_lod50 - S_lod50), type = "F")/norm((mix), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Method = "LOD PCP")
+```
+
+### Viz
+
+```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Prediction Error")
+```
+
+## Individual Solution Matrices
+
+```{r}
+L_diff <- as_tibble(cbind(`0%` = norm((L_lod0 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      `10%` = norm((L_lod10 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      `20%` = norm((L_lod20 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      `30%` = norm((L_lod30 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      `40%` = norm((L_lod40 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      `50%` = norm((L_lod50 - L_lod0), type = "F")/norm((L_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Low-Rank",
+         Method = "LOD PCP")
+
+S_diff <- as_tibble(cbind(`0%` = norm((S_lod0 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      `10%` = norm((S_lod10 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      `20%` = norm((S_lod20 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      `30%` = norm((S_lod30 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      `40%` = norm((S_lod40 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      `50%` = norm((S_lod50 - S_lod0), type = "F")/norm((S_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Sparse",
+         Method = "LOD PCP")
+```
+
+### Viz
+
+```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(Matrix,Method), color = Method)) + 
+  geom_point() + geom_path(aes(linetype = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
+       title = "Relative Error in \nSolution Matrices")
+```
+
+## Values \<LOD
+
+```{r, l22s}
+t_na_lod_0 <- sim_all %>% 
+  as_tibble() %>% 
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_0_na <- as_tibble(t_na_lod_0*L_lod0)
+s_blod_0_na <- as_tibble(t_na_lod_0*S_lod0)
+blod_0_na <- as_tibble(sim_all*t_na_lod_0)
+
+t_na_lod_10 <- mix_data_lod_10 %>% 
+  as_tibble() %>%
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_10_na <- as_tibble(t_na_lod_10*L_lod10)
+s_blod_10_na <- as_tibble(t_na_lod_10*S_lod10)
+blod_10_na <- as_tibble(sim_all*t_na_lod_10)
+
+t_na_lod_20 <- mix_data_lod_20 %>% 
+  as_tibble() %>% 
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_20_na <- as_tibble(t_na_lod_20*L_lod20)
+s_blod_20_na <- as_tibble(t_na_lod_20*S_lod20)
+blod_20_na <- as_tibble(sim_all*t_na_lod_20)
+
+t_na_lod_30 <- mix_data_lod_30 %>% 
+  as_tibble() %>% 
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_30_na <- as_tibble(t_na_lod_30*L_lod30)
+s_blod_30_na <- as_tibble(t_na_lod_30*S_lod30)
+blod_30_na <- as_tibble(sim_all*t_na_lod_30)
+
+t_na_lod_40 <- mix_data_lod_40 %>% 
+  as_tibble() %>% 
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_40_na <- as_tibble(t_na_lod_40*L_lod40)
+s_blod_40_na <- as_tibble(t_na_lod_40*S_lod40)
+blod_40_na <- as_tibble(sim_all*t_na_lod_40)
+
+t_na_lod_50 <- mix_data_lod_50 %>% 
+  as_tibble() %>% 
+  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
+l_blod_50_na <- as_tibble(t_na_lod_50*L_lod50)
+s_blod_50_na <- as_tibble(t_na_lod_50*S_lod50)
+blod_50_na <- as_tibble(sim_all*t_na_lod_50) 
+```
+
+```{r}
+LOD10 <- delta10 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "10%")
+LOD20 <- delta20 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "20%")
+LOD30 <- delta30 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "30%")
+LOD40 <- delta40 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "40%")
+LOD50 <- delta50 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "50%")
+LODall <- rbind(LOD10, LOD20, LOD30, LOD40, LOD50)
+  
+plot_10 <- blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "10%")
+plotl_10 <- l_blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+plots_10 <- s_blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+plotall_10 <- (l_blod_10_na + s_blod_10_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+
+plot_20 <- blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "20%") 
+plotl_20 <- l_blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
+plots_20 <- s_blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
+plotall_20 <- (l_blod_20_na + s_blod_20_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent")) 
+
+plot_30 <- blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "30%")
+plotl_30 <- l_blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent"))
+plots_30 <- s_blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
+plotall_30 <- (l_blod_30_na + s_blod_30_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
+
+plot_40 <- blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "40%") 
+plotl_40 <- l_blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+plots_40 <- s_blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+plotall_40 <- (l_blod_40_na + s_blod_40_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+
+plot_50 <- blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "50%") 
+plotl_50 <- l_blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
+plots_50 <- s_blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent")) 
+plotall_50 <- (l_blod_50_na + s_blod_50_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
+
+org <- rbind(plot_10,
+        plot_20,
+        plot_30,
+        plot_40,
+        plot_50) %>% rename(Value = Original) %>% 
+  mutate(Compare = "Original") %>% 
+  left_join(., LODall, by = c("POP", "Percent"))
+
+plotall <- rbind(plotl_10,
+      plots_10,
+      plotall_10,
+      plotl_20,
+      plots_20,
+      plotall_20,
+      plotl_30,
+      plots_30,
+      plotall_30, 
+      plotl_40,
+      plots_40,
+      plotall_40,
+      plotl_50,
+      plots_50,
+      plotall_50)
+```
+
+```{r}
+plotall %>% 
+  drop_na(.) %>% 
+  mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
+  group_by(Compare, Percent) %>% 
+  summarise(above = sum(above_lod),
+            total = n()) %>% 
+  mutate(above_prop = above/total) %>% 
+  select(-above, -total) %>% 
+  kable(.)
+
+rbind(plots_10,
+      plots_20,
+      plots_30,
+      plots_40,
+      plots_50) %>% 
+  drop_na(.) %>% 
+  group_by(Compare, Percent) %>% 
+  summarise(Min = min (Value),
+            Ave = mean(Value),
+            Max = max(Value)) %>% kable(.)
+```
+
+### Correlation
+
+```{r}
+cor(as.matrix(blod_50_na), use = "complete.obs", method = "spearman")
+cor(as.matrix(l_blod_50_na), use = "complete.obs", method = "spearman")
+cor(as.matrix(s_blod_50_na), use = "complete.obs", method = "spearman")
+```
+
+### Viz
+
+```{r}
+plotall %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  #filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction",
+                            "Original")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+plotall %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+plotall %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  mutate(Value_SD = Value - LOD) %>%
+  filter(Compare != "Sparse Solution") %>% 
+  ggplot(aes(x = Value)) + 
+  geom_density(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  theme_bw() +
+  facet_wrap(.~Percent, scales = "free") +
+  labs(x = "Solution Value", 
+       y = "Density",
+       title = "Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+

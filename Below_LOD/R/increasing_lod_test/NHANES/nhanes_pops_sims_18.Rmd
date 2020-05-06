@@ -1837,7 +1837,7 @@ round(cbind(Component = 1:18, PCP_0, PCA_0, PCP_50, PCA_50), 4) %>% stargazer::s
 
 ## Values \<LOD
 
-```{r}
+```{r, l22s}
 t_na_lod_0 <- sim_all %>% 
   as_tibble() %>% 
   mutate_all(function(x) ifelse(x == -1, TRUE, NA))
@@ -1916,7 +1916,7 @@ S_blod_40_sqrt2_na <- as_tibble(t_na_lod_40*S_lod40_sqrt2)
 L_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*L_lod50_sqrt2)
 S_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*S_lod50_sqrt2)
 ```
-```{r, ls2}
+```{r, ls22}
 L_blod_0_2_na <- as_tibble(t_na_lod_0*L_lod0_2)
 S_blod_0_2_na <- as_tibble(t_na_lod_0*S_lod0_2)
 
