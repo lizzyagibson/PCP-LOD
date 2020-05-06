@@ -31,6 +31,8 @@ library(mvtnorm)
 library(reshape2)
 library(GGally)
 library(grDevices)
+library(plotly)
+library(Cairo)
 ```
 
 ## NHANES
@@ -1992,54 +1994,74 @@ plotall <- rbind(plotl_10,
       plotall_50)
 ```
 
+```{r}
+plotall %>% 
+  drop_na(.) %>% 
+  mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
+  group_by(Compare, Percent) %>% 
+  summarise(above = sum(above_lod),
+            total = n()) %>% 
+  mutate(above_prop = above/total) %>% 
+  select(-above, -total) %>% 
+  kable(.)
+
+rbind(plots_10,
+      plots_20,
+      plots_30,
+      plots_40,
+      plots_50) %>% 
+  drop_na(.) %>% 
+  group_by(Compare, Percent) %>% 
+  summarise(Min = min (Value),
+            Ave = mean(Value),
+            Max = max(Value)) %>% kable(.)
+```
+
+### Correlation
+
+```{r}
+cor(as.matrix(blod_50_na), use = "complete.obs", method = "spearman")
+cor(as.matrix(l_blod_50_na), use = "complete.obs", method = "spearman")
+cor(as.matrix(s_blod_50_na), use = "complete.obs", method = "spearman")
+```
+
 ### Viz
 
 ```{r}
 plotall %>% 
-      drop_na(Original) %>% 
-  ggplot(aes(x = Original, y = Value, 
-             color = Percent)) + 
-  geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(intercept = 0, slope = 1) +
-  facet_wrap(.~Compare) +
-  #, scales = "free") +
-  labs(x = "Original", 
-       y = "Solution Value",
-       title = "Values <LOD") + 
-  theme(legend.position = "bottom")
-
-plotall %>% 
-      drop_na(Original) %>% 
-  ggplot(aes(x = Original, y = Value, 
-             color = Compare)) + 
-  geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(intercept = 0, slope = 1) +
-  facet_wrap(.~Percent, scales = "free") +
-  labs(x = "Original", 
-       y = "Solution Value",
-       title = "Values <LOD") +
-  theme(legend.position = "bottom")
-
-plotall %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
   drop_na(.) %>% 
-  ggplot(aes(x = rowid, y = Value)) + 
-  geom_point(aes(color = Compare), alpha = 0.25) + 
-  theme_bw() +
-  facet_wrap(.~Percent) +
-  labs(x = "Individual", 
-       y = "Solution Value",
-       title = "Values <LOD") +
-  theme(legend.position = "bottom")
-
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
+  #filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction",
+                            "Original")) %>% 
   ggplot(aes(x = POP, y = Value)) + 
-  geom_jitter(aes(color = Compare), alpha = 0.25, width = 0.3, height = 0) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
   theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+plotall %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
   facet_wrap(.~Percent) +
   labs(x = "POP", 
        y = "Solution Value",
@@ -2048,70 +2070,19 @@ plotall %>%
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-#### Subtract LOD
-
-LOD center data.
-
 ```{r}
 plotall %>% 
-  drop_na(Original) %>%
-  mutate(Value_SD = Value - LOD,
-         Original_SD = Original - LOD) %>% 
-  ggplot(aes(x = Original_SD, y = Value_SD, 
-             color = Percent)) + 
-  geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(intercept = 0, slope = 1) +
-  geom_hline(yintercept = 0) +
-  geom_vline(xintercept = 0) +
-  facet_wrap(.~Compare) +
-  labs(x = "Original", 
-       y = "Solution Value",
-       title = "Values <LOD") + 
-  theme(legend.position = "bottom")
-
-plotall %>% 
-  drop_na(Original) %>% 
-  mutate(Value_SD = Value - LOD,
-         Original_SD = Original - LOD) %>%
-  ggplot(aes(x = Original_SD, y = Value_SD, 
-             color = Compare)) + 
-  geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(intercept = 0, slope = 1) +
-  geom_hline(yintercept = 0) +
-  geom_vline(xintercept = 0) +
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  mutate(Value_SD = Value - LOD) %>%
+  filter(Compare != "Sparse Solution") %>% 
+  ggplot(aes(x = Value)) + 
+  geom_density(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
-  labs(x = "Original", 
-       y = "Solution Value",
-       title = "Values <LOD") +
-  theme(legend.position = "bottom")
-
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
-  mutate(Value_SD = Value - LOD) %>%
-  ggplot(aes(x = rowid, y = Value_SD)) + 
-  geom_point(aes(color = Compare), alpha = 0.25) + 
-  geom_hline(yintercept = 0) +
-  theme_bw() +
-  facet_wrap(.~Percent) +
-  labs(x = "Individual", 
-       y = "Solution Value",
-       title = "Values <LOD") +
-  theme(legend.position = "bottom")
-
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
-  mutate(Value_SD = Value - LOD) %>%
-  ggplot(aes(x = POP, y = Value_SD)) + 
-  geom_jitter(aes(color = Compare), alpha = 0.25, width = 0.3, height = 0) + 
-  geom_hline(yintercept = 0) +
-  theme_bw() +
-  facet_wrap(.~Percent) +
-  labs(x = "POP", 
-       y = "Solution Value",
+  labs(x = "Solution Value", 
+       y = "Density",
        title = "Values <LOD") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
