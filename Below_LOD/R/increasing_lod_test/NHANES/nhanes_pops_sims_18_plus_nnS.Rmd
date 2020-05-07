@@ -2433,14 +2433,14 @@ plotall %>%
   rbind(., org) %>% 
   drop_na(.) %>% 
   mutate(Value_SD = Value - LOD) %>%
-  filter(Compare != "Sparse Solution") %>% 
+  #filter(Compare != "Sparse Solution") %>% 
   ggplot(aes(x = Value)) + 
-  geom_density(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
        y = "Density",
-       title = "Values <LOD (excluding sparse)") +
+       title = "Values <LOD") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 
@@ -2504,29 +2504,12 @@ plotall_nns %>%
   drop_na(.) %>% 
   #filter(Compare != "Sparse Solution") %>% 
   ggplot(aes(x = Value)) + 
-  geom_density(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
-       y = "Density",
-       title = "Values <LOD") +
+       y = "Count",
+       title = "nnS Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
-
-plotall_nns %>% 
-  drop_na(.) %>% 
-  filter(Compare != "Sparse Solution") %>% 
-  select(-Original, -LOD) %>% 
-  spread(key = Compare, value = Value) %>% 
-  mutate(Sparse = `Model Prediction` - `Low Rank Solution`) %>% 
-  summarise(max_sparse = max(Sparse),
-            min_sparse = min(Sparse))
-
-plotall_nns %>% 
-  drop_na(.) %>% 
-  filter(Compare == "Sparse Solution") %>% 
-  summarise(max_sparse = max(Value),
-            min_sparse = min(Value))
 ```
-
-Ok, this actually makes sense because it only includes values <LOD to begin with. Values <LOD all have zeros in the solution sparse matrix, so model prediction = low rank solution, so you can't see the low rank solution values.
