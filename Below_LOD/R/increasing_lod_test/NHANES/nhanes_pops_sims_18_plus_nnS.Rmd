@@ -1583,14 +1583,9 @@ V_lod50_nnS <- svd(L_lod50_nnS)$v[,1:7]
 # cor(V_lod0_nnS, V_lod50_nnS)
 
 # Hack -- Flip
-# V_lod10_nnS[,3] <- -V_lod10_nnS[,3]
-# V_lod10_nnS[,5:7] <- -V_lod10_nnS[,5:7]
-# V_lod20_nnS[,3] <- -V_lod20_nnS[,3]
-# V_lod20_nnS[,5:7] <- -V_lod20_nnS[,5:7]
-# V_lod30_nnS[,3:6] <- -V_lod30_nnS[,3:6]
-# V_lod40_nnS[,3:4] <- -V_lod40_nnS[,3:4]
-# V_lod40_nnS[,7] <- -V_lod40_nnS[,7]
-# V_lod50_nnS[,3:7] <- -V_lod50_nnS[,3:7]
+V_lod30_nnS[,6] <- -V_lod30_nnS[,6]
+V_lod40_nnS[,6] <- -V_lod40_nnS[,6]
+V_lod50_nnS[,6] <- -V_lod50_nnS[,6]
 
 V_diff_nnS<- as_tibble(cbind(`0%` =norm((V_lod0_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
       `10%` =norm((V_lod10_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
@@ -1772,14 +1767,9 @@ u_lod40_nnS <- svd(L_lod40_nnS)$u[,1:7]
 u_lod50_nnS <- svd(L_lod50_nnS)$u[,1:7]
 
 # Hack -- Flip
-# u_lod10_nnS[,3] <- -u_lod10_nnS[,3]
-# u_lod10_nnS[,5:7] <- -u_lod10_nnS[,5:7]
-# u_lod20_nnS[,3] <- -u_lod20_nnS[,3]
-# u_lod20_nnS[,5:7] <- -u_lod20_nnS[,5:7]
-# u_lod30_nnS[,3:6] <- -u_lod30_nnS[,3:6]
-# u_lod40_nnS[,3:4] <- -u_lod40_nnS[,3:4]
-# u_lod40_nnS[,7] <- -u_lod40_nnS[,7]
-# u_lod50_nnS[,3:7] <- -u_lod50_nnS[,3:7]
+u_lod30_nnS[,6] <- -u_lod30_nnS[,6]
+u_lod40_nnS[,6] <- -u_lod40_nnS[,6]
+u_lod50_nnS[,6] <- -u_lod50_nnS[,6]
 
 u_diff_nnS<- as_tibble(cbind(`0%` =norm((u_lod0_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
       `10%` =norm((u_lod10_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
