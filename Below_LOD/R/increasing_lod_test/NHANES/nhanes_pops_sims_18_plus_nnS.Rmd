@@ -7,7 +7,6 @@ output:
     toc: TRUE
     toc_float: TRUE
     toc_depth: 5
-    code_folding: 'hide'
 ---
 
 ```{r setup, include=FALSE}
@@ -54,10 +53,6 @@ names(pops) <- str_replace(names(pops), "lbxd", "D")
 names(pops) <- str_replace(names(pops), "lbxf", "F")
 names(pops) <- str_replace(names(pops), "lbx", "PCB")
 pops
-
-ggcorr(pops, method = c("everything", "spearman"), limits = FALSE,
-       label = TRUE, label_size = 3, label_alpha = TRUE,
-       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Persistent organic pollutants \n in NHANES 2001-2002")
 
 # Vector of NHANES means
 # log to approx normal dist
@@ -789,6 +784,10 @@ F_norm_nnS <- as_tibble(cbind(`0%` = norm((mix - L_lod0_nnS - S_lod0_nnS), type 
   mutate(Method = "LOD PCP nnS")
 ```
 
+* X = simulated dataset
+* L = low rank solution matrix
+* S = sparse solution matrix
+
 ```{r, fig.align = "center"}
 rbind(F_norm_2, F_norm_sqrt2, F_norm_0, F_norm, F_norm_nnS) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
@@ -918,6 +917,10 @@ S_diff_nnS <- as_tibble(cbind(`0%` = norm((S_lod0_nnS - S_lod0_nnS), type = "F")
          Method = "LOD PCP nnS")
 ```
 
+* Reference is solution matix with 0\% \<LOD  
+* Low rank solution matrices compared with low rank solution with 0\% \<LOD
+* Sparse solution matrices compared with sparse solution with 0\% \<LOD
+
 ```{r, fig.align = "center"}
 rbind(L_diff_2, S_diff_2,
       L_diff_sqrt2, S_diff_sqrt2,
@@ -926,7 +929,7 @@ rbind(L_diff_2, S_diff_2,
       L_diff_nnS, S_diff_nnS) %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(Matrix,Method), color = Method)) + 
   geom_point() + geom_path(aes(linetype = Matrix)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
-       title = "Relative Error in \nSolution Matrices")
+       title = "Relative Error in Solution Matrices")
 ```
 
 ## Values \<LOD vs \>LOD
@@ -1267,6 +1270,9 @@ less_diff_nnS <- as_tibble(cbind(`0%` = norm((blod_0 - l_blod_0_nnS - s_blod_0_n
          Method = "LOD PCP nnS")
 ```
 
+* Values \> and \< LOD stratified
+* Sum of low rank and sparse solution matrices (L \+ S) compared to simulated data (X)
+
 ```{r, fig.align = "center"}
 rbind(above_diff, 
       less_diff,
@@ -1284,7 +1290,7 @@ rbind(above_diff,
   geom_point(aes()) + geom_path(aes(linetype = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "(norm(X-L-S) / norm(X)",
-       title = "Relative Error in \nValues < LOD & > LOD")
+       title = "Relative Error in Values < LOD & > LOD")
 ```
 
 ## SVD
@@ -1473,6 +1479,8 @@ V_diff_nnS<- as_tibble(cbind(`0%` =norm((V_lod0_nnS - V_lod0_nnS), type = "F")/n
 #V_diff_nnS
 ```
 
+* Reference is right singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
+
 ```{r, fig.align = "center"}
 rbind(V_diff,
       V_diff_0,
@@ -1482,7 +1490,7 @@ rbind(V_diff,
   geom_point() + geom_path() + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "norm(SV - SV_lod0) / norm(SV_lod0)",
-       title = "Relative Error in Low-Rank \nSolution Right Singular Vectors")
+       title = "Relative Error in Low-Rank Solution Right Singular Vectors")
 ```
 
 ### Left singular vectors
@@ -1634,6 +1642,8 @@ mutate(Method = "LOD PCP nnS")
 # u_diff_nnS
 ```
 
+* Reference is left singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
+
 ```{r, fig.align = "center"}
 rbind(u_diff,
       u_diff_0,
@@ -1643,7 +1653,7 @@ rbind(u_diff,
   geom_point() + geom_path() + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "norm(SV - SV_lod0) / norm(SV_lod0)",
-       title = "Relative Error in Low-Rank \nSolution Left Singular Vectors")
+       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
 ### Singular Values
@@ -1749,6 +1759,8 @@ d_diff_nnS<- as_tibble(cbind(`0%` = norm_vec(d_lod0_nnS - d_lod0_nnS)/norm_vec(d
   mutate(Method = "LOD PCP nnS")
 ```
 
+* Reference is singular value vector of SVD of low rank solution matix with 0\% \<LOD
+
 ```{r, fig.align = "center"}
 rbind(d_diff_sqrt2,
       d_diff,
@@ -1758,7 +1770,7 @@ rbind(d_diff_sqrt2,
   geom_point() + geom_path() + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "norm(SV - SV_lod0) / norm(SV_lod0)",
-       title = "Relative Error in Low-Rank \nSolution Singular Values")
+       title = "Relative Error in Low-Rank Solution Singular Values")
 ```
 
 ## Values \<LOD
@@ -1806,24 +1818,6 @@ l_blod_50_na <- as_tibble(t_na_lod_50*L_lod50)
 s_blod_50_na <- as_tibble(t_na_lod_50*S_lod50)
 blod_50_na <- as_tibble(sim_all*t_na_lod_50) 
 
-l_blod_0_0_na <- as_tibble(t_na_lod_0*L_lod0_0)
-s_blod_0_0_na <- as_tibble(t_na_lod_0*S_lod0_0)
-
-l_blod_10_0_na <- as_tibble(t_na_lod_10*L_lod10_0)
-s_blod_10_0_na <- as_tibble(t_na_lod_10*S_lod10_0)
-
-l_blod_20_0_na <- as_tibble(t_na_lod_20*L_lod20_0)
-s_blod_20_0_na <- as_tibble(t_na_lod_20*S_lod20_0)
-
-l_blod_30_0_na <- as_tibble(t_na_lod_30*L_lod30_0)
-s_blod_30_0_na <- as_tibble(t_na_lod_30*S_lod30_0)
-
-l_blod_40_0_na <- as_tibble(t_na_lod_40*L_lod40_0)
-s_blod_40_0_na <- as_tibble(t_na_lod_40*S_lod40_0)
-
-l_blod_50_0_na <- as_tibble(t_na_lod_50*L_lod50_0)
-s_blod_50_0_na <- as_tibble(t_na_lod_50*S_lod50_0)
-
 L_blod_0_sqrt2_na <- as_tibble(t_na_lod_0*L_lod0_sqrt2)
 S_blod_0_sqrt2_na <- as_tibble(t_na_lod_0*S_lod0_sqrt2)
 
@@ -1841,24 +1835,6 @@ S_blod_40_sqrt2_na <- as_tibble(t_na_lod_40*S_lod40_sqrt2)
 
 L_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*L_lod50_sqrt2)
 S_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*S_lod50_sqrt2)
-
-L_blod_0_2_na <- as_tibble(t_na_lod_0*L_lod0_2)
-S_blod_0_2_na <- as_tibble(t_na_lod_0*S_lod0_2)
-
-L_blod_10_2_na <- as_tibble(t_na_lod_10*L_lod10_2)
-S_blod_10_2_na <- as_tibble(t_na_lod_10*S_lod10_2)
-
-L_blod_20_2_na <- as_tibble(t_na_lod_20*L_lod20_2)
-S_blod_20_2_na <- as_tibble(t_na_lod_20*S_lod20_2)
-
-L_blod_30_2_na <- as_tibble(t_na_lod_30*L_lod30_2)
-S_blod_30_2_na <- as_tibble(t_na_lod_30*S_lod30_2)
-
-L_blod_40_2_na <- as_tibble(t_na_lod_40*L_lod40_2)
-S_blod_40_2_na <- as_tibble(t_na_lod_40*S_lod40_2)
-
-L_blod_50_2_na <- as_tibble(t_na_lod_50*L_lod50_2)
-S_blod_50_2_na <- as_tibble(t_na_lod_50*S_lod50_2)
 
 LOD10 <- delta10 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "10%")
 LOD20 <- delta20 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "20%")
@@ -1969,9 +1945,45 @@ plotall_nns <- rbind(plotl_10_nnS,
       plotl_50_nnS,
       plots_50_nnS,
       plotall_50_nnS)
+
+plotl_10_sqrt2 <- L_blod_10_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+plots_10_sqrt2 <- S_blod_10_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+plotall_10_sqrt2 <- (L_blod_10_sqrt2_na + S_blod_10_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+
+plotl_20_sqrt2 <- L_blod_20_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
+plots_20_sqrt2 <- S_blod_20_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
+plotall_20_sqrt2 <- (L_blod_20_sqrt2_na + S_blod_20_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent")) 
+
+plotl_30_sqrt2 <- L_blod_30_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent"))
+plots_30_sqrt2 <- S_blod_30_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
+plotall_30_sqrt2 <- (L_blod_30_sqrt2_na + S_blod_30_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
+
+plotl_40_sqrt2 <- L_blod_40_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+plots_40_sqrt2 <- S_blod_40_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+plotall_40_sqrt2 <- (L_blod_40_sqrt2_na + S_blod_40_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
+
+plotl_50_sqrt2 <- L_blod_50_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
+plots_50_sqrt2 <- S_blod_50_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent")) 
+plotall_50_sqrt2 <- (L_blod_50_sqrt2_na + S_blod_50_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
+
+plotall_sqrt2 <- rbind(plotl_10_sqrt2,
+      plots_10_sqrt2,
+      plotall_10_sqrt2,
+      plotl_20_sqrt2,
+      plots_20_sqrt2,
+      plotall_20_sqrt2,
+      plotl_30_sqrt2,
+      plots_30_sqrt2,
+      plotall_30_sqrt2, 
+      plotl_40_sqrt2,
+      plots_40_sqrt2,
+      plotall_40_sqrt2,
+      plotl_50_sqrt2,
+      plots_50_sqrt2,
+      plotall_50_sqrt2)
 ```
 
-```{r, fig.align = "center"}
+```{r}
 plotall %>% 
   filter(Compare == "Low Rank Solution") %>% 
   drop_na(.) %>% 
@@ -1996,6 +2008,18 @@ plotall_nns %>%
   select(Percent, Proportion) %>% 
   kable(., caption = "nnS LOD PCP Low Rank Solution Values >LOD")
 
+plotall_sqrt2 %>% 
+  filter(Compare == "Low Rank Solution") %>% 
+  drop_na(.) %>% 
+  mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
+  group_by(Compare, Percent) %>% 
+  summarise(above = sum(above_lod),
+            total = n()) %>% 
+  mutate(Proportion = round(above/total, 2)) %>% 
+  ungroup(.) %>% 
+  select(Percent, Proportion) %>% 
+  kable(., caption = "Original PCP w/ LOD/sqrt(2) Low Rank Solution Values >LOD")
+
 rbind(plots_10,
       plots_20,
       plots_30,
@@ -2003,10 +2027,11 @@ rbind(plots_10,
       plots_50) %>% 
   drop_na(.) %>% 
   group_by(Compare, Percent) %>% 
-  summarise(Min = min (Value),
+  summarise(Min = min(Value),
             Ave = mean(Value),
             Max = max(Value)) %>% 
   ungroup(.) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   select(-Compare) %>% kable(., caption = "LOD PCP Sparse Solutions")
 
 rbind(plots_10_nnS,
@@ -2020,8 +2045,25 @@ rbind(plots_10_nnS,
             Mean = mean(Value),
             Max = max(Value)) %>% 
   ungroup(.) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   select(-Compare) %>% kable(., caption = "nnS LOD PCP Sparse Solutions")
+
+rbind(plots_10_sqrt2,
+      plots_20_sqrt2,
+      plots_30_sqrt2,
+      plots_40_sqrt2,
+      plots_50_sqrt2) %>% 
+  drop_na(.) %>% 
+  group_by(Compare, Percent) %>%
+  summarise(Min = min (Value),
+            Mean = mean(Value),
+            Max = max(Value)) %>% 
+  ungroup(.) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  select(-Compare) %>% kable(., caption = "Original PCP w/ LOD/sqrt(2) Sparse Solutions")
 ```
+
+* Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
 plotall %>% 
@@ -2044,7 +2086,11 @@ plotall %>%
        title = "LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
+```
 
+* Plus sign (\+) indicates LOD for each chemical
+
+```{r, fig.align = "center"}
 plotall %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
@@ -2065,6 +2111,8 @@ plotall %>%
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
+* Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
 plotall_nns %>% 
@@ -2087,7 +2135,11 @@ plotall_nns %>%
        title = "nnS LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
+```
 
+* Plus sign (\+) indicates LOD for each chemical
+
+```{r, fig.align = "center"}
 plotall_nns %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
@@ -2105,6 +2157,55 @@ plotall_nns %>%
   labs(x = "POP", 
        y = "Solution Value",
        title = "nnS LOD PCP Solution Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+* Plus sign (\+) indicates LOD for each chemical
+
+```{r, fig.align = "center"}
+plotall_sqrt2 %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  #filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction",
+                            "Original")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "Original PCP w/ LOD/sqrt(2) Solution Values <LOD + Original Values") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+* Plus sign (\+) indicates LOD for each chemical
+
+```{r, fig.align = "center"}
+plotall_sqrt2 %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "Original PCP w/ LOD/sqrt(2) Solution Values <LOD") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
@@ -2138,6 +2239,21 @@ plotall_nns %>%
   labs(x = "Solution Value", 
        y = "Count",
        title = "nnS LOD PCP Solution Values <LOD + Original Values") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+plotall_sqrt2 %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  #filter(Compare != "Sparse Solution") %>% 
+  ggplot(aes(x = Value)) + 
+  geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  theme_bw() +
+  facet_wrap(.~Percent, scales = "free") +
+  labs(x = "Solution Value", 
+       y = "Count",
+       title = "Original PCP w/ LOD/sqrt(2) Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
