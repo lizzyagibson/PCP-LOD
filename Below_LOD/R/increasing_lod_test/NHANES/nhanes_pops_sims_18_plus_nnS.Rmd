@@ -1,7 +1,7 @@
 ---
-title: "NHANES POP Simulations"
+title: "LOD PCP, Original PCP, & nnS LOD PCP"
 author: "Lizzy Gibson"
-date: "4/8/2020"
+date: "5/7/2020"
 output: 
   html_document:
     toc: TRUE
@@ -12,7 +12,7 @@ output:
 
 ```{r setup, include=FALSE}
 require("knitr")
-opts_chunk$set(echo = TRUE)
+opts_chunk$set(echo = FALSE, messages = FALSE)
 options(scipen = 999)
 library(R.matlab)
 library(tidyverse)
@@ -35,25 +35,12 @@ library(plotly)
 library(Cairo)
 ```
 
-## NHANES
-
-NHANES 2001-2002 POP data.
-
-```{r}
+```{r, nhanes, include=FALSE, cache = TRUE}
 nhanes <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
   clean_names()
 
 head(nhanes)[1:7]
-```
 
-LA = lipid adjusted  
-LC = comment code  
-
-### Select
-
-CDC imputes values \<LOD as LOD/sqrt(2). Here, if comment code = "below detectable limit", LC = 1.
-
-```{r}
 prop <- function (x) {1 - (sum(x, na.rm = TRUE)/nrow(nhanes))}
 
 names <- nhanes %>% select(names(.)[grep("lc", names(.))]) %>% 
@@ -71,14 +58,7 @@ pops
 ggcorr(pops, method = c("everything", "spearman"), limits = FALSE,
        label = TRUE, label_size = 3, label_alpha = TRUE,
        hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Persistent organic pollutants \n in NHANES 2001-2002")
-```
 
-### Simulate
-
-Remove comment codes for simulations.  
-Remove NA for simulations.
-
-```{r}
 # Vector of NHANES means
 # log to approx normal dist
 means <- as_vector(map(log(pops), function(x) mean(x, na.rm = TRUE)))
@@ -91,26 +71,10 @@ covs <- cov(log(pops))
 # exp multi-normal to get multi-log normal
 set.seed(1988)
 sim_all <- exp(rmvnorm(1000, mean = means, sigma = covs)) %>% as_tibble()
-```
 
-```{r}
-ggcorr(sim_all, method = c("everything", "spearman"), limits = FALSE,
-       label = TRUE, label_size = 3, label_alpha = TRUE,
-       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Simulated Data")
-```
-
-### Scale Simulations
-
-Divide by standard deviation, do not mean center.  
-
-```{r}
 sim_all <- sim_all %>% 
   mutate_all(scale, center = FALSE)
-```
 
-### Create \<LOD Datasets
-
-```{r, neg}
 # Create version with 10% lowest values for each variable as below the LOD
 mix_data_lod_10 <- sim_all %>% 
   mutate_all(~ifelse(. < quantile(., probs = .10), -1, .)) %>% as.matrix()
@@ -190,11 +154,7 @@ mix_data_lod_40_2 <- sim_all %>%
 # Create version with 50% lowest values for each variable as below the LOD
 mix_data_lod_50_2 <- sim_all %>% 
   mutate_all(~ifelse(. <= quantile(., probs = .50), (quantile(., probs = .50)/2), .)) %>% as.matrix()
-```
 
-### Quantiles = LOD
-
-```{r}
 delta10 <- sim_all %>% 
   summarise_all(quantile, probs = .10) %>% as_vector()
 
@@ -211,9 +171,7 @@ delta50 <- sim_all %>%
   summarise_all(quantile, probs = .50) %>% as_vector()
 ```
 
-## Fuctions
-
-```{r, nn_function}
+```{r, nn_function, include=FALSE, cache = TRUE}
 prox_l1 <- function(Y, c) {
   
   myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
@@ -371,9 +329,7 @@ pcp_lod_NN <- function(D, lambda, mu, LOD) {
   S <- S1 #(S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
-```
 
-```{r, older}
 loss_lod <- function(X, D, LOD) {
 
     X_lod <- ((X - D)     * (D >= 0)) +
@@ -477,9 +433,7 @@ pcp_lod <- function(D, lambda, mu, LOD) {
   S <- S1 #(S1 + S2) / 2
   list(L = L, S = S, loss = loss)
 }
-```
 
-```{r}
 soft_thresholding <- function(v, lambda) {
   myzero <- matrix(data = 0, ncol = ncol(v), nrow = nrow(v))
   w <- sign(v) * pmax(abs(v) - lambda, myzero)
@@ -544,9 +498,7 @@ original_pcp <- function(D, lambda, mu) {
   }
   list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj)
 }
-```
 
-```{r, functionnnS}
 pcp_lod_nnS <- function(D, lambda, mu, LOD) {
   
   m <- nrow(D)
@@ -649,9 +601,7 @@ pcp_lod_nnS <- function(D, lambda, mu, LOD) {
 }
 ```
 
-## PCP
-
-```{r, jingkai_leave, cache = TRUE}
+```{r, jingkai_leave, include = FALSE, cache = TRUE}
 m <- nrow(sim_all)
 p <- ncol(sim_all)
 
@@ -700,15 +650,6 @@ nn_S_lod40 <- nn_results_40[[2]]
 nn_L_lod50 <- nn_results_50[[1]]
 nn_S_lod50 <- nn_results_50[[2]]
 
-# all_equal(nn_L_lod0, L_lod0)
-# all_equal(nn_L_lod10, L_lod10)
-# all_equal(nn_L_lod20, L_lod20)
-# all_equal(nn_L_lod30, L_lod30)
-# all_equal(nn_L_lod40, L_lod40)
-# all_equal(nn_L_lod50, L_lod50)
-```
-
-```{r, subzero_old, cache = TRUE}
 results_0_0  <- original_pcp(mix,               lambda_mix, mu_mix)
 results_10_0 <- original_pcp(mix_data_lod_10_0, lambda_mix, mu_mix)
 results_20_0 <- original_pcp(mix_data_lod_20_0, lambda_mix, mu_mix)
@@ -748,9 +689,7 @@ L_lod40_sqrt2 <- results_40_sqrt2[[1]]
 S_lod40_sqrt2 <- results_40_sqrt2[[2]]
 L_lod50_sqrt2 <- results_50_sqrt2[[1]]
 S_lod50_sqrt2 <- results_50_sqrt2[[2]]
-```
 
-```{r, two, cache = TRUE}
 results_0_2  <- original_pcp(mix,                   lambda_mix, mu_mix)
 results_10_2 <- original_pcp(mix_data_lod_10_2, lambda_mix, mu_mix)
 results_20_2 <- original_pcp(mix_data_lod_20_2, lambda_mix, mu_mix)
@@ -770,9 +709,7 @@ L_lod40_2 <- results_40_2[[1]]
 S_lod40_2 <- results_40_2[[2]]
 L_lod50_2 <- results_50_2[[1]]
 S_lod50_2 <- results_50_2[[2]]
-```
 
-```{r pcpnns, cache = TRUE}
 results_0_nnS  <- pcp_lod_nnS(mix,             lambda_mix, mu_mix, 0)
 results_10_nnS <- pcp_lod_nnS(mix_data_lod_10, lambda_mix, mu_mix, delta10)
 results_20_nnS <- pcp_lod_nnS(mix_data_lod_20, lambda_mix, mu_mix, delta20)
@@ -796,7 +733,7 @@ S_lod50_nnS <- results_50_nnS[[2]]
 
 ## X - L - S
 
-```{r}
+```{r, xls, include=FALSE, cache=TRUE}
 F_norm <- as_tibble(cbind(`0%` = norm((mix - L_lod0 - S_lod0), type = "F")/norm((mix), type = "F"),
       `10%` = norm((mix - L_lod10 - S_lod10), type = "F")/norm((mix), type = "F"),
       `20%` = norm((mix - L_lod20 - S_lod20), type = "F")/norm((mix), type = "F"),
@@ -841,9 +778,7 @@ F_norm_2 <- as_tibble(cbind(`0%` = norm((mix - L_lod0_2 - S_lod0_2), type = "F")
                                 `50%` = norm((mix - L_lod50_2 - S_lod50_2), type = "F")/norm((mix), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Method = "PCP w/ LOD/2")
-```
 
-```{r}
 F_norm_nnS <- as_tibble(cbind(`0%` = norm((mix - L_lod0_nnS - S_lod0_nnS), type = "F")/norm((mix), type = "F"),
       `10%` = norm((mix - L_lod10_nnS - S_lod10_nnS), type = "F")/norm((mix), type = "F"),
       `20%` = norm((mix - L_lod20_nnS - S_lod20_nnS), type = "F")/norm((mix), type = "F"),
@@ -854,9 +789,7 @@ F_norm_nnS <- as_tibble(cbind(`0%` = norm((mix - L_lod0_nnS - S_lod0_nnS), type 
   mutate(Method = "LOD PCP nnS")
 ```
 
-### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(F_norm_2, F_norm_sqrt2, F_norm_0, F_norm, F_norm_nnS) %>% ggplot(aes(x = percent_blod, y = norm)) + 
   geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
@@ -865,7 +798,7 @@ rbind(F_norm_2, F_norm_sqrt2, F_norm_0, F_norm, F_norm_nnS) %>% ggplot(aes(x = p
 
 ## Individual Solution Matrices
 
-```{r}
+```{r, ind, include=FALSE, cache= TRUE}
 L_diff <- as_tibble(cbind(`0%` = norm((L_lod0 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
       `10%` = norm((L_lod10 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
       `20%` = norm((L_lod20 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
@@ -963,9 +896,7 @@ S_diff_2 <- as_tibble(cbind(`0%` = norm((S_lod0_2 - S_lod0_2), type = "F")/norm(
   gather(percent_blod, norm) %>% 
   mutate(Matrix = "Sparse",
          Method = "PCP w/ LOD/2")
-```
 
-```{r}
 L_diff_nnS <- as_tibble(cbind(`0%` = norm((L_lod0_nnS - L_lod0_nnS), type = "F")/norm((L_lod0_nnS), type = "F"),
       `10%` = norm((L_lod10_nnS - L_lod0_nnS), type = "F")/norm((L_lod0_nnS), type = "F"),
       `20%` = norm((L_lod20_nnS - L_lod0_nnS), type = "F")/norm((L_lod0_nnS), type = "F"),
@@ -987,9 +918,7 @@ S_diff_nnS <- as_tibble(cbind(`0%` = norm((S_lod0_nnS - S_lod0_nnS), type = "F")
          Method = "LOD PCP nnS")
 ```
 
-### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(L_diff_2, S_diff_2,
       L_diff_sqrt2, S_diff_sqrt2,
       L_diff, S_diff,
@@ -1002,7 +931,7 @@ rbind(L_diff_2, S_diff_2,
 
 ## Values \<LOD vs \>LOD
 
-```{r}
+```{r, above_below, include=FALSE, cache = TRUE}
 # BELOW LOD
 # TRUE = <LOD
 tf_lod_0 <- sim_all %>% 
@@ -1207,9 +1136,7 @@ above_diff_sqrt2 <- as_tibble(cbind(
   gather(percent_blod, norm) %>% 
   mutate(Values = "> LOD",
          Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-```
 
-```{r, ls2}
 L_blod_0_2 <- as.matrix(tf_lod_0*L_lod0_2)
 S_blod_0_2 <- as.matrix(tf_lod_0*S_lod0_2)
 
@@ -1268,10 +1195,7 @@ above_diff_2 <- as_tibble(cbind(
   gather(percent_blod, norm) %>% 
   mutate(Values = "> LOD",
          Method = "PCP w/ LOD/2")
-```
 
-
-```{r}
 l_above_blod_0_nnS <- as.matrix((!tf_lod_0)*L_lod0_nnS)
 s_above_blod_0_nnS <- as.matrix((!tf_lod_0)*S_lod0_nnS)
 
@@ -1343,9 +1267,7 @@ less_diff_nnS <- as_tibble(cbind(`0%` = norm((blod_0 - l_blod_0_nnS - s_blod_0_n
          Method = "LOD PCP nnS")
 ```
 
-### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(above_diff, 
       less_diff,
       above_diff_0, 
@@ -1367,15 +1289,9 @@ rbind(above_diff,
 
 ## SVD
 
-```{r}
-svd(L_lod0)$d
-
-svd(L_lod50)$d
-```
-
 ### Right singular vectors
 
-```{r}
+```{r, svdv, include=FALSE, cache= TRUE}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0  <-  svd(L_lod0)$v[,1:7]
 V_lod10 <- svd(L_lod10)$v[,1:7]
@@ -1395,7 +1311,7 @@ V_lod50 <- svd(L_lod50)$v[,1:7]
 V_lod10[,3] <- -V_lod10[,3]
 V_lod10[,5:7] <- -V_lod10[,5:7]
 V_lod20[,3] <- -V_lod20[,3]
-V_lod20[,5:7] <- -V_lod20[,5:7]
+V_lod20[,5:6] <- -V_lod20[,5:6]
 V_lod30[,3:6] <- -V_lod30[,3:6]
 V_lod40[,3:4] <- -V_lod40[,3:4]
 V_lod40[,7] <- -V_lod40[,7]
@@ -1411,44 +1327,6 @@ V_diff <- as_tibble(cbind(`0%` =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0
   mutate(Method = "LOD PCP")
 
 #V_diff
-
-# Extract right singular vectors from each low rank solution matrix
-nn_V_lod0  <-  svd(nn_L_lod0)$v[,1:7]
-nn_V_lod10 <- svd(nn_L_lod10)$v[,1:7]
-nn_V_lod20 <- svd(nn_L_lod20)$v[,1:7]
-nn_V_lod30 <- svd(nn_L_lod30)$v[,1:7]
-nn_V_lod40 <- svd(nn_L_lod40)$v[,1:7]
-nn_V_lod50 <- svd(nn_L_lod50)$v[,1:7]
-
-# cor(nn_V_lod0, nn_V_lod10)
-# cor(nn_V_lod0, nn_V_lod20)
-# cor(nn_V_lod0, nn_V_lod30)
-# cor(nn_V_lod0, nn_V_lod40)
-# cor(nn_V_lod0, nn_V_lod50)
-
-# Hack -- Flip
-nn_V_lod10[,3] <- -nn_V_lod10[,3]
-nn_V_lod10[,5] <- -nn_V_lod10[,5]
-nn_V_lod20[,3] <- -nn_V_lod20[,3]
-nn_V_lod20[,5] <- -nn_V_lod20[,5]
-nn_V_lod30[,3] <- -nn_V_lod30[,3]
-nn_V_lod30[,4] <- -nn_V_lod30[,4]
-nn_V_lod30[,5] <- -nn_V_lod30[,5]
-nn_V_lod40[,4] <- -nn_V_lod40[,4]
-nn_V_lod40[,3] <- -nn_V_lod40[,3]
-nn_V_lod50[,3] <- -nn_V_lod50[,3]
-nn_V_lod50[,4] <- -nn_V_lod50[,4]
-nn_V_lod50[,5] <- -nn_V_lod50[,5]
-
-nn_V_diff <- as_tibble(cbind(`0%` =norm((nn_V_lod0 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
-      `10%` =norm((nn_V_lod10 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
-      `20%` =norm((nn_V_lod20 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
-      `30%` =norm((nn_V_lod30 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
-      `40%` =norm((nn_V_lod40 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"),
-      `50%` =norm((nn_V_lod50 - nn_V_lod0), type = "F")/norm((nn_V_lod0), type = "F"))) %>% 
-  gather(percent_blod, norm)
-
-#nn_V_diff
 
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_0  <-  svd(L_lod0_0)$v[,1:7]
@@ -1525,9 +1403,7 @@ V_diff_sqrt2 <- as_tibble(cbind(`0%` =norm((V_lod0_sqrt2 - V_lod0_sqrt2), type =
   mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
 
 #V_diff_sqrt2
-```
 
-```{r, vdiff2}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_2  <-  svd(L_lod0_2)$v[,1:7]
 V_lod10_2 <- svd(L_lod10_2)$v[,1:7]
@@ -1564,9 +1440,7 @@ V_diff_2 <- as_tibble(cbind(`0%` =norm((V_lod0_2 - V_lod0_2), type = "F")/norm((
   mutate(Method = "PCP w/ LOD/2")
 
 #V_diff_2
-```
 
-```{r}
 # Extract right singular vectors from each low rank solution matrix
 V_lod0_nnS  <-  svd(L_lod0_nnS)$v[,1:7]
 V_lod10_nnS <- svd(L_lod10_nnS)$v[,1:7]
@@ -1599,9 +1473,7 @@ V_diff_nnS<- as_tibble(cbind(`0%` =norm((V_lod0_nnS - V_lod0_nnS), type = "F")/n
 #V_diff_nnS
 ```
 
-#### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(V_diff,
       V_diff_0,
       V_diff_sqrt2,
@@ -1615,7 +1487,7 @@ rbind(V_diff,
 
 ### Left singular vectors
 
-```{r}
+```{r, svdu, include=FALSE, cache = TRUE}
 u_lod0  <-  svd(L_lod0)$u[,1:7]
 u_lod10 <- svd(L_lod10)$u[,1:7]
 u_lod20 <- svd(L_lod20)$u[,1:7]
@@ -1623,15 +1495,18 @@ u_lod30 <- svd(L_lod30)$u[,1:7]
 u_lod40 <- svd(L_lod40)$u[,1:7]
 u_lod50 <- svd(L_lod50)$u[,1:7]
 
+#cor(u_lod0, u_lod40)
+
 # Hack -- Flip
 u_lod10[,3] <- -u_lod10[,3]
 u_lod10[,5:7] <- -u_lod10[,5:7]
 u_lod20[,3] <- -u_lod20[,3]
 u_lod20[,5:7] <- -u_lod20[,5:7]
-u_lod30[,3:6] <- -u_lod30[,3:6]
+u_lod30[,3:7] <- -u_lod30[,3:7]
 u_lod40[,3:4] <- -u_lod40[,3:4]
 u_lod40[,7] <- -u_lod40[,7]
-u_lod50[,3:7] <- -u_lod50[,3:7]
+u_lod50[,3] <- -u_lod50[,3]
+u_lod50[,6:7] <- -u_lod50[,6:7]
 
 u_diff <- as_tibble(cbind(`0%` =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
       `10%` =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
@@ -1643,35 +1518,6 @@ u_diff <- as_tibble(cbind(`0%` =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0
 mutate(Method = "LOD PCP")
 
 # u_diff
-
-nn_u_lod0  <-  svd(nn_L_lod0)$u[,1:7]
-nn_u_lod10 <- svd(nn_L_lod10)$u[,1:7]
-nn_u_lod20 <- svd(nn_L_lod20)$u[,1:7]
-nn_u_lod30 <- svd(nn_L_lod30)$u[,1:7]
-nn_u_lod40 <- svd(nn_L_lod40)$u[,1:7]
-nn_u_lod50 <- svd(nn_L_lod50)$u[,1:7]
-
-# Hack -- Flip
-nn_u_lod10[,3] <- -nn_u_lod10[,3]
-nn_u_lod10[,5] <- -nn_u_lod10[,5]
-nn_u_lod20[,3] <- -nn_u_lod20[,3]
-nn_u_lod20[,5] <- -nn_u_lod20[,5]
-nn_u_lod30[,3] <- -nn_u_lod30[,3]
-nn_u_lod30[,4] <- -nn_u_lod30[,4]
-nn_u_lod30[,5] <- -nn_u_lod30[,5]
-nn_u_lod40[,4] <- -nn_u_lod40[,4]
-nn_u_lod40[,3] <- -nn_u_lod40[,3]
-nn_u_lod50[,3] <- -nn_u_lod50[,3]
-nn_u_lod50[,4] <- -nn_u_lod50[,4]
-nn_u_lod50[,5] <- -nn_u_lod50[,5]
-
-nn_u_diff <- as_tibble(cbind(`0%` =norm((nn_u_lod0 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
-      `10%` =norm((nn_u_lod10 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
-      `20%` =norm((nn_u_lod20 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
-      `30%` =norm((nn_u_lod30 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
-      `40%` =norm((nn_u_lod40 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"),
-      `50%` =norm((nn_u_lod50 - nn_u_lod0), type = "F")/norm((nn_u_lod0), type = "F"))) %>% 
-  gather(percent_blod, norm)
 
 u_lod0_0  <-  svd(L_lod0_0)$u[,1:7]
 u_lod10_0 <- svd(L_lod10_0)$u[,1:7]
@@ -1688,8 +1534,11 @@ u_lod30_0[,3] <- -u_lod30_0[,3]
 u_lod30_0[,5] <- -u_lod30_0[,5]
 u_lod30_0[,7] <- -u_lod30_0[,7]
 u_lod40_0[,3] <- -u_lod40_0[,3]
-u_lod50_0[,3:4] <- -u_lod50_0[,3:4]
+u_lod40_0[,6:7] <- -u_lod40_0[,6:7]
+u_lod50_0[,3:5] <- -u_lod50_0[,3:5]
 u_lod50_0[,7] <- -u_lod50_0[,7]
+
+#cor(u_lod0_0, u_lod50_0)
 
 u_diff_0 <- as_tibble(cbind(`0%` =norm((u_lod0_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
       `10%` =norm((u_lod10_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
@@ -1713,10 +1562,12 @@ u_lod10_sqrt2[,7] <- -u_lod10_sqrt2[,7]
 u_lod20_sqrt2[,3] <- -u_lod20_sqrt2[,3]
 u_lod20_sqrt2[,5:7] <- -u_lod20_sqrt2[,5:7]
 u_lod30_sqrt2[,3] <- -u_lod30_sqrt2[,3]
-u_lod30_sqrt2[,5:6] <- -u_lod30_sqrt2[,5:6]
-u_lod40_sqrt2[,7] <- -u_lod40_sqrt2[,7]
+u_lod30_sqrt2[,5:7] <- -u_lod30_sqrt2[,5:7]
+u_lod40_sqrt2[,6] <- -u_lod40_sqrt2[,6]
 u_lod50_sqrt2[,3:4] <- -u_lod50_sqrt2[,3:4]
-u_lod50_sqrt2[,6:7] <- -u_lod50_sqrt2[,6:7]
+u_lod50_sqrt2[,6] <- -u_lod50_sqrt2[,6]
+
+#cor(u_lod0_sqrt2, u_lod50_sqrt2)
 
 u_diff_sqrt2 <- as_tibble(cbind(`0%` =norm((u_lod0_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
       `10%` =norm((u_lod10_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
@@ -1726,9 +1577,7 @@ u_diff_sqrt2 <- as_tibble(cbind(`0%` =norm((u_lod0_sqrt2 - u_lod0_sqrt2), type =
       `50%` =norm((u_lod50_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-```
 
-```{r, udiff2}
 u_lod0_2  <-  svd(L_lod0_2)$u[,1:7]
 u_lod10_2 <- svd(L_lod10_2)$u[,1:7]
 u_lod20_2 <- svd(L_lod20_2)$u[,1:7]
@@ -1744,9 +1593,11 @@ u_lod20_2[,3] <- -u_lod20_2[,3]
 u_lod20_2[,5] <- -u_lod20_2[,5]
 u_lod30_2[,3] <- -u_lod30_2[,3]
 u_lod30_2[,5] <- -u_lod30_2[,5]
+u_lod30_2[,7] <- -u_lod30_2[,7]
 u_lod40_2[,3:5] <- -u_lod40_2[,3:5]
-u_lod50_2[,3:5] <- -u_lod50_2[,3:5]
-u_lod50_2[,7] <- -u_lod50_2[,7]
+u_lod50_2[,3:7] <- -u_lod50_2[,3:7]
+
+#cor(u_lod0_2, u_lod50_2)
 
 u_diff_2 <- as_tibble(cbind(`0%` =norm((u_lod0_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
                                 `10%` =norm((u_lod10_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
@@ -1756,9 +1607,7 @@ u_diff_2 <- as_tibble(cbind(`0%` =norm((u_lod0_2 - u_lod0_2), type = "F")/norm((
                                 `50%` =norm((u_lod50_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Method = "PCP w/ LOD/2")
-```
 
-```{r}
 u_lod0_nnS  <-  svd(L_lod0_nnS)$u[,1:7]
 u_lod10_nnS <- svd(L_lod10_nnS)$u[,1:7]
 u_lod20_nnS <- svd(L_lod20_nnS)$u[,1:7]
@@ -1770,6 +1619,8 @@ u_lod50_nnS <- svd(L_lod50_nnS)$u[,1:7]
 u_lod30_nnS[,6] <- -u_lod30_nnS[,6]
 u_lod40_nnS[,6] <- -u_lod40_nnS[,6]
 u_lod50_nnS[,6] <- -u_lod50_nnS[,6]
+
+#cor(u_lod0_nnS, u_lod50_nnS)
 
 u_diff_nnS<- as_tibble(cbind(`0%` =norm((u_lod0_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
       `10%` =norm((u_lod10_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
@@ -1783,9 +1634,7 @@ mutate(Method = "LOD PCP nnS")
 # u_diff_nnS
 ```
 
-#### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(u_diff,
       u_diff_0,
       u_diff_sqrt2,
@@ -1799,7 +1648,7 @@ rbind(u_diff,
 
 ### Singular Values
 
-```{r}
+```{r, include=FALSE, cache=TRUE}
 d_lod0  <- svd(L_lod0)$d[1:7]
 d_lod10 <- svd(L_lod10)$d[1:7]
 d_lod20 <- svd(L_lod20)$d[1:7]
@@ -1864,9 +1713,7 @@ d_diff_sqrt2 <- as_tibble(cbind(`0%` = norm_vec(d_lod0_sqrt2 - d_lod0_sqrt2)/nor
       `50%` = norm_vec(d_lod50_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-```
 
-```{r, ddiff2}
 d_lod0_2  <- svd(L_lod0_2)$d[1:7]
 d_lod10_2 <- svd(L_lod10_2)$d[1:7]
 d_lod20_2 <- svd(L_lod20_2)$d[1:7]
@@ -1882,9 +1729,7 @@ d_diff_2 <- as_tibble(cbind(`0%` = norm_vec(d_lod0_2 - d_lod0_2)/norm_vec(d_lod0
                                 `50%` = norm_vec(d_lod50_2 - d_lod0_2)/norm_vec(d_lod0_2))) %>% 
   gather(percent_blod, norm) %>% 
   mutate(Method = "PCP w/ LOD/2")
-```
 
-```{r}
 d_lod0_nnS  <- svd(L_lod0_nnS)$d[1:7]
 d_lod10_nnS <- svd(L_lod10_nnS)$d[1:7]
 d_lod20_nnS <- svd(L_lod20_nnS)$d[1:7]
@@ -1904,9 +1749,7 @@ d_diff_nnS<- as_tibble(cbind(`0%` = norm_vec(d_lod0_nnS - d_lod0_nnS)/norm_vec(d
   mutate(Method = "LOD PCP nnS")
 ```
 
-#### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
+```{r, fig.align = "center"}
 rbind(d_diff_sqrt2,
       d_diff,
       d_diff_0,
@@ -1918,184 +1761,9 @@ rbind(d_diff_sqrt2,
        title = "Relative Error in Low-Rank \nSolution Singular Values")
 ```
 
-## PCA
-
-```{r}
-pca_0  <- prcomp(mix)
-pca_10 <- prcomp(mix_data_lod_10_sqrt2)
-pca_20 <- prcomp(mix_data_lod_20_sqrt2)
-pca_30 <- prcomp(mix_data_lod_30_sqrt2)
-pca_40 <- prcomp(mix_data_lod_40_sqrt2)
-pca_50 <- prcomp(mix_data_lod_50_sqrt2)
-```
-
-```{r}
-# cor(pca_0$rotation[,1:7], pca_10$rotation[,1:7])
-# cor(pca_0$rotation[,1:7], pca_20$rotation[,1:7])
-# cor(pca_0$rotation[,1:7], pca_30$rotation[,1:7])
-# cor(pca_0$rotation[,1:7], pca_40$rotation[,1:7])
-# cor(pca_0$rotation[,1:7], pca_50$rotation[,1:7])
-
-pca_10$rotation[,6:7] <- -pca_10$rotation[,6:7]
-pca_20$rotation[,6:7] <- -pca_20$rotation[,6:7]
-pca_40$rotation[,6:7] <- -pca_40$rotation[,6:7]
-pca_50$rotation[,3:5] <- -pca_50$rotation[,3:5]
-
-rotation_norm <- as_tibble(cbind(`0%` = norm((pca_0$rotation[,1:7] - pca_0$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
-      `10%` = norm((pca_0$rotation[,1:7] - pca_10$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
-      `20%` = norm((pca_0$rotation[,1:7] - pca_20$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
-      `30%` = norm((pca_0$rotation[,1:7] - pca_30$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
-      `40%` = norm((pca_0$rotation[,1:7] - pca_40$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"),
-      `50%` = norm((pca_0$rotation[,1:7] - pca_50$rotation[,1:7]), type = "F")/norm((pca_0$rotation[,1:7]), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCA")
-```
-
-```{r}
-# cor(pca_0$x[,1:7], pca_10$x[,1:7])
-# cor(pca_0$x[,1:7], pca_20$x[,1:7])
-# cor(pca_0$x[,1:7], pca_30$x[,1:7])
-# cor(pca_0$x[,1:7], pca_40$x[,1:7])
-# cor(pca_0$x[,1:7], pca_50$x[,1:7])
-
-pca_10$x[,6:7] <- -pca_10$x[,6:7]
-pca_20$x[,6:7] <- -pca_20$x[,6:7]
-pca_40$x[,6:7] <- -pca_40$x[,6:7]
-pca_50$x[,3:5] <- -pca_50$x[,3:5]
-
-score_norm <- as_tibble(cbind(`0%` = norm((pca_0$x[,1:7] - pca_0$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
-      `10%` = norm((pca_0$x[,1:7] - pca_10$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
-      `20%` = norm((pca_0$x[,1:7] - pca_20$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
-      `30%` = norm((pca_0$x[,1:7] - pca_30$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
-      `40%` = norm((pca_0$x[,1:7] - pca_40$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"),
-      `50%` = norm((pca_0$x[,1:7] - pca_50$x[,1:7]), type = "F")/norm((pca_0$x[,1:7]), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCA")
-```
-
-```{r}
-sdev_norm <- as_tibble(cbind(`0%` = norm_vec(pca_0$sdev[1:7] - pca_0$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
-      `10%` = norm_vec(pca_0$sdev[1:7] - pca_10$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
-      `20%` = norm_vec(pca_0$sdev[1:7] - pca_20$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
-      `30%` = norm_vec(pca_0$sdev[1:7] - pca_30$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
-      `40%` = norm_vec(pca_0$sdev[1:7] - pca_40$sdev[1:7])/norm_vec(pca_0$sdev[1:7]),
-      `50%` = norm_vec(pca_0$sdev[1:7] - pca_50$sdev[1:7])/norm_vec(pca_0$sdev[1:7]))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCA")
-```
-
-```{r}
-pcp_pca_0  <- prcomp(L_lod0)
-pcp_pca_10 <- prcomp(L_lod10)
-pcp_pca_20 <- prcomp(L_lod20)
-pcp_pca_30 <- prcomp(L_lod30)
-pcp_pca_40 <- prcomp(L_lod40)
-pcp_pca_50 <- prcomp(L_lod50)
-```
-
-```{r}
-# cor(pcp_pca_0$rotation[,1:7], pcp_pca_10$rotation[,1:7])
-# cor(pcp_pca_0$rotation[,1:7], pcp_pca_20$rotation[,1:7])
-# cor(pcp_pca_0$rotation[,1:7], pcp_pca_30$rotation[,1:7])
-# cor(pcp_pca_0$rotation[,1:7], pcp_pca_40$rotation[,1:7])
-# cor(pcp_pca_0$rotation[,1:7], pcp_pca_50$rotation[,1:7])
-
-pcp_pca_10$rotation[,7] <- -pcp_pca_10$rotation[,7]
-pcp_pca_20$rotation[,3:4] <- -pcp_pca_20$rotation[,3:4]
-pcp_pca_20$rotation[,6] <- -pcp_pca_20$rotation[,6]
-pcp_pca_30$rotation[,3:4] <- -pcp_pca_30$rotation[,3:4]
-pcp_pca_30$rotation[,6:7] <- -pcp_pca_30$rotation[,6:7]
-pcp_pca_40$rotation[,6] <- -pcp_pca_40$rotation[,6]
-pcp_pca_50$rotation[,3:6] <- -pcp_pca_50$rotation[,3:6]
-
-pcp_rotation_norm <- as_tibble(cbind(`0%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_0$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
-      `10%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_10$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
-      `20%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_20$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
-      `30%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_30$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
-      `40%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_40$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"),
-      `50%` = norm((pcp_pca_0$rotation[,1:7] - pcp_pca_50$rotation[,1:7]), type = "F")/norm((pcp_pca_0$rotation[,1:7]), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP")
-```
-
-```{r}
-# cor(pcp_pca_0$x[,1:7], pcp_pca_10$x[,1:7])
-# cor(pcp_pca_0$x[,1:7], pcp_pca_20$x[,1:7])
-# cor(pcp_pca_0$x[,1:7], pcp_pca_30$x[,1:7])
-# cor(pcp_pca_0$x[,1:7], pcp_pca_40$x[,1:7])
-# cor(pcp_pca_0$x[,1:7], pcp_pca_50$x[,1:7])
-
-pcp_pca_10$x[,7] <- -pcp_pca_10$x[,7]
-pcp_pca_20$x[,3:4] <- -pcp_pca_20$x[,3:4]
-pcp_pca_20$x[,6] <- -pcp_pca_20$x[,6]
-pcp_pca_30$x[,3:4] <- -pcp_pca_30$x[,3:4]
-pcp_pca_30$x[,6:7] <- -pcp_pca_30$x[,6:7]
-pcp_pca_40$x[,6] <- -pcp_pca_40$x[,6]
-pcp_pca_50$x[,3:6] <- -pcp_pca_50$x[,3:6]
-
-pcp_score_norm <- as_tibble(cbind(`0%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_0$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
-      `10%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_10$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
-      `20%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_20$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
-      `30%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_30$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
-      `40%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_40$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"),
-      `50%` = norm((pcp_pca_0$x[,1:7] - pcp_pca_50$x[,1:7]), type = "F")/norm((pcp_pca_0$x[,1:7]), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP")
-```
-
-```{r}
-pcp_sdev_norm <- as_tibble(cbind(`0%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_0$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
-      `10%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_10$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
-      `20%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_20$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
-      `30%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_30$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
-      `40%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_40$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]),
-      `50%` = norm_vec(pcp_pca_0$sdev[1:7] - pcp_pca_50$sdev[1:7])/norm_vec(pcp_pca_0$sdev[1:7]))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP")
-```
-
-### Viz
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
-rbind(rotation_norm, pcp_rotation_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Error in Rotations")
-```
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
-rbind(score_norm, pcp_score_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Error in Scores")
-```
-
-```{r, fig.height = 5, fig.width = 4, fig.align = "center"}
-rbind(sdev_norm, pcp_sdev_norm) %>% ggplot(aes(x = percent_blod, y = norm)) + 
-  geom_point(aes(color = Method)) + geom_path(aes(group = Method, color = Method)) + theme_bw() +
-  labs(x = "Percent Below LOD", y = "norm(X-lod0) / norm(X)",
-       title = "Relative Error in Singular Values")
-```
-
-### Variance Explained
-
-```{r}
-PCP_0 <- pcp_pca_0$sdev^2/sum(pcp_pca_0$sdev^2) *100
-PCA_0 <- pca_0$sdev^2/sum(pca_0$sdev^2) *100
-
-PCP_50 <- pcp_pca_50$sdev^2/sum(pcp_pca_50$sdev^2) *100
-PCA_50 <- pca_50$sdev^2/sum(pca_50$sdev^2) *100
-
-round(cbind(Component = 1:18, PCP_0, PCA_0, PCP_50, PCA_50), 4) %>% kable()
-```
-
-```{r, include=FALSE}
-round(cbind(Component = 1:18, PCP_0, PCA_0, PCP_50, PCA_50), 4) %>% stargazer::stargazer(., summary = NULL)
-```
-
 ## Values \<LOD
 
-```{r, l22s}
+```{r, l22s, include=FALSE, cache = TRUE}
 t_na_lod_0 <- sim_all %>% 
   as_tibble() %>% 
   mutate_all(function(x) ifelse(x == -1, TRUE, NA))
@@ -2137,9 +1805,7 @@ t_na_lod_50 <- mix_data_lod_50 %>%
 l_blod_50_na <- as_tibble(t_na_lod_50*L_lod50)
 s_blod_50_na <- as_tibble(t_na_lod_50*S_lod50)
 blod_50_na <- as_tibble(sim_all*t_na_lod_50) 
-```
 
-```{r}
 l_blod_0_0_na <- as_tibble(t_na_lod_0*L_lod0_0)
 s_blod_0_0_na <- as_tibble(t_na_lod_0*S_lod0_0)
 
@@ -2175,9 +1841,7 @@ S_blod_40_sqrt2_na <- as_tibble(t_na_lod_40*S_lod40_sqrt2)
 
 L_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*L_lod50_sqrt2)
 S_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*S_lod50_sqrt2)
-```
 
-```{r, ls22}
 L_blod_0_2_na <- as_tibble(t_na_lod_0*L_lod0_2)
 S_blod_0_2_na <- as_tibble(t_na_lod_0*S_lod0_2)
 
@@ -2195,9 +1859,7 @@ S_blod_40_2_na <- as_tibble(t_na_lod_40*S_lod40_2)
 
 L_blod_50_2_na <- as_tibble(t_na_lod_50*L_lod50_2)
 S_blod_50_2_na <- as_tibble(t_na_lod_50*S_lod50_2)
-```
 
-```{r}
 LOD10 <- delta10 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "10%")
 LOD20 <- delta20 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "20%")
 LOD30 <- delta30 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "30%")
@@ -2253,9 +1915,7 @@ plotall <- rbind(plotl_10,
       plotl_50,
       plots_50,
       plotall_50)
-```
 
-```{r, l22s2}
 l_blod_0_nnS_na <- as_tibble(t_na_lod_0*L_lod0_nnS)
 s_blod_0_nnS_na <- as_tibble(t_na_lod_0*S_lod0_nnS)
 
@@ -2273,9 +1933,7 @@ s_blod_40_nnS_na <- as_tibble(t_na_lod_40*S_lod40_nnS)
 
 l_blod_50_nnS_na <- as_tibble(t_na_lod_50*L_lod50_nnS)
 s_blod_50_nnS_na <- as_tibble(t_na_lod_50*S_lod50_nnS)
-```
 
-```{r}
 plotl_10_nnS <- l_blod_10_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
 plots_10_nnS <- s_blod_10_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
 plotall_10_nnS <- (l_blod_10_nnS_na + s_blod_10_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
@@ -2313,16 +1971,30 @@ plotall_nns <- rbind(plotl_10_nnS,
       plotall_50_nnS)
 ```
 
-```{r}
+```{r, fig.align = "center"}
 plotall %>% 
+  filter(Compare == "Low Rank Solution") %>% 
   drop_na(.) %>% 
   mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
   group_by(Compare, Percent) %>% 
   summarise(above = sum(above_lod),
             total = n()) %>% 
-  mutate(above_prop = above/total) %>% 
-  select(-above, -total) %>% 
-  kable(.)
+  mutate(Proportion = round(above/total, 2)) %>% 
+  ungroup(.) %>% 
+  select(Percent, Proportion) %>% 
+  kable(., caption = "LOD PCP Low Rank Solution Values >LOD")
+
+plotall_nns %>% 
+  filter(Compare == "Low Rank Solution") %>% 
+  drop_na(.) %>% 
+  mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
+  group_by(Compare, Percent) %>% 
+  summarise(above = sum(above_lod),
+            total = n()) %>% 
+  mutate(Proportion = round(above/total, 2)) %>% 
+  ungroup(.) %>% 
+  select(Percent, Proportion) %>% 
+  kable(., caption = "nnS LOD PCP Low Rank Solution Values >LOD")
 
 rbind(plots_10,
       plots_20,
@@ -2333,19 +2005,9 @@ rbind(plots_10,
   group_by(Compare, Percent) %>% 
   summarise(Min = min (Value),
             Ave = mean(Value),
-            Max = max(Value)) %>% kable(.)
-```
-
-```{r}
-plotall_nns %>% 
-  drop_na(.) %>% 
-  mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
-  group_by(Compare, Percent) %>% 
-  summarise(above = sum(above_lod),
-            total = n()) %>% 
-  mutate(above_prop = above/total) %>% 
-  select(-above, -total) %>% 
-  kable(.)
+            Max = max(Value)) %>% 
+  ungroup(.) %>% 
+  select(-Compare) %>% kable(., caption = "LOD PCP Sparse Solutions")
 
 rbind(plots_10_nnS,
       plots_20_nnS,
@@ -2353,28 +2015,15 @@ rbind(plots_10_nnS,
       plots_40_nnS,
       plots_50_nnS) %>% 
   drop_na(.) %>% 
-  group_by(Compare, Percent) %>% 
+  group_by(Compare, Percent) %>%
   summarise(Min = min (Value),
-            Ave = mean(Value),
-            Max = max(Value)) %>% kable(.)
+            Mean = mean(Value),
+            Max = max(Value)) %>% 
+  ungroup(.) %>% 
+  select(-Compare) %>% kable(., caption = "nnS LOD PCP Sparse Solutions")
 ```
 
-### Correlation
-
-```{r}
-cor(as.matrix(blod_50_na), use = "complete.obs", method = "spearman")
-cor(as.matrix(l_blod_50_na), use = "complete.obs", method = "spearman")
-cor(as.matrix(s_blod_50_na), use = "complete.obs", method = "spearman")
-```
-
-```{r}
-cor(as.matrix(l_blod_50_nnS_na), use = "complete.obs", method = "spearman")
-cor(as.matrix(s_blod_50_nnS_na), use = "complete.obs", method = "spearman")
-```
-
-### Viz
-
-```{r}
+```{r, fig.align = "center"}
 plotall %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
@@ -2392,7 +2041,7 @@ plotall %>%
   facet_wrap(.~Percent) +
   labs(x = "POP", 
        y = "Solution Value",
-       title = "Solution Values <LOD + Original Values") +
+       title = "LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 
@@ -2412,12 +2061,55 @@ plotall %>%
   facet_wrap(.~Percent) +
   labs(x = "POP", 
        y = "Solution Value",
-       title = "Solution Values <LOD") +
+       title = "LOD PCP Solution Values <LOD") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-```{r}
+```{r, fig.align = "center"}
+plotall_nns %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  #filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction",
+                            "Original")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "nnS LOD PCP Solution Values <LOD + Original Values") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+plotall_nns %>% 
+  select(-Original) %>% 
+  rbind(., org) %>% 
+  drop_na(.) %>% 
+  filter(Compare != "Original") %>% 
+  # with and without Original
+  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
+                            "Sparse Solution",
+                            "Model Prediction")) %>% 
+  ggplot(aes(x = POP, y = Value)) + 
+  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
+  facet_wrap(.~Percent) +
+  labs(x = "POP", 
+       y = "Solution Value",
+       title = "nnS LOD PCP Solution Values <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r, message=FALSE, fig.align = "center"}
 plotall %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
@@ -2429,65 +2121,11 @@ plotall %>%
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
-       y = "Density",
-       title = "Values <LOD") +
+       y = "Count",
+       title = "LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 
-plotall %>% 
-  drop_na(.) %>% 
-  filter(Compare != "Sparse Solution") %>% 
-  select(-Original, -LOD) %>% 
-  spread(key = Compare, value = Value) %>% 
-  mutate(Sparse = `Model Prediction` - `Low Rank Solution`) %>% 
-  summarise(max_sparse = max(Sparse),
-            min_sparse = min(Sparse))
-```
-
-```{r}
-plotall_nns %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
-  #filter(Compare != "Original") %>% 
-  # with and without Original
-  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
-                            "Sparse Solution",
-                            "Model Prediction",
-                            "Original")) %>% 
-  ggplot(aes(x = POP, y = Value)) + 
-  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
-  theme_bw() +
-  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
-  facet_wrap(.~Percent) +
-  labs(x = "POP", 
-       y = "Solution Value",
-       title = "nnS Solution Values <LOD + Original Values") +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 90, hjust = 1))
-
-plotall_nns %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
-  filter(Compare != "Original") %>% 
-  # with and without Original
-  mutate(Compare = fct_relevel(Compare, "Low Rank Solution",
-                            "Sparse Solution",
-                            "Model Prediction")) %>% 
-  ggplot(aes(x = POP, y = Value)) + 
-  geom_jitter(aes(color = Compare), alpha = 0.1, width = 0.3, height = 0) + 
-  theme_bw() +
-  geom_point(aes(y = LOD), shape = 3, size = 0.5) +
-  facet_wrap(.~Percent) +
-  labs(x = "POP", 
-       y = "Solution Value",
-       title = "nnS Solution Values <LOD") +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 90, hjust = 1))
-```
-
-```{r}
 plotall_nns %>% 
   select(-Original) %>% 
   rbind(., org) %>% 
@@ -2499,7 +2137,7 @@ plotall_nns %>%
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
        y = "Count",
-       title = "nnS Solution Values <LOD + Original Values") +
+       title = "nnS LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
