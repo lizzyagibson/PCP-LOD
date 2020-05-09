@@ -68,7 +68,7 @@ sim_logn <- function (seed){
 }
 
 # exp multi-normal to get multi-log normal
-sim_all <- as_tibble(1:3) %>%
+sim_all <- as_tibble(1:100) %>%
   rename(seed = value) %>% 
   mutate(sims = map(seed, sim_logn),
          sims = map(sims, scale, center = FALSE),
@@ -178,118 +178,6 @@ is_same <- function(SAME_THRESH, ...) {
 }
 
 ############################################################
-
-loss_lod_NN <- function(X, D, LOD) {
-
-    X_lod <- ((X - D)     * (D >= LOD)) +
-            ((X - LOD)  * ((D < LOD) & (X > LOD))) +
-              (X          * ((D < LOD) & (X < 0)))
-  
-  l <- sum(X_lod^2) / 2
-  l
-}
-
-############################################################
-
-pcp_lod_NN <- function(D, lambda, mu, LOD) {
-  
-  if( any(D < matrix(0, nrow = nrow(D), ncol = ncol(D))) ) stop("Physical concentration measurements cannot be negative.")
-  
-  m <- nrow(D)
-  n <- ncol(D)
-  rho <- 1 # Augmented Lagrangian coefficient (rate)
-  
-  L1 <- matrix(0, m, n)
-  L2 <- matrix(0, m, n)
-  L3 <- matrix(0, m, n)
-  
-  S1 <- matrix(0, m, n)
-  S2 <- matrix(0, m, n)
-  
-  Z1 <- matrix(0, m, n)
-  Z2 <- matrix(0, m, n)
-  Z3 <- matrix(0, m, n)
-  
-  # Max iteration
-  MAX_ITER <- 5000
-  
-  # Convergence Thresholds
-  LOSS_THRESH <- 1e-5
-  SAME_THRESH <- 1e-4
-  
-  if (is.vector(LOD)) {
-    empty = matrix(TRUE, nrow = nrow(D), ncol = ncol(D))
-    LOD = t(t(empty) * LOD)
-  }
-  
-  if( any(LOD < matrix(0, nrow = nrow(LOD), ncol = ncol(LOD))) ) stop("Physical Limits of Detection (LOD) cannot be negative.")
-  
-  loss <- vector("numeric", MAX_ITER)
-  
-  for (i in 1:MAX_ITER) {
-    
-    nuc <- prox_nuclear( ((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
-    L1 <- nuc[[1]]
-    nuclearL1 <- nuc[[2]] #nuclearX
-    # % L, Z, S all start at zero, and change each iteration
-    # % Prox_nuc is singular value thresholding
-    # % L is low rank matrix
-    
-    S1 <- prox_l1((S2 - Z3/rho), lambda/rho)
-    # % S is sparse matrix
-    
-      L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
-      L2_opt2 <- L1 + Z1/rho
-      L2_opt3 <- ((mu*rho*LOD + (((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
-      L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
-
-      L2_new <- (L2_opt1 * (( D >= LOD))) +
-                (L2_opt2 * (((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
-                (L2_opt3 * (((D < LOD) & ((L2 + S2) > LOD)))) +
-                (L2_opt4 * (((D < LOD) & ((L2 + S2) < 0))))
-
-      S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
-      S2_opt2 <- S1 + (Z3/rho)
-      S2_opt3 <- (((mu*rho*LOD) + (((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
-      S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
-
-      S2 <- (S2_opt1 * (( D >= LOD))) +
-            (S2_opt2 * (((D < LOD) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
-            (S2_opt3 * (((D < LOD) & ((L2 + S2) > LOD)))) +
-            (S2_opt4 * (((D < LOD) & ((L2 + S2) < 0))))
-   
-    L2 <- L2_new
-    
-    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
-    # % Non-Negativity constraint!
-    
-    Z1 <- Z1 + rho*(L1 - L2)
-    Z2 <- Z2 + rho*(L1 - L3)
-    Z3 <- Z3 + rho*(S1 - S2)
-    # % Z accumulate differnces between L and L and between S and S
-    
-    loss[i] <- nuclearL1 + 
-      (lambda*sum(abs(S1))) +
-      (mu*loss_lod_NN((L2 + S2), D, LOD)) +
-      sum(Z1*(L1 - L2)) +
-      sum(Z2*(L1 - L3)) +
-      sum(Z3*(S1 - S2)) +
-      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
-    # % The code block above takes LOD into account.
-    
-    print(str_c(i, " Obj: ", loss[i]))
-      
-    if ((i != 1) && 
-        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
-        is_same(SAME_THRESH, L1, L2, L3) &&
-        is_same(SAME_THRESH, S1, S2)) {
-      break} # % Convergence criteria!
-  }
-  
-  L <- L3 # (L1 + L2 + L3) / 3
-  S <- S1 #(S1 + S2) / 2
-  list(L = L, S = S, loss = loss)
-}
 
 loss_lod <- function(X, D, LOD) {
 
@@ -562,27 +450,7 @@ pcp_lod_nnS <- function(D, lambda, mu, LOD) {
 }
 ```
 
-```{r, jingkai_leave, include = FALSE, cache = TRUE}
-m <- nrow(sim_all$sims[[1]])
-p <- ncol(sim_all$sims[[1]])
-
-lambda_mix <- 1/sqrt(m)
-mu_mix <- sqrt(p/(2*log(m*p)))
-
-sim_all <- sim_all %>% 
-  mutate(sims = map(sims, as.matrix),
-         results_0 = pmap(list(sims, lambda_mix, mu_mix, 0), function(x,y,z,a) pcp_lod(x,y,z,a)),
-         results_10 = pmap(list(mix_data_lod_10, lambda_mix, mu_mix, delta10), 
-                           function(x,y,z,a) pcp_lod(x,y,z,a)),
-         results_20 = pmap(list(mix_data_lod_20, lambda_mix, mu_mix, delta20), 
-                           function(x,y,z,a) pcp_lod(x,y,z,a)),
-         results_30 = pmap(list(mix_data_lod_30, lambda_mix, mu_mix, delta30), 
-                           function(x,y,z,a) pcp_lod(x,y,z,a)),
-         results_40 = pmap(list(mix_data_lod_40, lambda_mix, mu_mix, delta40), 
-                           function(x,y,z,a) pcp_lod(x,y,z,a)),
-         results_50 = pmap(list(mix_data_lod_50, lambda_mix, mu_mix, delta50), 
-                           function(x,y,z,a) pcp_lod(x,y,z,a)))
-  
+```{r, code_0, include = FALSE, cache = TRUE}
 sim_all <- sim_all %>% 
   mutate(results_0_0  = pmap(list(sims, lambda_mix, mu_mix), function(x,y,z) original_pcp(x,y,z)),
          results_10_0 = pmap(list(mix_data_lod_10_0, lambda_mix, mu_mix), 
@@ -595,7 +463,9 @@ sim_all <- sim_all %>%
                            function(x,y,z) original_pcp(x,y,z)),
          results_50_0 = pmap(list(mix_data_lod_50_0, lambda_mix, mu_mix), 
                            function(x,y,z) original_pcp(x,y,z)))
+```
 
+```{r, code_2, include = FALSE, cache = TRUE}
 sim_all <- sim_all %>% 
   mutate(results_0_2  = pmap(list(sims, lambda_mix, mu_mix), function(x,y,z) original_pcp(x,y,z)),
          results_10_2 = pmap(list(mix_data_lod_10_2, lambda_mix, mu_mix), 
@@ -608,7 +478,9 @@ sim_all <- sim_all %>%
                            function(x,y,z) original_pcp(x,y,z)),
          results_50_2 = pmap(list(mix_data_lod_50_2, lambda_mix, mu_mix), 
                            function(x,y,z) original_pcp(x,y,z)))
+```
 
+```{r, code_sqrt2, include = FALSE, cache = TRUE}
 sim_all <- sim_all %>% 
   mutate(results_0_sqrt2  = pmap(list(sims, lambda_mix, mu_mix), function(x,y,z) original_pcp(x,y,z)),
          results_10_sqrt2 = pmap(list(mix_data_lod_10_sqrt2, lambda_mix, mu_mix), 
@@ -621,7 +493,34 @@ sim_all <- sim_all %>%
                            function(x,y,z) original_pcp(x,y,z)),
          results_50_sqrt2 = pmap(list(mix_data_lod_50_sqrt2, lambda_mix, mu_mix), 
                            function(x,y,z) original_pcp(x,y,z)))
+```
 
+```{r, jingkai_leave, include = FALSE, cache = TRUE}
+m <- nrow(sim_all$sims[[1]])
+p <- ncol(sim_all$sims[[1]])
+
+lambda_mix <- 1/sqrt(m)
+mu_mix <- sqrt(p/(2*log(m*p)))
+
+sim_all <- sim_all %>% 
+  mutate(sims = map(sims, as.matrix),
+         results_0  = pmap(list(sims, lambda_mix, mu_mix, 0), function(x,y,z,a) pcp_lod(x,y,z,a)),
+         results_10 = pmap(list(mix_data_lod_10, lambda_mix, mu_mix, delta10), 
+                           function(x,y,z,a) pcp_lod(x,y,z,a)),
+         results_20 = pmap(list(mix_data_lod_20, lambda_mix, mu_mix, delta20), 
+                           function(x,y,z,a) pcp_lod(x,y,z,a)),
+         results_30 = pmap(list(mix_data_lod_30, lambda_mix, mu_mix, delta30), 
+                           function(x,y,z,a) pcp_lod(x,y,z,a)),
+         results_40 = pmap(list(mix_data_lod_40, lambda_mix, mu_mix, delta40), 
+                           function(x,y,z,a) pcp_lod(x,y,z,a)),
+         results_50 = pmap(list(mix_data_lod_50, lambda_mix, mu_mix, delta50), 
+                           function(x,y,z,a) pcp_lod(x,y,z,a)))
+
+# norm((sim_all$sims[[1]] - sim_all$results_50[[2]]$L - sim_all$results_50[[1]]$S), type = "F")/
+#  norm((sim_all$sims[[1]]), type = "F")
+```
+
+```{r, code_nns, include = FALSE, cache = TRUE}
 sim_all <- sim_all %>% 
   mutate(results_0_nnS = pmap(list(sims, lambda_mix, mu_mix, 0), function(x,y,z,a) pcp_lod_nnS(x,y,z,a)),
          results_10_nnS = pmap(list(mix_data_lod_10, lambda_mix, mu_mix, delta10), 
@@ -637,79 +536,112 @@ sim_all <- sim_all %>%
 ```
 
 ```{r, extract, include = FALSE, cache = TRUE}
-sim_all <- sim_all %>% 
-  mutate(L_lod0  = map(results_0[[1]][1], as_tibble),
-         S_lod0  = map(results_0[[1]][2], as_tibble),
-         L_lod10 = map(results_10[[1]][1], as_tibble),
-         S_lod10 = map(results_10[[1]][2], as_tibble),
-         L_lod20 = map(results_20[[1]][1], as_tibble),
-         S_lod20 = map(results_20[[1]][2], as_tibble),
-         L_lod30 = map(results_30[[1]][1], as_tibble),
-         S_lod30 = map(results_30[[1]][2], as_tibble),
-         L_lod40 = map(results_40[[1]][1], as_tibble),
-         S_lod40 = map(results_40[[1]][2], as_tibble),
-         L_lod50 = map(results_50[[1]][1], as_tibble),
-         S_lod50 = map(results_50[[1]][2], as_tibble))
+extract_l <- function (results) {
+  L <- as.matrix(results$L)
+  L
+}
+
+extract_s <- function (results) {
+  S <- as.matrix(results$S)
+  S
+}
 
 sim_all <- sim_all %>% 
-  mutate(L_lod0_0  = map(results_0_0[[1]][1], as_tibble),
-         S_lod0_0  = map(results_0_0[[1]][2], as_tibble),
-         L_lod10_0 = map(results_10_0[[1]][1], as_tibble),
-         S_lod10_0 = map(results_10_0[[1]][2], as_tibble),
-         L_lod20_0 = map(results_20_0[[1]][1], as_tibble),
-         S_lod20_0 = map(results_20_0[[1]][2], as_tibble),
-         L_lod30_0 = map(results_30_0[[1]][1], as_tibble),
-         S_lod30_0 = map(results_30_0[[1]][2], as_tibble),
-         L_lod40_0 = map(results_40_0[[1]][1], as_tibble),
-         S_lod40_0 = map(results_40_0[[1]][2], as_tibble),
-         L_lod50_0 = map(results_50_0[[1]][1], as_tibble),
-         S_lod50_0 = map(results_50_0[[1]][2], as_tibble))
+  mutate(L_lod0  = map(results_0, extract_l),
+         S_lod0  = map(results_0, extract_s),
+         L_lod10 = map(results_10, extract_l),
+         S_lod10 = map(results_10, extract_s),
+         L_lod20 = map(results_20, extract_l),
+         S_lod20 = map(results_20, extract_s),
+         L_lod30 = map(results_30, extract_l),
+         S_lod30 = map(results_30, extract_s),
+         L_lod40 = map(results_40, extract_l),
+         S_lod40 = map(results_40, extract_s),
+         L_lod50 = map(results_50, extract_l),
+         S_lod50 = map(results_50, extract_s))
+
+#extract_l(sim_all$results_0[[1]])
+
+# head(sim_all[1,]$results_0[[1]]$L)[,1:5]
+# sim_all %>% mutate(L_lod0  = map(results_0[[1]], as_tibble)) %>% select(L_lod0) %>% .[1,1] %>% unnest(cols = c(L_lod0))
+# sim_all %>% mutate(L_lod0  = map(results_0[[1]][1], as_tibble)) %>% select(L_lod0) %>% unnest(cols = c(L_lod0))
+# sim_all %>% select(L_lod0) %>% mutate_all(as_tibble) %>% unnest(cols = c(L_lod0))
+# 
+# sim_all %>%
+#   select(seed, results_0) %>% 
+#   mutate(L_lod0 = map(results_0, extract_l)) %>% select(L_lod0)
+# 
+#   mutate(L_lod0  = map(results_0[[1]][[1]][1], as_tibble))
+#          
+# # EQUAL
+# head(sim_all$results_0[[1]]$L)[,1:5]
+# head(sim_all$L_lod0[[1]])[,1:5]
+# 
+# # NOT EQUAL
+# norm((sim_all$sims[[3]] - sim_all$results_50[[3]]$L - sim_all$results_50[[3]]$S), type = "F")/
+#   norm((sim_all$sims[[3]]), type = "F")
+# norm((sim_all$sims[[3]] - as.matrix(sim_all$L_lod50[[3]]) - as.matrix(sim_all$S_lod50[[3]])), type = "F")/
+#  norm((sim_all$sims[[3]]), type = "F")
 
 sim_all <- sim_all %>% 
-  mutate(L_lod0_sqrt2  = map(results_0_sqrt2[[1]][1], as_tibble),
-         S_lod0_sqrt2  = map(results_0_sqrt2[[1]][2], as_tibble),
-         L_lod10_sqrt2 = map(results_10_sqrt2[[1]][1], as_tibble),
-         S_lod10_sqrt2 = map(results_10_sqrt2[[1]][2], as_tibble),
-         L_lod20_sqrt2 = map(results_20_sqrt2[[1]][1], as_tibble),
-         S_lod20_sqrt2 = map(results_20_sqrt2[[1]][2], as_tibble),
-         L_lod30_sqrt2 = map(results_30_sqrt2[[1]][1], as_tibble),
-         S_lod30_sqrt2 = map(results_30_sqrt2[[1]][2], as_tibble),
-         L_lod40_sqrt2 = map(results_40_sqrt2[[1]][1], as_tibble),
-         S_lod40_sqrt2 = map(results_40_sqrt2[[1]][2], as_tibble),
-         L_lod50_sqrt2 = map(results_50_sqrt2[[1]][1], as_tibble),
-         S_lod50_sqrt2 = map(results_50_sqrt2[[1]][2], as_tibble))
+  mutate(L_lod0_0  = map(results_0_0, extract_l),
+         S_lod0_0  = map(results_0_0, extract_s),
+         L_lod10_0 = map(results_10_0, extract_l),
+         S_lod10_0 = map(results_10_0, extract_s),
+         L_lod20_0 = map(results_20_0, extract_l),
+         S_lod20_0 = map(results_20_0, extract_s),
+         L_lod30_0 = map(results_30_0, extract_l),
+         S_lod30_0 = map(results_30_0, extract_s),
+         L_lod40_0 = map(results_40_0, extract_l),
+         S_lod40_0 = map(results_40_0, extract_s),
+         L_lod50_0 = map(results_50_0, extract_l),
+         S_lod50_0 = map(results_50_0, extract_s))
 
 sim_all <- sim_all %>% 
-  mutate(L_lod0_2  = map(results_0_2[[1]][1], as_tibble),
-         S_lod0_2  = map(results_0_2[[1]][2], as_tibble),
-         L_lod10_2 = map(results_10_2[[1]][1], as_tibble),
-         S_lod10_2 = map(results_10_2[[1]][2], as_tibble),
-         L_lod20_2 = map(results_20_2[[1]][1], as_tibble),
-         S_lod20_2 = map(results_20_2[[1]][2], as_tibble),
-         L_lod30_2 = map(results_30_2[[1]][1], as_tibble),
-         S_lod30_2 = map(results_30_2[[1]][2], as_tibble),
-         L_lod40_2 = map(results_40_2[[1]][1], as_tibble),
-         S_lod40_2 = map(results_40_2[[1]][2], as_tibble),
-         L_lod50_2 = map(results_50_2[[1]][1], as_tibble),
-         S_lod50_2 = map(results_50_2[[1]][2], as_tibble))
+  mutate(L_lod0_sqrt2  = map(results_0_sqrt2, extract_l),
+         S_lod0_sqrt2  = map(results_0_sqrt2, extract_s),
+         L_lod10_sqrt2 = map(results_10_sqrt2, extract_l),
+         S_lod10_sqrt2 = map(results_10_sqrt2, extract_s),
+         L_lod20_sqrt2 = map(results_20_sqrt2, extract_l),
+         S_lod20_sqrt2 = map(results_20_sqrt2, extract_s),
+         L_lod30_sqrt2 = map(results_30_sqrt2, extract_l),
+         S_lod30_sqrt2 = map(results_30_sqrt2, extract_s),
+         L_lod40_sqrt2 = map(results_40_sqrt2, extract_l),
+         S_lod40_sqrt2 = map(results_40_sqrt2, extract_s),
+         L_lod50_sqrt2 = map(results_50_sqrt2, extract_l),
+         S_lod50_sqrt2 = map(results_50_sqrt2, extract_s))
 
 sim_all <- sim_all %>% 
-  mutate(L_lod0_nnS  = map(results_0_nnS[[1]][1], as_tibble),
-         S_lod0_nnS  = map(results_0_nnS[[1]][2], as_tibble),
-         L_lod10_nnS = map(results_10_nnS[[1]][1], as_tibble),
-         S_lod10_nnS = map(results_10_nnS[[1]][2], as_tibble),
-         L_lod20_nnS = map(results_20_nnS[[1]][1], as_tibble),
-         S_lod20_nnS = map(results_20_nnS[[1]][2], as_tibble),
-         L_lod30_nnS = map(results_30_nnS[[1]][1], as_tibble),
-         S_lod30_nnS = map(results_30_nnS[[1]][2], as_tibble),
-         L_lod40_nnS = map(results_40_nnS[[1]][1], as_tibble),
-         S_lod40_nnS = map(results_40_nnS[[1]][2], as_tibble),
-         L_lod50_nnS = map(results_50_nnS[[1]][1], as_tibble),
-         S_lod50_nnS = map(results_50_nnS[[1]][2], as_tibble))
+  mutate(L_lod0_2  = map(results_0_2, extract_l),
+         S_lod0_2  = map(results_0_2, extract_s),
+         L_lod10_2 = map(results_10_2, extract_l),
+         S_lod10_2 = map(results_10_2, extract_s),
+         L_lod20_2 = map(results_20_2, extract_l),
+         S_lod20_2 = map(results_20_2, extract_s),
+         L_lod30_2 = map(results_30_2, extract_l),
+         S_lod30_2 = map(results_30_2, extract_s),
+         L_lod40_2 = map(results_40_2, extract_l),
+         S_lod40_2 = map(results_40_2, extract_s),
+         L_lod50_2 = map(results_50_2, extract_l),
+         S_lod50_2 = map(results_50_2, extract_s))
 
 sim_all <- sim_all %>% 
-  select(-grep("results", colnames(.))) %>% 
-  modify_depth(2, as.matrix)
+  mutate(L_lod0_nnS  = map(results_0_nnS, extract_l),
+         S_lod0_nnS  = map(results_0_nnS, extract_s),
+         L_lod10_nnS = map(results_10_nnS, extract_l),
+         S_lod10_nnS = map(results_10_nnS, extract_s),
+         L_lod20_nnS = map(results_20_nnS, extract_l),
+         S_lod20_nnS = map(results_20_nnS, extract_s),
+         L_lod30_nnS = map(results_30_nnS, extract_l),
+         S_lod30_nnS = map(results_30_nnS, extract_s),
+         L_lod40_nnS = map(results_40_nnS, extract_l),
+         S_lod40_nnS = map(results_40_nnS, extract_s),
+         L_lod50_nnS = map(results_50_nnS, extract_l),
+         S_lod50_nnS = map(results_50_nnS, extract_s))
+
+# sim_all <- sim_all %>% 
+#   select(-grep("results", colnames(.))) %>% 
+#   modify_depth(2, as.matrix)
 ```
 
 ## X - L - S
@@ -727,8 +659,7 @@ make_fnorm <- function (mix, L0, S0, L10, S10, L20, S20, L30, S30, L40, S40, L50
   F_norm
 }
 
-norm((sim_all$sims[[3]] - sim_all$L_lod0[[3]] - sim_all$S_lod0[[3]]), type = "F")/norm((sim_all$sims[[3]]), type = "F")
-
+#norm((sim_all$sims[[3]] - sim_all$L_lod0[[3]] - sim_all$S_lod0[[3]]), type = "F")/norm((sim_all$sims[[3]]), type = "F")
 
 sim_f <- sim_all %>% 
   mutate(F_norm = pmap(list(sims, L_lod0, S_lod0, L_lod10, S_lod10, L_lod20, S_lod20, 
@@ -894,7 +825,7 @@ create_lsabove <- function (sim_neg1, solution) {
   ls_above
 }
 
-sim_ab <- sim_all %>% 
+sim_all <- sim_all %>% 
   mutate(l_blod_0 = map2(sims, L_lod0, create_lsbelow),
          s_blod_0 = map2(sims, S_lod0, create_lsbelow),
          blod_0 = map2(sims, sims, create_lsbelow),
@@ -962,7 +893,7 @@ sim_ab <- sim_all %>%
        l_blod_50_nnS = map2(mix_data_lod_50, L_lod50_nnS, create_lsbelow),
        s_blod_50_nnS = map2(mix_data_lod_50, S_lod50_nnS, create_lsbelow))
 
-sim_ab <- sim_ab %>% 
+sim_all <- sim_all %>% 
   mutate(l_above_blod_0 = map2(sims, L_lod0, create_lsabove),
          s_above_blod_0 = map2(sims, S_lod0, create_lsabove),
          l_above_blod_10 = map2(mix_data_lod_10, L_lod10, create_lsabove),
@@ -1024,316 +955,121 @@ sim_ab <- sim_ab %>%
           l_above_blod_50_nnS = map2(mix_data_lod_50, L_lod50_nnS, create_lsabove),
           s_above_blod_50_nnS = map2(mix_data_lod_50, S_lod50_nnS, create_lsabove))
 
-sim_ab <- sim_ab %>% select(grep("blod", colnames(.)))
-
 #Subtract true values and divide by norm of true
-less_diff <- as_tibble(cbind(`0%` = norm((blod_0 - l_blod_0 - s_blod_0), type = "F"), #/norm((mix), type = "F"),
-      `10%` = norm((blod_10 - l_blod_10 - s_blod_10), type = "F")/norm((blod_10), type = "F"),
-      `20%` = norm((blod_20 - l_blod_20 - s_blod_20), type = "F")/norm((blod_20), type = "F"),
-      `30%` = norm((blod_30 - l_blod_30 - s_blod_30), type = "F")/norm((blod_30), type = "F"),
-      `40%` = norm((blod_40 - l_blod_40 - s_blod_40), type = "F")/norm((blod_40), type = "F"),
-      `50%` = norm((blod_50 - l_blod_50 - s_blod_50), type = "F")/norm((blod_50), type = "F"))) %>% 
+make_ab_diff <- function (ref0, L0, S0, ref10, L10, S10, ref20, L20, S20, 
+                       ref30, L30, S30, ref40, L40, S40, ref50, L50, S50, a_or_b, Name) {
+  as_tibble(cbind(`0%` = norm((ref0 - L0 - S0), type = "F"),
+      `10%` = norm((ref10 - L10 - S10), type = "F")/norm((ref10), type = "F"),
+      `20%` = norm((ref20 - L20 - S20), type = "F")/norm((ref20), type = "F"),
+      `30%` = norm((ref30 - L30 - S30), type = "F")/norm((ref30), type = "F"),
+      `40%` = norm((ref40 - L40 - S40), type = "F")/norm((ref40), type = "F"),
+      `50%` = norm((ref50 - L50 - S50), type = "F")/norm((ref50), type = "F"))) %>% 
   gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD",
-         Method = "LOD PCP")
+  mutate(Values = a_or_b,
+         Method = Name)}
 
-l_above_blod_0 <- as.matrix((!tf_lod_0)*L_lod0)
-s_above_blod_0 <- as.matrix((!tf_lod_0)*S_lod0)
-
-l_above_blod_10 <- as.matrix((!tf_lod_10)*L_lod10)
-s_above_blod_10 <- as.matrix((!tf_lod_10)*S_lod10)
-
-l_above_blod_20 <- as.matrix((!tf_lod_20)*L_lod20)
-s_above_blod_20 <- as.matrix((!tf_lod_20)*S_lod20)
-
-l_above_blod_30 <- as.matrix((!tf_lod_30)*L_lod30)
-s_above_blod_30 <- as.matrix((!tf_lod_30)*S_lod30)
-
-l_above_blod_40 <- as.matrix((!tf_lod_40)*L_lod40)
-s_above_blod_40 <- as.matrix((!tf_lod_40)*S_lod40)
-
-l_above_blod_50 <- as.matrix((!tf_lod_50)*L_lod50)
-s_above_blod_50 <- as.matrix((!tf_lod_50)*S_lod50)
-
-#divide by true values
-# mix_data_lod_##_0 datasets replaced <LOD with zero, so use them as reference for >LOD
-above_diff <- as_tibble(cbind(
-  `0%`  = norm((mix  - l_above_blod_0  - s_above_blod_0),  type = "F")/norm(mix,  type = "F"),
-  `10%` = norm((mix_data_lod_10_0 - l_above_blod_10 - s_above_blod_10), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  `20%` = norm((mix_data_lod_20_0 - l_above_blod_20 - s_above_blod_20), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  `30%` = norm((mix_data_lod_30_0 - l_above_blod_30 - s_above_blod_30), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  `40%` = norm((mix_data_lod_40_0 - l_above_blod_40 - s_above_blod_40), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  `50%` = norm((mix_data_lod_50_0 - l_above_blod_50 - s_above_blod_50), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD",
-         Method = "LOD PCP")
-
-l_blod_0_0 <- as.matrix(tf_lod_0*L_lod0_0)
-s_blod_0_0 <- as.matrix(tf_lod_0*S_lod0_0)
-
-l_blod_10_0 <- as.matrix(tf_lod_10*L_lod10_0)
-s_blod_10_0 <- as.matrix(tf_lod_10*S_lod10_0)
-
-l_blod_20_0 <- as.matrix(tf_lod_20*L_lod20_0)
-s_blod_20_0 <- as.matrix(tf_lod_20*S_lod20_0)
-
-l_blod_30_0 <- as.matrix(tf_lod_30*L_lod30_0)
-s_blod_30_0 <- as.matrix(tf_lod_30*S_lod30_0)
-
-l_blod_40_0 <- as.matrix(tf_lod_40*L_lod40_0)
-s_blod_40_0 <- as.matrix(tf_lod_40*S_lod40_0)
-
-l_blod_50_0 <- as.matrix(tf_lod_50*L_lod50_0)
-s_blod_50_0 <- as.matrix(tf_lod_50*S_lod50_0)
-
-#Subtract true values and divide by norm of true
-less_diff_0 <- as_tibble(cbind(
-      `0%` = norm((blod_0 - l_blod_0_0 - s_blod_0_0), type = "F"), #/norm((blod_0), type = "F"),
-      `10%` = norm((blod_10 - l_blod_10_0 - s_blod_10_0), type = "F")/norm((blod_10), type = "F"),
-      `20%` = norm((blod_20 - l_blod_20_0 - s_blod_20_0), type = "F")/norm((blod_20), type = "F"),
-      `30%` = norm((blod_30 - l_blod_30_0 - s_blod_30_0), type = "F")/norm((blod_30), type = "F"),
-      `40%` = norm((blod_40 - l_blod_40_0 - s_blod_40_0), type = "F")/norm((blod_40), type = "F"),
-      `50%` = norm((blod_50 - l_blod_50_0 - s_blod_50_0), type = "F")/norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD",
-         Method = "PCP w/ 0")
-
-l_above_blod_0_0 <- as.matrix((!tf_lod_0)*L_lod0_0)
-s_above_blod_0_0 <- as.matrix((!tf_lod_0)*S_lod0_0)
-
-l_above_blod_10_0 <- as.matrix((!tf_lod_10)*L_lod10_0)
-s_above_blod_10_0 <- as.matrix((!tf_lod_10)*S_lod10_0)
-
-l_above_blod_20_0 <- as.matrix((!tf_lod_20)*L_lod20_0)
-s_above_blod_20_0 <- as.matrix((!tf_lod_20)*S_lod20_0)
-
-l_above_blod_30_0 <- as.matrix((!tf_lod_30)*L_lod30_0)
-s_above_blod_30_0 <- as.matrix((!tf_lod_30)*S_lod30_0)
-
-l_above_blod_40_0 <- as.matrix((!tf_lod_40)*L_lod40_0)
-s_above_blod_40_0 <- as.matrix((!tf_lod_40)*S_lod40_0)
-
-l_above_blod_50_0 <- as.matrix((!tf_lod_50)*L_lod50_0)
-s_above_blod_50_0 <- as.matrix((!tf_lod_50)*S_lod50_0)
-
-#divide by true values
-above_diff_0 <- as_tibble(cbind(
-  `0%`  = norm((mix  - l_above_blod_0_0  - s_above_blod_0_0),  type = "F")/norm(mix,  type = "F"),
-  `10%` = norm((mix_data_lod_10_0 - l_above_blod_10_0 - s_above_blod_10_0), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  `20%` = norm((mix_data_lod_20_0 - l_above_blod_20_0 - s_above_blod_20_0), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  `30%` = norm((mix_data_lod_30_0 - l_above_blod_30_0 - s_above_blod_30_0), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  `40%` = norm((mix_data_lod_40_0 - l_above_blod_40_0 - s_above_blod_40_0), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  `50%` = norm((mix_data_lod_50_0 - l_above_blod_50_0 - s_above_blod_50_0), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD",
-         Method = "PCP w/ 0")
-
-L_blod_0_sqrt2 <- as.matrix(tf_lod_0*L_lod0_sqrt2)
-S_blod_0_sqrt2 <- as.matrix(tf_lod_0*S_lod0_sqrt2)
-
-L_blod_10_sqrt2 <- as.matrix(tf_lod_10*L_lod10_sqrt2)
-S_blod_10_sqrt2 <- as.matrix(tf_lod_10*S_lod10_sqrt2)
-
-L_blod_20_sqrt2 <- as.matrix(tf_lod_20*L_lod20_sqrt2)
-S_blod_20_sqrt2 <- as.matrix(tf_lod_20*S_lod20_sqrt2)
-
-L_blod_30_sqrt2 <- as.matrix(tf_lod_30*L_lod30_sqrt2)
-S_blod_30_sqrt2 <- as.matrix(tf_lod_30*S_lod30_sqrt2)
-
-L_blod_40_sqrt2 <- as.matrix(tf_lod_40*L_lod40_sqrt2)
-S_blod_40_sqrt2 <- as.matrix(tf_lod_40*S_lod40_sqrt2)
-
-L_blod_50_sqrt2 <- as.matrix(tf_lod_50*L_lod50_sqrt2)
-S_blod_50_sqrt2 <- as.matrix(tf_lod_50*S_lod50_sqrt2)
-
-less_diff_sqrt2 <- as_tibble(
-  cbind(`0%`  = norm((blod_0  - L_blod_0_sqrt2  - S_blod_0_sqrt2),  type = "F"), #/norm((blod_0), type = "F"),
-        `10%` = norm((blod_10 - L_blod_10_sqrt2 - S_blod_10_sqrt2), type = "F")/norm((blod_10), type = "F"),
-        `20%` = norm((blod_20 - L_blod_20_sqrt2 - S_blod_20_sqrt2), type = "F")/norm((blod_20), type = "F"),
-        `30%` = norm((blod_30 - L_blod_30_sqrt2 - S_blod_30_sqrt2), type = "F")/norm((blod_30), type = "F"),
-        `40%` = norm((blod_40 - L_blod_40_sqrt2 - S_blod_40_sqrt2), type = "F")/norm((blod_40), type = "F"),
-        `50%` = norm((blod_50 - L_blod_50_sqrt2 - S_blod_50_sqrt2), type = "F")/norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD",
-         Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-
-L_above_blod_0_sqrt2 <- as.matrix((!tf_lod_0)*L_lod0_sqrt2)
-S_above_blod_0_sqrt2 <- as.matrix((!tf_lod_0)*S_lod0_sqrt2)
-
-L_above_blod_10_sqrt2 <- as.matrix((!tf_lod_10)*L_lod10_sqrt2)
-S_above_blod_10_sqrt2 <- as.matrix((!tf_lod_10)*S_lod10_sqrt2)
-
-L_above_blod_20_sqrt2 <- as.matrix((!tf_lod_20)*L_lod20_sqrt2)
-S_above_blod_20_sqrt2 <- as.matrix((!tf_lod_20)*S_lod20_sqrt2)
-
-L_above_blod_30_sqrt2 <- as.matrix((!tf_lod_30)*L_lod30_sqrt2)
-S_above_blod_30_sqrt2 <- as.matrix((!tf_lod_30)*S_lod30_sqrt2)
-
-L_above_blod_40_sqrt2 <- as.matrix((!tf_lod_40)*L_lod40_sqrt2)
-S_above_blod_40_sqrt2 <- as.matrix((!tf_lod_40)*S_lod40_sqrt2)
-
-L_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*L_lod50_sqrt2)
-S_above_blod_50_sqrt2 <- as.matrix((!tf_lod_50)*S_lod50_sqrt2)
-
-#divide by true values
-above_diff_sqrt2 <- as_tibble(cbind(
-  `0%`  = norm((mix  - L_above_blod_0_sqrt2  - S_above_blod_0_sqrt2),  type = "F")/norm(mix,  type = "F"),
-  `10%` = norm((mix_data_lod_10_0 - L_above_blod_10_sqrt2 - S_above_blod_10_sqrt2), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  `20%` = norm((mix_data_lod_20_0 - L_above_blod_20_sqrt2 - S_above_blod_20_sqrt2), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  `30%` = norm((mix_data_lod_30_0 - L_above_blod_30_sqrt2 - S_above_blod_30_sqrt2), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  `40%` = norm((mix_data_lod_40_0 - L_above_blod_40_sqrt2 - S_above_blod_40_sqrt2), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  `50%` = norm((mix_data_lod_50_0 - L_above_blod_50_sqrt2 - S_above_blod_50_sqrt2), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD",
-         Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-
-L_blod_0_2 <- as.matrix(tf_lod_0*L_lod0_2)
-S_blod_0_2 <- as.matrix(tf_lod_0*S_lod0_2)
-
-L_blod_10_2 <- as.matrix(tf_lod_10*L_lod10_2)
-S_blod_10_2 <- as.matrix(tf_lod_10*S_lod10_2)
-
-L_blod_20_2 <- as.matrix(tf_lod_20*L_lod20_2)
-S_blod_20_2 <- as.matrix(tf_lod_20*S_lod20_2)
-
-L_blod_30_2 <- as.matrix(tf_lod_30*L_lod30_2)
-S_blod_30_2 <- as.matrix(tf_lod_30*S_lod30_2)
-
-L_blod_40_2 <- as.matrix(tf_lod_40*L_lod40_2)
-S_blod_40_2 <- as.matrix(tf_lod_40*S_lod40_2)
-
-L_blod_50_2 <- as.matrix(tf_lod_50*L_lod50_2)
-S_blod_50_2 <- as.matrix(tf_lod_50*S_lod50_2)
-
-less_diff_2 <- as_tibble(
-  cbind(`0%`  = norm((blod_0  - L_blod_0_2  - S_blod_0_2),  type = "F"), #/norm((blod_0), type = "F"),
-        `10%` = norm((blod_10 - L_blod_10_2 - S_blod_10_2), type = "F")/norm((blod_10), type = "F"),
-        `20%` = norm((blod_20 - L_blod_20_2 - S_blod_20_2), type = "F")/norm((blod_20), type = "F"),
-        `30%` = norm((blod_30 - L_blod_30_2 - S_blod_30_2), type = "F")/norm((blod_30), type = "F"),
-        `40%` = norm((blod_40 - L_blod_40_2 - S_blod_40_2), type = "F")/norm((blod_40), type = "F"),
-        `50%` = norm((blod_50 - L_blod_50_2 - S_blod_50_2), type = "F")/norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD",
-         Method = "PCP w/ LOD/2")
-
-L_above_blod_0_2 <- as.matrix((!tf_lod_0)*L_lod0_2)
-S_above_blod_0_2 <- as.matrix((!tf_lod_0)*S_lod0_2)
-
-L_above_blod_10_2 <- as.matrix((!tf_lod_10)*L_lod10_2)
-S_above_blod_10_2 <- as.matrix((!tf_lod_10)*S_lod10_2)
-
-L_above_blod_20_2 <- as.matrix((!tf_lod_20)*L_lod20_2)
-S_above_blod_20_2 <- as.matrix((!tf_lod_20)*S_lod20_2)
-
-L_above_blod_30_2 <- as.matrix((!tf_lod_30)*L_lod30_2)
-S_above_blod_30_2 <- as.matrix((!tf_lod_30)*S_lod30_2)
-
-L_above_blod_40_2 <- as.matrix((!tf_lod_40)*L_lod40_2)
-S_above_blod_40_2 <- as.matrix((!tf_lod_40)*S_lod40_2)
-
-L_above_blod_50_2 <- as.matrix((!tf_lod_50)*L_lod50_2)
-S_above_blod_50_2 <- as.matrix((!tf_lod_50)*S_lod50_2)
-
-#divide by true values
-above_diff_2 <- as_tibble(cbind(
-  `0%`  = norm((mix  - L_above_blod_0_2  - S_above_blod_0_2),  type = "F")/norm(mix,  type = "F"),
-  `10%` = norm((mix_data_lod_10_0 - L_above_blod_10_2 - S_above_blod_10_2), type = "F")/norm(mix_data_lod_10_0, type = "F"),
-  `20%` = norm((mix_data_lod_20_0 - L_above_blod_20_2 - S_above_blod_20_2), type = "F")/norm(mix_data_lod_20_0, type = "F"),
-  `30%` = norm((mix_data_lod_30_0 - L_above_blod_30_2 - S_above_blod_30_2), type = "F")/norm(mix_data_lod_30_0, type = "F"),
-  `40%` = norm((mix_data_lod_40_0 - L_above_blod_40_2 - S_above_blod_40_2), type = "F")/norm(mix_data_lod_40_0, type = "F"),
-  `50%` = norm((mix_data_lod_50_0 - L_above_blod_50_2 - S_above_blod_50_2), type = "F")/norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD",
-         Method = "PCP w/ LOD/2")
-
-l_above_blod_0_nnS <- as.matrix((!tf_lod_0)*L_lod0_nnS)
-s_above_blod_0_nnS <- as.matrix((!tf_lod_0)*S_lod0_nnS)
-
-l_above_blod_10_nnS <- as.matrix((!tf_lod_10)*L_lod10_nnS)
-s_above_blod_10_nnS <- as.matrix((!tf_lod_10)*S_lod10_nnS)
-
-l_above_blod_20_nnS <- as.matrix((!tf_lod_20)*L_lod20_nnS)
-s_above_blod_20_nnS <- as.matrix((!tf_lod_20)*S_lod20_nnS)
-
-l_above_blod_30_nnS <- as.matrix((!tf_lod_30)*L_lod30_nnS)
-s_above_blod_30_nnS <- as.matrix((!tf_lod_30)*S_lod30_nnS)
-
-l_above_blod_40_nnS <- as.matrix((!tf_lod_40)*L_lod40)
-s_above_blod_40_nnS <- as.matrix((!tf_lod_40)*S_lod40)
-
-l_above_blod_50_nnS <- as.matrix((!tf_lod_50)*L_lod50_nnS)
-s_above_blod_50_nnS <- as.matrix((!tf_lod_50)*S_lod50_nnS)
-
-#divide by true values
-above_diff_nnS <- as_tibble(cbind(
-  `0%`  = norm((mix  - l_above_blod_0_nnS  - s_above_blod_0_nnS),  type = "F")/
-    norm(mix,  type = "F"),
-  `10%` = norm((mix_data_lod_10_0 - l_above_blod_10_nnS - s_above_blod_10_nnS), type = "F")/
-    norm(mix_data_lod_10_0, type = "F"),
-  `20%` = norm((mix_data_lod_20_0 - l_above_blod_20_nnS - s_above_blod_20_nnS), type = "F")/
-    norm(mix_data_lod_20_0, type = "F"),
-  `30%` = norm((mix_data_lod_30_0 - l_above_blod_30_nnS - s_above_blod_30_nnS), type = "F")/
-    norm(mix_data_lod_30_0, type = "F"),
-  `40%` = norm((mix_data_lod_40_0 - l_above_blod_40_nnS - s_above_blod_40_nnS), type = "F")/
-    norm(mix_data_lod_40_0, type = "F"),
-  `50%` = norm((mix_data_lod_50_0 - l_above_blod_50_nnS - s_above_blod_50_nnS), type = "F")/
-    norm(mix_data_lod_50_0, type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "> LOD",
-         Method = "LOD PCP nnS")
-
-l_blod_0_nnS <- as.matrix(tf_lod_0*L_lod0_nnS)
-s_blod_0_nnS <- as.matrix(tf_lod_0*S_lod0_nnS)
-
-l_blod_10_nnS <- as.matrix(tf_lod_10*L_lod10_nnS)
-s_blod_10_nnS <- as.matrix(tf_lod_10*S_lod10_nnS)
-
-l_blod_20_nnS <- as.matrix(tf_lod_20*L_lod20_nnS)
-s_blod_20_nnS <- as.matrix(tf_lod_20*S_lod20_nnS)
-
-l_blod_30_nnS <- as.matrix(tf_lod_30*L_lod30_nnS)
-s_blod_30_nnS <- as.matrix(tf_lod_30*S_lod30_nnS)
-
-l_blod_40_nnS <- as.matrix(tf_lod_40*L_lod40_nnS)
-s_blod_40_nnS <- as.matrix(tf_lod_40*S_lod40_nnS)
-
-l_blod_50_nnS <- as.matrix(tf_lod_50*L_lod50_nnS)
-s_blod_50_nnS <- as.matrix(tf_lod_50*S_lod50_nnS)
-
-#Subtract true values and divide by norm of true
-less_diff_nnS <- as_tibble(cbind(`0%` = norm((blod_0 - l_blod_0_nnS - s_blod_0_nnS), type = "F"), #/norm((mix), type = "F"),
-      `10%` = norm((blod_10 - l_blod_10_nnS - s_blod_10_nnS), type = "F")/
-        norm((blod_10), type = "F"),
-      `20%` = norm((blod_20 - l_blod_20_nnS - s_blod_20_nnS), type = "F")/
-        norm((blod_20), type = "F"),
-      `30%` = norm((blod_30 - l_blod_30_nnS - s_blod_30_nnS), type = "F")/
-        norm((blod_30), type = "F"),
-      `40%` = norm((blod_40 - l_blod_40_nnS - s_blod_40_nnS), type = "F")/
-        norm((blod_40), type = "F"),
-      `50%` = norm((blod_50 - l_blod_50_nnS - s_blod_50_nnS), type = "F")/
-        norm((blod_50), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Values = "< LOD",
-         Method = "LOD PCP nnS")
+sim_ab <- sim_all %>% 
+  mutate(above_diff = pmap(list(sims, l_above_blod_0, s_above_blod_0, mix_data_lod_10_0, l_above_blod_10, 
+                                s_above_blod_10, mix_data_lod_20_0, l_above_blod_20, s_above_blod_20, 
+                                mix_data_lod_30_0, l_above_blod_30, s_above_blod_30, mix_data_lod_40_0, 
+                                l_above_blod_40, s_above_blod_40, mix_data_lod_50_0, l_above_blod_50, s_above_blod_50, 
+                                "> LOD", "LOD PCP"), make_ab_diff),
+         above_diff_2 = pmap(list(sims, l_above_blod_0_2, s_above_blod_0_2, mix_data_lod_10_0, l_above_blod_10_2, 
+                    s_above_blod_10_2, mix_data_lod_20_0, l_above_blod_20_2, s_above_blod_20_2, 
+                    mix_data_lod_30_0, l_above_blod_30_2, s_above_blod_30_2, mix_data_lod_40_0, 
+                    l_above_blod_40_2, s_above_blod_40_2, mix_data_lod_50_0, l_above_blod_50_2, s_above_blod_50_2, 
+                    "> LOD", "PCP w/ LOD/2"), make_ab_diff),
+          above_diff_sqrt2 = pmap(list(sims, l_above_blod_0_sqrt2, s_above_blod_0_sqrt2, mix_data_lod_10_0, 
+                                 l_above_blod_10_sqrt2, s_above_blod_10_sqrt2, mix_data_lod_20_0, 
+                                 l_above_blod_20_sqrt2, s_above_blod_20_sqrt2, mix_data_lod_30_0,
+                                 l_above_blod_30_sqrt2, s_above_blod_30_sqrt2, mix_data_lod_40_0, 
+                                  l_above_blod_40_sqrt2, s_above_blod_40_sqrt2, mix_data_lod_50_0, 
+                                  l_above_blod_50_sqrt2, s_above_blod_50_sqrt2, 
+                                  "> LOD", "PCP w/ LOD/sqrt2"), make_ab_diff),
+         above_diff_nnS = pmap(list(sims, l_above_blod_0_nnS, s_above_blod_0_nnS, mix_data_lod_10_0,
+                                    l_above_blod_10_nnS, s_above_blod_10_nnS, mix_data_lod_20_0,
+                                    l_above_blod_20_nnS, s_above_blod_20_nnS, mix_data_lod_30_0,
+                                    l_above_blod_30_nnS, s_above_blod_30_nnS, mix_data_lod_40_0,
+                                    l_above_blod_40_nnS, s_above_blod_40_nnS, mix_data_lod_50_0,
+                                    l_above_blod_50_nnS, s_above_blod_50_nnS, 
+                                    "> LOD", "LOD PCP nnS"), make_ab_diff),
+         above_diff_0 = pmap(list(sims, l_above_blod_0_0, s_above_blod_0_0, mix_data_lod_10_0, l_above_blod_10_0,
+                                  s_above_blod_10_0, mix_data_lod_20_0, l_above_blod_20_0, s_above_blod_20_0,
+                                  mix_data_lod_30_0, l_above_blod_30_0, s_above_blod_30_0, mix_data_lod_40_0,
+                                  l_above_blod_40_0, s_above_blod_40_0, mix_data_lod_50_0, l_above_blod_50_0,
+                                  s_above_blod_50_0, "> LOD", "PCP w/ 0"), make_ab_diff)) %>% 
+  mutate(less_diff = pmap(list(sims, l_blod_0, s_blod_0, mix_data_lod_10_0, l_blod_10, 
+                                s_blod_10, mix_data_lod_20_0, l_blod_20, s_blod_20, 
+                                mix_data_lod_30_0, l_blod_30, s_blod_30, mix_data_lod_40_0, 
+                                l_blod_40, s_blod_40, mix_data_lod_50_0, l_blod_50, s_blod_50, 
+                                "< LOD", "LOD PCP"), make_ab_diff),
+         less_diff_2 = pmap(list(sims, l_blod_0_2, s_blod_0_2, mix_data_lod_10_0, l_blod_10_2, 
+                                  s_blod_10_2, mix_data_lod_20_0, l_blod_20_2, s_blod_20_2, 
+                                  mix_data_lod_30_0, l_blod_30_2, s_blod_30_2, mix_data_lod_40_0, 
+                                  l_blod_40_2, s_blod_40_2, mix_data_lod_50_0, l_blod_50_2, s_blod_50_2, 
+                                  "< LOD", "PCP w/ LOD/2"), make_ab_diff),
+         less_diff_sqrt2 = pmap(list(sims, l_blod_0_sqrt2, s_blod_0_sqrt2, mix_data_lod_10_0, 
+                                      l_blod_10_sqrt2, s_blod_10_sqrt2, mix_data_lod_20_0, 
+                                      l_blod_20_sqrt2, s_blod_20_sqrt2, mix_data_lod_30_0,
+                                      l_blod_30_sqrt2, s_blod_30_sqrt2, mix_data_lod_40_0, 
+                                      l_blod_40_sqrt2, s_blod_40_sqrt2, mix_data_lod_50_0, 
+                                      l_blod_50_sqrt2, s_blod_50_sqrt2, 
+                                      "< LOD", "PCP w/ LOD/sqrt2"), make_ab_diff),
+         less_diff_nnS = pmap(list(sims, l_blod_0_nnS, s_blod_0_nnS, mix_data_lod_10_0,
+                                    l_blod_10_nnS, s_blod_10_nnS, mix_data_lod_20_0,
+                                    l_blod_20_nnS, s_blod_20_nnS, mix_data_lod_30_0,
+                                    l_blod_30_nnS, s_blod_30_nnS, mix_data_lod_40_0,
+                                    l_blod_40_nnS, s_blod_40_nnS, mix_data_lod_50_0,
+                                    l_blod_50_nnS, s_blod_50_nnS, 
+                                    "< LOD", "LOD PCP nnS"), make_ab_diff),
+         less_diff_0 = pmap(list(sims, l_blod_0_0, s_blod_0_0, mix_data_lod_10_0, l_blod_10_0,
+                                  s_blod_10_0, mix_data_lod_20_0, l_blod_20_0, s_blod_20_0,
+                                  mix_data_lod_30_0, l_blod_30_0, s_blod_30_0, mix_data_lod_40_0,
+                                  l_blod_40_0, s_blod_40_0, mix_data_lod_50_0, l_blod_50_0,
+                                  s_blod_50_0, "< LOD", "PCP w/ 0"), make_ab_diff))
+ 
+sim_ab <- sim_ab %>% select(seed, grep("diff", colnames(.)))
 ```
 
 * Values \> and \< LOD stratified
 * Sum of low rank and sparse solution matrices (L \+ S) compared to simulated data (X)
 
 ```{r, fig.align = "center"}
-rbind(above_diff, 
-      less_diff,
-      above_diff_0, 
-      less_diff_0,
-      above_diff_sqrt2, 
-      less_diff_sqrt2,
-      above_diff_2,
-      less_diff_2,
-      above_diff_nnS,
-      less_diff_nnS) %>% 
+out_ab <- sim_ab %>% 
+  select(seed, above_diff) %>% 
+  unnest(cols = c(above_diff)) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, above_diff_0) %>% 
+          unnest(cols = c(above_diff_0))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, above_diff_sqrt2) %>% 
+          unnest(cols = c(above_diff_sqrt2))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, above_diff_2) %>% 
+          unnest(cols = c(above_diff_2))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, above_diff_nnS) %>% 
+          unnest(cols = c(above_diff_nnS))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, less_diff_0) %>% 
+          unnest(cols = c(less_diff_0))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, less_diff_sqrt2) %>% 
+          unnest(cols = c(less_diff_sqrt2))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, less_diff_2) %>% 
+          unnest(cols = c(less_diff_2))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, less_diff_nnS) %>% 
+          unnest(cols = c(less_diff_nnS))) %>% 
+  rbind(., sim_ab %>% 
+          select(seed, less_diff) %>% 
+          unnest(cols = c(less_diff))) 
+
+out_ab %>% 
   mutate(norm = ifelse(Values == "> LOD" & Method == "LOD PCP", norm + 0.005, norm),
          norm = ifelse(Values == "> LOD" & Method == "PCP w/ 0", norm - 0.005, norm)) %>% 
-  ggplot(aes(x = percent_blod, y = norm, group = interaction(Values, Method), color = Method)) + 
+  ggplot(aes(x = percent_blod, y = norm, group = interaction(Values, Method, seed), color = Method)) + 
   geom_point(aes()) + geom_path(aes(linetype = Values)) + theme_bw() +
   labs(x = "Percent Below LOD", 
        y = "(norm(X-L-S) / norm(X)",
@@ -1341,7 +1077,6 @@ rbind(above_diff,
 ```
 
 ## SVD
-
 ### Right singular vectors
 
 ```{r, svdv, include=FALSE, cache= TRUE}
