@@ -451,6 +451,15 @@ pcp_lod_nnS <- function(D, lambda, mu, LOD) {
 ```
 
 ```{r, code_0, include = FALSE, cache = TRUE}
+m <- nrow(sim_all$sims[[1]])
+p <- ncol(sim_all$sims[[1]])
+
+lambda_mix <- 1/sqrt(m)
+mu_mix <- sqrt(p/(2*log(m*p)))
+
+sim_all <- sim_all %>% mutate(sims = map(sims, as.matrix))
+#original_pcp(as.matrix(sim_all$sims[[1]]), lambda_mix, mu_mix)
+
 sim_all <- sim_all %>% 
   mutate(results_0_0  = pmap(list(sims, lambda_mix, mu_mix), function(x,y,z) original_pcp(x,y,z)),
          results_10_0 = pmap(list(mix_data_lod_10_0, lambda_mix, mu_mix), 
@@ -496,12 +505,6 @@ sim_all <- sim_all %>%
 ```
 
 ```{r, jingkai_leave, include = FALSE, cache = TRUE}
-m <- nrow(sim_all$sims[[1]])
-p <- ncol(sim_all$sims[[1]])
-
-lambda_mix <- 1/sqrt(m)
-mu_mix <- sqrt(p/(2*log(m*p)))
-
 sim_all <- sim_all %>% 
   mutate(sims = map(sims, as.matrix),
          results_0  = pmap(list(sims, lambda_mix, mu_mix, 0), function(x,y,z,a) pcp_lod(x,y,z,a)),
