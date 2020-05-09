@@ -1140,184 +1140,53 @@ out_ab %>%
 
 ```{r, svdv, include=FALSE, cache= TRUE}
 # Extract right singular vectors from each low rank solution matrix
-V_lod0  <-  svd(L_lod0)$v[,1:7]
-V_lod10 <- svd(L_lod10)$v[,1:7]
-V_lod20 <- svd(L_lod20)$v[,1:7]
-V_lod30 <- svd(L_lod30)$v[,1:7]
-V_lod40 <- svd(L_lod40)$v[,1:7]
-V_lod50 <- svd(L_lod50)$v[,1:7]
+extract_SVD <- function (L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50) {
+        v_lod0  <- svd(L_lod0)$v[,1:7]
+        v_lod10 <- svd(L_lod10)$v[,1:7]
+        v_lod20 <- svd(L_lod20)$v[,1:7]
+        v_lod30 <- svd(L_lod30)$v[,1:7]
+        v_lod40 <- svd(L_lod40)$v[,1:7]
+        v_lod50 <- svd(L_lod50)$v[,1:7]
+        
+        u_lod0  <- svd(L_lod0)$u[,1:7]
+        u_lod10 <- svd(L_lod10)$u[,1:7]
+        u_lod20 <- svd(L_lod20)$u[,1:7]
+        u_lod30 <- svd(L_lod30)$u[,1:7]
+        u_lod40 <- svd(L_lod40)$u[,1:7]
+        u_lod50 <- svd(L_lod50)$u[,1:7]
+        
+        d_lod0  <- svd(L_lod0)$d[1:7]
+        d_lod10 <- svd(L_lod10)$d[1:7]
+        d_lod20 <- svd(L_lod20)$d[1:7]
+        d_lod30 <- svd(L_lod30)$d[1:7]
+        d_lod40 <- svd(L_lod40)$d[1:7]
+        d_lod50 <- svd(L_lod50)$d[1:7]
+        list(v_lod0 = v_lod0, v_lod10 = v_lod10, v_lod20 = v_lod20, v_lod30 = v_lod30, v_lod40 = v_lod40, v_lod50 = v_lod50,
+             u_lod0 = u_lod0, u_lod10 = u_lod10, u_lod20 = u_lod20, u_lod30 = u_lod30, u_lod40 = u_lod40, u_lod50 = u_lod50,
+             d_lod0 = d_lod0, d_lod10 = d_lod10, d_lod20 = d_lod20, d_lod30 = d_lod30, d_lod40 = d_lod40, d_lod50 = d_lod50)
+}
 
-# Hack to flip singular vectos -- Use correlation
-# cor(V_lod0, V_lod10)
-# cor(V_lod0, V_lod20)
-# cor(V_lod0, V_lod30)
-# cor(V_lod0, V_lod40)
-# cor(V_lod0, V_lod50)
-
-# Hack -- Flip
-V_lod10[,3] <- -V_lod10[,3]
-V_lod10[,5:7] <- -V_lod10[,5:7]
-V_lod20[,3] <- -V_lod20[,3]
-V_lod20[,5:6] <- -V_lod20[,5:6]
-V_lod30[,3:6] <- -V_lod30[,3:6]
-V_lod40[,3:4] <- -V_lod40[,3:4]
-V_lod40[,7] <- -V_lod40[,7]
-V_lod50[,3:7] <- -V_lod50[,3:7]
-
-V_diff <- as_tibble(cbind(`0%` =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      `10%` =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      `20%` =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      `30%` =norm((V_lod30 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      `40%` =norm((V_lod40 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
-      `50%` =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "LOD PCP")
-
-#V_diff
-
-# Extract right singular vectors from each low rank solution matrix
-V_lod0_0  <-  svd(L_lod0_0)$v[,1:7]
-V_lod10_0 <- svd(L_lod10_0)$v[,1:7]
-V_lod20_0 <- svd(L_lod20_0)$v[,1:7]
-V_lod30_0 <- svd(L_lod30_0)$v[,1:7]
-V_lod40_0 <- svd(L_lod40_0)$v[,1:7]
-V_lod50_0 <- svd(L_lod50_0)$v[,1:7]
-
-# cor(V_lod0_0, V_lod10_0)
-# cor(V_lod0_0, V_lod20_0)
-# cor(V_lod0_0, V_lod30_0)
-# cor(V_lod0_0, V_lod40_0)
-# cor(V_lod0_0, V_lod50_0)
-
-# Hack -- Flip
-V_lod10_0[,3:7] <- -V_lod10_0[,3:7]
-V_lod20_0[,3:4] <- -V_lod20_0[,3:4]
-V_lod20_0[,7] <- -V_lod20_0[,7]
-V_lod30_0[,3] <- -V_lod30_0[,3]
-V_lod30_0[,5] <- -V_lod30_0[,5]
-V_lod30_0[,7] <- -V_lod30_0[,7]
-V_lod40_0[,3] <- -V_lod40_0[,3]
-V_lod50_0[,3:4] <- -V_lod50_0[,3:4]
-V_lod50_0[,7] <- -V_lod50_0[,7]
-
-V_diff_0 <- as_tibble(cbind(`0%` =norm((V_lod0_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"),
-      `10%` =norm((V_lod10_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"),
-      `20%` =norm((V_lod20_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"),
-      `30%` =norm((V_lod30_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"),
-      `40%` =norm((V_lod40_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"),
-      `50%` =norm((V_lod50_0 - V_lod0_0), type = "F")/norm((V_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ 0")
-
-#V_diff_0
-
-# Extract right singular vectors from each low rank solution matrix
-V_lod0_sqrt2  <-  svd(L_lod0_sqrt2)$v[,1:7]
-V_lod10_sqrt2 <- svd(L_lod10_sqrt2)$v[,1:7]
-V_lod20_sqrt2 <- svd(L_lod20_sqrt2)$v[,1:7]
-V_lod30_sqrt2 <- svd(L_lod30_sqrt2)$v[,1:7]
-V_lod40_sqrt2 <- svd(L_lod40_sqrt2)$v[,1:7]
-V_lod50_sqrt2 <- svd(L_lod50_sqrt2)$v[,1:7]
-
-# cor(V_lod0_sqrt2, V_lod10_sqrt2)
-# cor(V_lod0_sqrt2, V_lod20_sqrt2)
-# cor(V_lod0_sqrt2, V_lod30_sqrt2)
-# cor(V_lod0_sqrt2, V_lod40_sqrt2)
-# cor(V_lod0_sqrt2, V_lod50_sqrt2)
-
-# Hack -- Flip
-V_lod10_sqrt2[,4:5] <- -V_lod10_sqrt2[,4:5]
-V_lod10_sqrt2[,7] <- -V_lod10_sqrt2[,7]
-
-V_lod20_sqrt2[,3] <- -V_lod20_sqrt2[,3]
-V_lod20_sqrt2[,5:7] <- -V_lod20_sqrt2[,5:7]
-
-V_lod30_sqrt2[,3] <- -V_lod30_sqrt2[,3]
-V_lod30_sqrt2[,5:6] <- -V_lod30_sqrt2[,5:6]
-
-V_lod40_sqrt2[,7] <- -V_lod40_sqrt2[,7]
-
-V_lod50_sqrt2[,3:4] <- -V_lod50_sqrt2[,3:4]
-V_lod50_sqrt2[,6:7] <- -V_lod50_sqrt2[,6:7]
-
-V_diff_sqrt2 <- as_tibble(cbind(`0%` =norm((V_lod0_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"),
-      `10%` =norm((V_lod10_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"),
-      `20%` =norm((V_lod20_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"),
-      `30%` =norm((V_lod30_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"),
-      `40%` =norm((V_lod40_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"),
-      `50%` =norm((V_lod50_sqrt2 - V_lod0_sqrt2), type = "F")/norm((V_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-
-#V_diff_sqrt2
-
-# Extract right singular vectors from each low rank solution matrix
-V_lod0_2  <-  svd(L_lod0_2)$v[,1:7]
-V_lod10_2 <- svd(L_lod10_2)$v[,1:7]
-V_lod20_2 <- svd(L_lod20_2)$v[,1:7]
-V_lod30_2 <- svd(L_lod30_2)$v[,1:7]
-V_lod40_2 <- svd(L_lod40_2)$v[,1:7]
-V_lod50_2 <- svd(L_lod50_2)$v[,1:7]
-
-# cor(V_lod0_2, V_lod10_2)
-# cor(V_lod0_2, V_lod20_2)
-# cor(V_lod0_2, V_lod30_2)
-# cor(V_lod0_2, V_lod40_2)
-# cor(V_lod0_2, V_lod50_2)
-
-# Hack -- Flip
-V_lod10_2[,3] <- -V_lod10_2[,3]
-V_lod10_2[,5] <- -V_lod10_2[,5]
-V_lod10_2[,7] <- -V_lod10_2[,7]
-V_lod20_2[,3] <- -V_lod20_2[,3]
-V_lod20_2[,5] <- -V_lod20_2[,5]
-V_lod30_2[,3] <- -V_lod30_2[,3]
-V_lod30_2[,5] <- -V_lod30_2[,5]
-V_lod40_2[,3:5] <- -V_lod40_2[,3:5]
-V_lod50_2[,3:5] <- -V_lod50_2[,3:5]
-V_lod50_2[,7] <- -V_lod50_2[,7]
-
-V_diff_2 <- as_tibble(cbind(`0%` =norm((V_lod0_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"),
-                                `10%` =norm((V_lod10_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"),
-                                `20%` =norm((V_lod20_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"),
-                                `30%` =norm((V_lod30_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"),
-                                `40%` =norm((V_lod40_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"),
-                                `50%` =norm((V_lod50_2 - V_lod0_2), type = "F")/norm((V_lod0_2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ LOD/2")
-
-#V_diff_2
-
-# Extract right singular vectors from each low rank solution matrix
-V_lod0_nnS  <-  svd(L_lod0_nnS)$v[,1:7]
-V_lod10_nnS <- svd(L_lod10_nnS)$v[,1:7]
-V_lod20_nnS <- svd(L_lod20_nnS)$v[,1:7]
-V_lod30_nnS <- svd(L_lod30_nnS)$v[,1:7]
-V_lod40_nnS <- svd(L_lod40_nnS)$v[,1:7]
-V_lod50_nnS <- svd(L_lod50_nnS)$v[,1:7]
-
-# Hack to flip singular vectos -- Use correlation
-# cor(V_lod0_nnS, V_lod10_nnS)
-# cor(V_lod0_nnS, V_lod20_nnS)
-# cor(V_lod0_nnS, V_lod30_nnS)
-# cor(V_lod0_nnS, V_lod40_nnS)
-# cor(V_lod0_nnS, V_lod50_nnS)
-
-# Hack -- Flip
-V_lod30_nnS[,6] <- -V_lod30_nnS[,6]
-V_lod40_nnS[,6] <- -V_lod40_nnS[,6]
-V_lod50_nnS[,6] <- -V_lod50_nnS[,6]
-
-V_diff_nnS<- as_tibble(cbind(`0%` =norm((V_lod0_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
-      `10%` =norm((V_lod10_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
-      `20%` =norm((V_lod20_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
-      `30%` =norm((V_lod30_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
-      `40%` =norm((V_lod40_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"),
-      `50%` =norm((V_lod50_nnS - V_lod0_nnS), type = "F")/norm((V_lod0_nnS), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "LOD PCP nnS")
-
-#V_diff_nnS
+sim_svd <- sim_all %>% 
+  mutate(lod_pcp_svd = pmap(list(L_lod0_0, L_lod10_0, L_lod20_0, L_lod30_0, L_lod40_0, L_lod50_0), 
+                      function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd) %>% 
+  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_0"))) %>% 
+  mutate(lod_pcp_svd = pmap(list(L_lod0_sqrt2, L_lod10_sqrt2, L_lod20_sqrt2, 
+                                 L_lod30_sqrt2, L_lod40_sqrt2, L_lod50_sqrt2), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd) %>% 
+  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_sqrt2"))) %>% 
+  mutate(lod_pcp_svd = pmap(list(L_lod0_2, L_lod10_2, L_lod20_2, L_lod30_2, L_lod40_2, L_lod50_2), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd) %>% 
+  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_2"))) %>% 
+  mutate(lod_pcp_svd = pmap(list(L_lod0_nnS, L_lod10_nnS, L_lod20_nnS, L_lod30_nnS, L_lod40_nnS, L_lod50_nnS), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd) %>% 
+  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_nnS"))) %>% 
+  mutate(lod_pcp_svd = pmap(list(L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd) 
 ```
 
 * Reference is right singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
