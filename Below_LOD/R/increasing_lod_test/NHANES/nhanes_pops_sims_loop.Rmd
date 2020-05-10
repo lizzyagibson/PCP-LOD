@@ -1136,9 +1136,10 @@ out_ab %>%
 ```
 
 ## SVD
+
 ### Right singular vectors
 
-```{r, svdv, include=FALSE, cache= TRUE}
+```{r, svdv, include=FALSE, cache= TRUE, cache.lazy=FALSE}
 # Extract right singular vectors from each low rank solution matrix
 extract_SVD <- function (L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50) {
         v_lod0  <- svd(L_lod0)$v[,1:7]
@@ -1161,302 +1162,303 @@ extract_SVD <- function (L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50) {
         d_lod30 <- svd(L_lod30)$d[1:7]
         d_lod40 <- svd(L_lod40)$d[1:7]
         d_lod50 <- svd(L_lod50)$d[1:7]
-        list(v_lod0 = v_lod0, v_lod10 = v_lod10, v_lod20 = v_lod20, v_lod30 = v_lod30, v_lod40 = v_lod40, v_lod50 = v_lod50,
-             u_lod0 = u_lod0, u_lod10 = u_lod10, u_lod20 = u_lod20, u_lod30 = u_lod30, u_lod40 = u_lod40, u_lod50 = u_lod50,
-             d_lod0 = d_lod0, d_lod10 = d_lod10, d_lod20 = d_lod20, d_lod30 = d_lod30, d_lod40 = d_lod40, d_lod50 = d_lod50)
-}
+        out <- list(v_lod0 = v_lod0, v_lod10 = v_lod10, v_lod20 = v_lod20, v_lod30 = v_lod30, 
+             v_lod40 = v_lod40, v_lod50 = v_lod50,
+             u_lod0 = u_lod0, u_lod10 = u_lod10, u_lod20 = u_lod20, u_lod30 = u_lod30, 
+             u_lod40 = u_lod40, u_lod50 = u_lod50,
+             d_lod0 = d_lod0, d_lod10 = d_lod10, d_lod20 = d_lod20, d_lod30 = d_lod30, 
+             d_lod40 = d_lod40, d_lod50 = d_lod50)
+        out <- out %>% set_names(~str_replace_all(., "0", "0_replace"))
+        out
+        }
 
 sim_svd <- sim_all %>% 
-  mutate(lod_pcp_svd = pmap(list(L_lod0_0, L_lod10_0, L_lod20_0, L_lod30_0, L_lod40_0, L_lod50_0), 
+  mutate(lod_pcp_svd_sqrt2 = pmap(list(L_lod0_sqrt2, L_lod10_sqrt2, L_lod20_sqrt2, 
+                                 L_lod30_sqrt2, L_lod40_sqrt2, L_lod50_sqrt2),
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd_sqrt2) %>%
+  rename_at(vars(ends_with("replace")), 
+            list(~ str_replace(., "replace", "sqrt2_old"))) %>%
+  mutate(lod_pcp_svd_2 = pmap(list(L_lod0_2, L_lod10_2, L_lod20_2, L_lod30_2, L_lod40_2, L_lod50_2), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd_2) %>% 
+  rename_at(vars(ends_with("replace")), 
+            list(~ str_replace(., "replace", "2_old"))) %>%
+  mutate(lod_pcp_svd_nnS = pmap(list(L_lod0_nnS, L_lod10_nnS, L_lod20_nnS, L_lod30_nnS, L_lod40_nnS, L_lod50_nnS), 
+                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
+  unnest_wider(lod_pcp_svd_nnS) %>% 
+  rename_at(vars(ends_with("replace")), 
+            list(~ str_replace(., "replace", "nnS_old"))) %>% 
+  mutate(lod_pcp_svd_0 = pmap(list(L_lod0_0, L_lod10_0, L_lod20_0, L_lod30_0, L_lod40_0, L_lod50_0), 
                       function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
-  unnest_wider(lod_pcp_svd) %>% 
-  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_0"))) %>% 
-  mutate(lod_pcp_svd = pmap(list(L_lod0_sqrt2, L_lod10_sqrt2, L_lod20_sqrt2, 
-                                 L_lod30_sqrt2, L_lod40_sqrt2, L_lod50_sqrt2), 
-                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
-  unnest_wider(lod_pcp_svd) %>% 
-  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_sqrt2"))) %>% 
-  mutate(lod_pcp_svd = pmap(list(L_lod0_2, L_lod10_2, L_lod20_2, L_lod30_2, L_lod40_2, L_lod50_2), 
-                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
-  unnest_wider(lod_pcp_svd) %>% 
-  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_2"))) %>% 
-  mutate(lod_pcp_svd = pmap(list(L_lod0_nnS, L_lod10_nnS, L_lod20_nnS, L_lod30_nnS, L_lod40_nnS, L_lod50_nnS), 
-                          function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
-  unnest_wider(lod_pcp_svd) %>% 
-  rename_at(vars(c(starts_with("v"),starts_with("u"),starts_with("d"))), funs(str_replace(., "0", "0_nnS"))) %>% 
+  unnest_wider(lod_pcp_svd_0) %>% 
+  rename_at(vars(ends_with("replace")), 
+            list(~ str_replace(., "replace", "0_old"))) %>%
   mutate(lod_pcp_svd = pmap(list(L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50), 
                           function (a,b,c,d,e,f) extract_SVD(a,b,c,d,e,f))) %>% 
-  unnest_wider(lod_pcp_svd) 
+  unnest_wider(lod_pcp_svd) %>% 
+  rename_at(vars(ends_with("replace")), 
+            list(~ str_replace(., "replace", "old")))
+
+match_loading <- function (truth, v) {
+  truth <- as.matrix(truth)
+  loading <- as.matrix(v)
+  corr <- diag(cor(truth, v))
+  reordered <- matrix(nrow = nrow(v), ncol = ncol(v))
+
+  for (i in 1:nrow(loading)) {  
+    reordered[i,1] <- ifelse(corr[1] < 0, -loading[i,1], loading[i,1])
+    reordered[i,2] <- ifelse(corr[2] < 0, -loading[i,2], loading[i,2])
+    reordered[i,3] <- ifelse(corr[3] < 0, -loading[i,3], loading[i,3])
+    reordered[i,4] <- ifelse(corr[4] < 0, -loading[i,4], loading[i,4])
+    reordered[i,5] <- ifelse(corr[5] < 0, -loading[i,5], loading[i,5])
+    reordered[i,6] <- ifelse(corr[6] < 0, -loading[i,6], loading[i,6])
+    reordered[i,7] <- ifelse(corr[7] < 0, -loading[i,7], loading[i,7])
+  }
+  reordered
+}
+  
+sim_svd <- sim_svd %>% 
+  mutate(v_lod0 = map2(v_lod0_old, v_lod0_old, match_loading),
+         v_lod10 = map2(v_lod0_old, v_lod10_old, match_loading),
+         v_lod20 = map2(v_lod0_old, v_lod20_old, match_loading),
+         v_lod30 = map2(v_lod0_old, v_lod30_old, match_loading),
+         v_lod40 = map2(v_lod0_old, v_lod40_old, match_loading),
+         v_lod50 = map2(v_lod0_old, v_lod50_old, match_loading),
+         v_lod0_sqrt2 = map2(v_lod0_sqrt2_old, v_lod0_sqrt2_old, match_loading),
+       v_lod10_sqrt2 = map2(v_lod0_sqrt2_old, v_lod10_sqrt2_old, match_loading),
+       v_lod20_sqrt2 = map2(v_lod0_sqrt2_old, v_lod20_sqrt2_old, match_loading),
+       v_lod30_sqrt2 = map2(v_lod0_sqrt2_old, v_lod30_sqrt2_old, match_loading),
+       v_lod40_sqrt2 = map2(v_lod0_sqrt2_old, v_lod40_sqrt2_old, match_loading),
+       v_lod50_sqrt2 = map2(v_lod0_sqrt2_old, v_lod50_sqrt2_old, match_loading),
+       v_lod0_2 = map2(v_lod0_2_old, v_lod0_2_old, match_loading),
+       v_lod10_2 = map2(v_lod0_2_old, v_lod10_2_old, match_loading),
+       v_lod20_2 = map2(v_lod0_2_old, v_lod20_2_old, match_loading),
+       v_lod30_2 = map2(v_lod0_2_old, v_lod30_2_old, match_loading),
+       v_lod40_2 = map2(v_lod0_2_old, v_lod40_2_old, match_loading),
+       v_lod50_2 = map2(v_lod0_2_old, v_lod50_2_old, match_loading),
+       v_lod0_nnS = map2(v_lod0_nnS_old, v_lod0_nnS_old, match_loading),
+       v_lod10_nnS = map2(v_lod0_nnS_old, v_lod10_nnS_old, match_loading),
+       v_lod20_nnS = map2(v_lod0_nnS_old, v_lod20_nnS_old, match_loading),
+       v_lod30_nnS = map2(v_lod0_nnS_old, v_lod30_nnS_old, match_loading),
+       v_lod40_nnS = map2(v_lod0_nnS_old, v_lod40_nnS_old, match_loading),
+       v_lod50_nnS = map2(v_lod0_nnS_old, v_lod50_nnS_old, match_loading),
+       v_lod0_0 = map2(v_lod0_0_old, v_lod0_0_old, match_loading),
+       v_lod10_0 = map2(v_lod0_0_old, v_lod10_0_old, match_loading),
+       v_lod20_0 = map2(v_lod0_0_old, v_lod20_0_old, match_loading),
+       v_lod30_0 = map2(v_lod0_0_old, v_lod30_0_old, match_loading),
+       v_lod40_0 = map2(v_lod0_0_old, v_lod40_0_old, match_loading),
+       v_lod50_0 = map2(v_lod0_0_old, v_lod50_0_old, match_loading))
+```
+
+```{r, svdvnorm, include=FALSE, cache= TRUE, cache.lazy=FALSE}
+make_Vnorm <- function (mix, L10, L20, L30, L40, L50, Name) {
+  V_norm <- as_tibble(cbind(`0%` = norm((mix - mix), type = "F")/norm((mix), type = "F"),
+      `10%` = norm((mix - L10), type = "F")/norm((mix), type = "F"),
+      `20%` = norm((mix - L20), type = "F")/norm((mix), type = "F"),
+      `30%` = norm((mix - L30), type = "F")/norm((mix), type = "F"),
+      `40%` = norm((mix - L40), type = "F")/norm((mix), type = "F"),
+      `50%` = norm((mix - L50), type = "F")/norm((mix), type = "F"))) %>% 
+    gather(percent_blod, norm) %>% 
+    mutate(Method = Name)
+  V_norm
+}
+
+sim_svd <- sim_svd %>% 
+        mutate(v_norm = pmap(list(v_lod0, v_lod10, v_lod20, v_lod30, v_lod40, v_lod50, "LOD PCP"), 
+               function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
+               v_norm_2 = pmap(list(v_lod0_2, v_lod10_2, v_lod20_2, v_lod30_2, 
+                                    v_lod40_2, v_lod50_2, "PCP w/ LOD/2"),
+              function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
+         v_norm_sqrt2 = pmap(list(v_lod0_sqrt2, v_lod10_sqrt2, v_lod20_sqrt2, v_lod30_sqrt2, v_lod40_sqrt2,
+                                  v_lod50_sqrt2, "PCP w/ LOD/sqrt2"), 
+            function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
+         v_norm_nnS = pmap(list(v_lod0_nnS, v_lod10_nnS, v_lod20_nnS, v_lod30_nnS, v_lod40_nnS, 
+                                v_lod50_nnS, "LOD PCP nnS"), 
+            function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
+         v_norm_0 = pmap(list(v_lod0_0, v_lod10_0, v_lod20_0, v_lod30_0, v_lod40_0, v_lod50_0, "PCP w/ 0"), 
+            function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)))
 ```
 
 * Reference is right singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
 
 ```{r, fig.align = "center"}
-rbind(V_diff,
-      V_diff_0,
-      V_diff_sqrt2,
-      V_diff_2,
-      V_diff_nnS) %>% ggplot(aes(x = percent_blod, y = norm, group = Method, color = Method)) + 
-  geom_point() + geom_path() + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "norm(SV - SV_lod0) / norm(SV_lod0)",
-       title = "Relative Error in Low-Rank Solution Right Singular Vectors")
+out_v <- sim_svd %>% 
+  select(seed, v_norm) %>% 
+  unnest(cols = c(v_norm)) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, v_norm_0) %>% 
+  unnest(cols = c(v_norm_0))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, v_norm_sqrt2) %>% 
+  unnest(cols = c(v_norm_sqrt2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, v_norm_2) %>% 
+  unnest(cols = c(v_norm_2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, v_norm_nnS) %>% 
+  unnest(cols = c(v_norm_nnS)))
+  
+out_v %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Method))) + 
+  geom_point(aes(color = Method)) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
 ### Left singular vectors
 
-```{r, svdu, include=FALSE, cache = TRUE}
-u_lod0  <-  svd(L_lod0)$u[,1:7]
-u_lod10 <- svd(L_lod10)$u[,1:7]
-u_lod20 <- svd(L_lod20)$u[,1:7]
-u_lod30 <- svd(L_lod30)$u[,1:7]
-u_lod40 <- svd(L_lod40)$u[,1:7]
-u_lod50 <- svd(L_lod50)$u[,1:7]
+```{r, matchleft, include=FALSE, cache= TRUE, cache.lazy=FALSE}
+match_scores <- function (v, reordered, u) {
+  u <- as.matrix(u)
+  v <- as.matrix(v)
+  u_re <- as_tibble(matrix(nrow = nrow(u), ncol = ncol(u)))
+   for (k in 1:ncol(v)) {
+      for (chem in 1:nrow(v)) {
+        for (i in 1:nrow(u)) {
+        if (v[chem, k] == reordered[chem, k]) {
+          u_re[i, k] = u[i, k]
+        } else {u_re[i, k] = -(u[i, k])}
+        }}}
+  u_re
+}
 
-#cor(u_lod0, u_lod40)
+sim_svd <- sim_svd %>% 
+  mutate(u_lod0  = pmap(list(v_lod0_old,  v_lod0,  u_lod0_old), match_scores),
+         u_lod10 = pmap(list(v_lod10_old, v_lod10, u_lod10_old), match_scores),
+         u_lod20 = pmap(list(v_lod20_old, v_lod20, u_lod20_old),  match_scores),
+         u_lod30 = pmap(list(v_lod30_old, v_lod30, u_lod30_old),  match_scores),
+         u_lod40 = pmap(list(v_lod40_old, v_lod40, u_lod40_old), match_scores),
+         u_lod50 = pmap(list(v_lod50_old, v_lod50, u_lod50_old), match_scores),
+         u_lod0_sqrt2  = pmap(list(v_lod0_sqrt2_old,  v_lod0_sqrt2,   u_lod0_sqrt2_old), match_scores),
+         u_lod10_sqrt2 = pmap(list(v_lod10_sqrt2_old, v_lod10_sqrt2,  u_lod10_sqrt2_old), match_scores),
+         u_lod20_sqrt2 = pmap(list(v_lod20_sqrt2_old, v_lod20_sqrt2,  u_lod20_sqrt2_old),  match_scores),
+         u_lod30_sqrt2 = pmap(list(v_lod30_sqrt2_old, v_lod30_sqrt2,  u_lod30_sqrt2_old),  match_scores),
+         u_lod40_sqrt2 = pmap(list(v_lod40_sqrt2_old, v_lod40_sqrt2,  u_lod40_sqrt2_old), match_scores),
+         u_lod50_sqrt2 = pmap(list(v_lod50_sqrt2_old, v_lod50_sqrt2,  u_lod50_sqrt2_old), match_scores),
+         u_lod0_2  = pmap(list(v_lod0_2_old,  v_lod0_2,   u_lod0_2_old), match_scores),
+         u_lod10_2 = pmap(list(v_lod10_2_old, v_lod10_2,  u_lod10_2_old), match_scores),
+         u_lod20_2 = pmap(list(v_lod20_2_old, v_lod20_2,  u_lod20_2_old),  match_scores),
+         u_lod30_2 = pmap(list(v_lod30_2_old, v_lod30_2,  u_lod30_2_old),  match_scores),
+         u_lod40_2 = pmap(list(v_lod40_2_old, v_lod40_2,  u_lod40_2_old), match_scores),
+         u_lod50_2 = pmap(list(v_lod50_2_old, v_lod50_2,  u_lod50_2_old), match_scores),
+         u_lod0_nnS  = pmap(list(v_lod0_nnS_old,  v_lod0_nnS,   u_lod0_nnS_old), match_scores),
+         u_lod10_nnS = pmap(list(v_lod10_nnS_old, v_lod10_nnS,  u_lod10_nnS_old), match_scores),
+         u_lod20_nnS = pmap(list(v_lod20_nnS_old, v_lod20_nnS,  u_lod20_nnS_old),  match_scores),
+         u_lod30_nnS = pmap(list(v_lod30_nnS_old, v_lod30_nnS,  u_lod30_nnS_old),  match_scores),
+         u_lod40_nnS = pmap(list(v_lod40_nnS_old, v_lod40_nnS,  u_lod40_nnS_old), match_scores),
+         u_lod50_nnS = pmap(list(v_lod50_nnS_old, v_lod50_nnS,  u_lod50_nnS_old), match_scores),
+         u_lod0_0  = pmap(list(v_lod0_0_old,  v_lod0_0,   u_lod0_0_old), match_scores),
+         u_lod10_0 = pmap(list(v_lod10_0_old, v_lod10_0,  u_lod10_0_old), match_scores),
+         u_lod20_0 = pmap(list(v_lod20_0_old, v_lod20_0,  u_lod20_0_old),  match_scores),
+         u_lod30_0 = pmap(list(v_lod30_0_old, v_lod30_0,  u_lod30_0_old),  match_scores),
+         u_lod40_0 = pmap(list(v_lod40_0_old, v_lod40_0,  u_lod40_0_old), match_scores),
+         u_lod50_0 = pmap(list(v_lod50_0_old, v_lod50_0,  u_lod50_0_old), match_scores))
+```
 
-# Hack -- Flip
-u_lod10[,3] <- -u_lod10[,3]
-u_lod10[,5:7] <- -u_lod10[,5:7]
-u_lod20[,3] <- -u_lod20[,3]
-u_lod20[,5:7] <- -u_lod20[,5:7]
-u_lod30[,3:7] <- -u_lod30[,3:7]
-u_lod40[,3:4] <- -u_lod40[,3:4]
-u_lod40[,7] <- -u_lod40[,7]
-u_lod50[,3] <- -u_lod50[,3]
-u_lod50[,6:7] <- -u_lod50[,6:7]
+```{r, svdu, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+make_unorm <- function (mix, L10, L20, L30, L40, L50, Name) {
+  u_norm <- as_tibble(cbind(`0%` = norm((mix - mix), type = "F")/norm((mix), type = "F"),
+                            `10%` = norm((mix - L10), type = "F")/norm((mix), type = "F"),
+                            `20%` = norm((mix - L20), type = "F")/norm((mix), type = "F"),
+                            `30%` = norm((mix - L30), type = "F")/norm((mix), type = "F"),
+                            `40%` = norm((mix - L40), type = "F")/norm((mix), type = "F"),
+                            `50%` = norm((mix - L50), type = "F")/norm((mix), type = "F"))) %>% 
+    gather(percent_blod, norm) %>% 
+    mutate(Method = Name)
+  u_norm
+}
 
-u_diff <- as_tibble(cbind(`0%` =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
-      `10%` =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
-      `20%` =norm((u_lod20 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
-      `30%` =norm((u_lod30 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
-      `40%` =norm((u_lod40 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
-      `50%` =norm((u_lod50 - u_lod0), type = "F")/norm((u_lod0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-mutate(Method = "LOD PCP")
-
-# u_diff
-
-u_lod0_0  <-  svd(L_lod0_0)$u[,1:7]
-u_lod10_0 <- svd(L_lod10_0)$u[,1:7]
-u_lod20_0 <- svd(L_lod20_0)$u[,1:7]
-u_lod30_0 <- svd(L_lod30_0)$u[,1:7]
-u_lod40_0 <- svd(L_lod40_0)$u[,1:7]
-u_lod50_0 <- svd(L_lod50_0)$u[,1:7]
-
-# Hack -- Flip
-u_lod10_0[,3:7] <- -u_lod10_0[,3:7]
-u_lod20_0[,3:4] <- -u_lod20_0[,3:4]
-u_lod20_0[,7] <- -u_lod20_0[,7]
-u_lod30_0[,3] <- -u_lod30_0[,3]
-u_lod30_0[,5] <- -u_lod30_0[,5]
-u_lod30_0[,7] <- -u_lod30_0[,7]
-u_lod40_0[,3] <- -u_lod40_0[,3]
-u_lod40_0[,6:7] <- -u_lod40_0[,6:7]
-u_lod50_0[,3:5] <- -u_lod50_0[,3:5]
-u_lod50_0[,7] <- -u_lod50_0[,7]
-
-#cor(u_lod0_0, u_lod50_0)
-
-u_diff_0 <- as_tibble(cbind(`0%` =norm((u_lod0_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
-      `10%` =norm((u_lod10_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
-      `20%` =norm((u_lod20_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
-      `30%` =norm((u_lod30_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
-      `40%` =norm((u_lod40_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"),
-      `50%` =norm((u_lod50_0 - u_lod0_0), type = "F")/norm((u_lod0_0), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ 0")
-
-u_lod0_sqrt2  <-  svd(L_lod0_sqrt2)$u[,1:7]
-u_lod10_sqrt2 <- svd(L_lod10_sqrt2)$u[,1:7]
-u_lod20_sqrt2 <- svd(L_lod20_sqrt2)$u[,1:7]
-u_lod30_sqrt2 <- svd(L_lod30_sqrt2)$u[,1:7]
-u_lod40_sqrt2 <- svd(L_lod40_sqrt2)$u[,1:7]
-u_lod50_sqrt2 <- svd(L_lod50_sqrt2)$u[,1:7]
-
-# Hack -- Flip
-u_lod10_sqrt2[,4:5] <- -u_lod10_sqrt2[,4:5]
-u_lod10_sqrt2[,7] <- -u_lod10_sqrt2[,7]
-u_lod20_sqrt2[,3] <- -u_lod20_sqrt2[,3]
-u_lod20_sqrt2[,5:7] <- -u_lod20_sqrt2[,5:7]
-u_lod30_sqrt2[,3] <- -u_lod30_sqrt2[,3]
-u_lod30_sqrt2[,5:7] <- -u_lod30_sqrt2[,5:7]
-u_lod40_sqrt2[,6] <- -u_lod40_sqrt2[,6]
-u_lod50_sqrt2[,3:4] <- -u_lod50_sqrt2[,3:4]
-u_lod50_sqrt2[,6] <- -u_lod50_sqrt2[,6]
-
-#cor(u_lod0_sqrt2, u_lod50_sqrt2)
-
-u_diff_sqrt2 <- as_tibble(cbind(`0%` =norm((u_lod0_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
-      `10%` =norm((u_lod10_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
-      `20%` =norm((u_lod20_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
-      `30%` =norm((u_lod30_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
-      `40%` =norm((u_lod40_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"),
-      `50%` =norm((u_lod50_sqrt2 - u_lod0_sqrt2), type = "F")/norm((u_lod0_sqrt2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-
-u_lod0_2  <-  svd(L_lod0_2)$u[,1:7]
-u_lod10_2 <- svd(L_lod10_2)$u[,1:7]
-u_lod20_2 <- svd(L_lod20_2)$u[,1:7]
-u_lod30_2 <- svd(L_lod30_2)$u[,1:7]
-u_lod40_2 <- svd(L_lod40_2)$u[,1:7]
-u_lod50_2 <- svd(L_lod50_2)$u[,1:7]
-
-# Hack -- Flip
-u_lod10_2[,3] <- -u_lod10_2[,3]
-u_lod10_2[,5] <- -u_lod10_2[,5]
-u_lod10_2[,7] <- -u_lod10_2[,7]
-u_lod20_2[,3] <- -u_lod20_2[,3]
-u_lod20_2[,5] <- -u_lod20_2[,5]
-u_lod30_2[,3] <- -u_lod30_2[,3]
-u_lod30_2[,5] <- -u_lod30_2[,5]
-u_lod30_2[,7] <- -u_lod30_2[,7]
-u_lod40_2[,3:5] <- -u_lod40_2[,3:5]
-u_lod50_2[,3:7] <- -u_lod50_2[,3:7]
-
-#cor(u_lod0_2, u_lod50_2)
-
-u_diff_2 <- as_tibble(cbind(`0%` =norm((u_lod0_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
-                                `10%` =norm((u_lod10_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
-                                `20%` =norm((u_lod20_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
-                                `30%` =norm((u_lod30_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
-                                `40%` =norm((u_lod40_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"),
-                                `50%` =norm((u_lod50_2 - u_lod0_2), type = "F")/norm((u_lod0_2), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ LOD/2")
-
-u_lod0_nnS  <-  svd(L_lod0_nnS)$u[,1:7]
-u_lod10_nnS <- svd(L_lod10_nnS)$u[,1:7]
-u_lod20_nnS <- svd(L_lod20_nnS)$u[,1:7]
-u_lod30_nnS <- svd(L_lod30_nnS)$u[,1:7]
-u_lod40_nnS <- svd(L_lod40_nnS)$u[,1:7]
-u_lod50_nnS <- svd(L_lod50_nnS)$u[,1:7]
-
-# Hack -- Flip
-u_lod30_nnS[,6] <- -u_lod30_nnS[,6]
-u_lod40_nnS[,6] <- -u_lod40_nnS[,6]
-u_lod50_nnS[,6] <- -u_lod50_nnS[,6]
-
-#cor(u_lod0_nnS, u_lod50_nnS)
-
-u_diff_nnS<- as_tibble(cbind(`0%` =norm((u_lod0_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
-      `10%` =norm((u_lod10_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
-      `20%` =norm((u_lod20_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
-      `30%` =norm((u_lod30_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
-      `40%` =norm((u_lod40_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"),
-      `50%` =norm((u_lod50_nnS - u_lod0_nnS), type = "F")/norm((u_lod0_nnS), type = "F"))) %>% 
-  gather(percent_blod, norm) %>% 
-mutate(Method = "LOD PCP nnS")
-
-# u_diff_nnS
+sim_svd <- sim_svd %>% 
+  mutate(u_norm = pmap(list(u_lod0, u_lod10, u_lod20, u_lod30, u_lod40, u_lod50, "LOD PCP"), make_unorm),
+         u_norm_2 = pmap(list(u_lod0_2, u_lod10_2, u_lod20_2, u_lod30_2, u_lod40_2, 
+                              u_lod50_2, "PCP w/ LOD/2"), make_unorm),
+         u_norm_sqrt2 = pmap(list(u_lod0_sqrt2, u_lod10_sqrt2, u_lod20_sqrt2, u_lod30_sqrt2, u_lod40_sqrt2,
+                                  u_lod50_sqrt2, "PCP w/ LOD/sqrt2"), make_unorm),
+         u_norm_nnS = pmap(list(u_lod0_nnS, u_lod10_nnS, u_lod20_nnS, u_lod30_nnS, u_lod40_nnS, 
+                                u_lod50_nnS, "LOD PCP nnS"), make_unorm),
+         u_norm_0 = pmap(list(u_lod0_0, u_lod10_0, u_lod20_0, u_lod30_0, 
+                              u_lod40_0, u_lod50_0, "PCP w/ 0"), make_unorm))
 ```
 
 * Reference is left singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
 
 ```{r, fig.align = "center"}
-rbind(u_diff,
-      u_diff_0,
-      u_diff_sqrt2,
-      u_diff_2,
-      u_diff_nnS) %>% ggplot(aes(x = percent_blod, y = norm, group = Method, color = Method)) + 
-  geom_point() + geom_path() + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "norm(SV - SV_lod0) / norm(SV_lod0)",
+out_u <- sim_svd %>% 
+  select(seed, u_norm) %>% 
+  unnest(cols = c(u_norm)) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, u_norm_0) %>% 
+  unnest(cols = c(u_norm_0))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, u_norm_sqrt2) %>% 
+  unnest(cols = c(u_norm_sqrt2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, u_norm_2) %>% 
+  unnest(cols = c(u_norm_2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, u_norm_nnS) %>% 
+  unnest(cols = c(u_norm_nnS)))
+  
+out_u %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Method))) + 
+  geom_point(aes(color = Method)) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
        title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
 ### Singular Values
 
-```{r, include=FALSE, cache=TRUE}
-d_lod0  <- svd(L_lod0)$d[1:7]
-d_lod10 <- svd(L_lod10)$d[1:7]
-d_lod20 <- svd(L_lod20)$d[1:7]
-d_lod30 <- svd(L_lod30)$d[1:7]
-d_lod40 <- svd(L_lod40)$d[1:7]
-d_lod50 <- svd(L_lod50)$d[1:7]
-
+```{r, sv, include=FALSE, cache=TRUE, cache.lazy=FALSE}
 norm_vec <- function(x) sqrt(sum(x^2))
 
-d_diff <- as_tibble(cbind(`0%` = norm_vec(d_lod0 - d_lod0)/norm_vec(d_lod0),
-      `10%` = norm_vec(d_lod10 - d_lod0)/norm_vec(d_lod0),
-      `20%` = norm_vec(d_lod20 - d_lod0)/norm_vec(d_lod0),
-      `30%` = norm_vec(d_lod30 - d_lod0)/norm_vec(d_lod0),
-      `40%` = norm_vec(d_lod40 - d_lod0)/norm_vec(d_lod0),
-      `50%` = norm_vec(d_lod50 - d_lod0)/norm_vec(d_lod0))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "LOD PCP")
+make_dnorm <- function (mix, L10, L20, L30, L40, L50, Name) {
+  d_norm <- as_tibble(cbind(`0%` = norm_vec((mix - mix))/norm_vec((mix)),
+                            `10%` = norm_vec((mix - L10))/norm_vec((mix)),
+                            `20%` = norm_vec((mix - L20))/norm_vec((mix)),
+                            `30%` = norm_vec((mix - L30))/norm_vec((mix)),
+                            `40%` = norm_vec((mix - L40))/norm_vec((mix)),
+                            `50%` = norm_vec((mix - L50))/norm_vec((mix)))) %>% 
+    gather(percent_blod, norm) %>% 
+    mutate(Method = Name)
+  d_norm
+}
 
-d_lod0_0  <- svd(L_lod0_0)$d[1:7]
-d_lod10_0 <- svd(L_lod10_0)$d[1:7]
-d_lod20_0 <- svd(L_lod20_0)$d[1:7]
-d_lod30_0 <- svd(L_lod30_0)$d[1:7]
-d_lod40_0 <- svd(L_lod40_0)$d[1:7]
-d_lod50_0 <- svd(L_lod50_0)$d[1:7]
-
-d_diff_0 <- as_tibble(cbind(`0%` = norm_vec(d_lod0_0 - d_lod0_0)/norm_vec(d_lod0_0),
-      `10%` = norm_vec(d_lod10_0 - d_lod0_0)/norm_vec(d_lod0_0),
-      `20%` = norm_vec(d_lod20_0 - d_lod0_0)/norm_vec(d_lod0_0),
-      `30%` = norm_vec(d_lod30_0 - d_lod0_0)/norm_vec(d_lod0_0),
-      `40%` = norm_vec(d_lod40_0 - d_lod0_0)/norm_vec(d_lod0_0),
-      `50%` = norm_vec(d_lod50_0 - d_lod0_0)/norm_vec(d_lod0_0))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ 0")
-
-d_lod0_sqrt2  <- svd(L_lod0_sqrt2)$d[1:7]
-d_lod10_sqrt2 <- svd(L_lod10_sqrt2)$d[1:7]
-d_lod20_sqrt2 <- svd(L_lod20_sqrt2)$d[1:7]
-d_lod30_sqrt2 <- svd(L_lod30_sqrt2)$d[1:7]
-d_lod40_sqrt2 <- svd(L_lod40_sqrt2)$d[1:7]
-d_lod50_sqrt2 <- svd(L_lod50_sqrt2)$d[1:7]
-
-d_diff_sqrt2 <- as_tibble(cbind(`0%` = norm_vec(d_lod0_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2),
-      `10%` = norm_vec(d_lod10_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2),
-      `20%` = norm_vec(d_lod20_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2),
-      `30%` = norm_vec(d_lod30_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2),
-      `40%` = norm_vec(d_lod40_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2),
-      `50%` = norm_vec(d_lod50_sqrt2 - d_lod0_sqrt2)/norm_vec(d_lod0_sqrt2))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = paste0("PCP w/ LOD/", intToUtf8(8730),2))
-
-d_lod0_2  <- svd(L_lod0_2)$d[1:7]
-d_lod10_2 <- svd(L_lod10_2)$d[1:7]
-d_lod20_2 <- svd(L_lod20_2)$d[1:7]
-d_lod30_2 <- svd(L_lod30_2)$d[1:7]
-d_lod40_2 <- svd(L_lod40_2)$d[1:7]
-d_lod50_2 <- svd(L_lod50_2)$d[1:7]
-
-d_diff_2 <- as_tibble(cbind(`0%` = norm_vec(d_lod0_2 - d_lod0_2)/norm_vec(d_lod0_2),
-                                `10%` = norm_vec(d_lod10_2 - d_lod0_2)/norm_vec(d_lod0_2),
-                                `20%` = norm_vec(d_lod20_2 - d_lod0_2)/norm_vec(d_lod0_2),
-                                `30%` = norm_vec(d_lod30_2 - d_lod0_2)/norm_vec(d_lod0_2),
-                                `40%` = norm_vec(d_lod40_2 - d_lod0_2)/norm_vec(d_lod0_2),
-                                `50%` = norm_vec(d_lod50_2 - d_lod0_2)/norm_vec(d_lod0_2))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "PCP w/ LOD/2")
-
-d_lod0_nnS  <- svd(L_lod0_nnS)$d[1:7]
-d_lod10_nnS <- svd(L_lod10_nnS)$d[1:7]
-d_lod20_nnS <- svd(L_lod20_nnS)$d[1:7]
-d_lod30_nnS <- svd(L_lod30_nnS)$d[1:7]
-d_lod40_nnS <- svd(L_lod40_nnS)$d[1:7]
-d_lod50_nnS <- svd(L_lod50_nnS)$d[1:7]
-
-norm_vec <- function(x) sqrt(sum(x^2))
-
-d_diff_nnS<- as_tibble(cbind(`0%` = norm_vec(d_lod0_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS),
-      `10%` = norm_vec(d_lod10_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS),
-      `20%` = norm_vec(d_lod20_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS),
-      `30%` = norm_vec(d_lod30_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS),
-      `40%` = norm_vec(d_lod40_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS),
-      `50%` = norm_vec(d_lod50_nnS - d_lod0_nnS)/norm_vec(d_lod0_nnS))) %>% 
-  gather(percent_blod, norm) %>% 
-  mutate(Method = "LOD PCP nnS")
+sim_svd <- sim_svd %>% 
+  mutate(d_norm = pmap(list(d_lod0, d_lod10, d_lod20, d_lod30, d_lod40, d_lod50, "LOD PCP"), make_dnorm),
+         d_norm_2 = pmap(list(d_lod0_2, d_lod10_2, d_lod20_2, d_lod30_2, 
+                              d_lod40_2, d_lod50_2, "PCP w/ LOD/2"), make_dnorm),
+         d_norm_sqrt2 = pmap(list(d_lod0_sqrt2, d_lod10_sqrt2, d_lod20_sqrt2, d_lod30_sqrt2, d_lod40_sqrt2,
+                                  d_lod50_sqrt2, "PCP w/ LOD/sqrt2"), make_dnorm),
+         d_norm_nnS = pmap(list(d_lod0_nnS, d_lod10_nnS, d_lod20_nnS, d_lod30_nnS, d_lod40_nnS, 
+                                d_lod50_nnS, "LOD PCP nnS"), make_dnorm),
+         d_norm_0 = pmap(list(d_lod0_0, d_lod10_0, d_lod20_0, d_lod30_0, d_lod40_0, 
+                              d_lod50_0, "PCP w/ 0"), make_dnorm))
 ```
 
 * Reference is singular value vector of SVD of low rank solution matix with 0\% \<LOD
 
 ```{r, fig.align = "center"}
+out_d <- sim_svd %>% 
+  select(seed, d_norm) %>% 
+  unnest(cols = c(d_norm)) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, d_norm_0) %>% 
+  unnest(cols = c(d_norm_0))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, d_norm_sqrt2) %>% 
+  unnest(cols = c(d_norm_sqrt2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, d_norm_2) %>% 
+  unnest(cols = c(d_norm_2))) %>% 
+  rbind(., sim_svd %>% 
+  select(seed, d_norm_nnS) %>% 
+  unnest(cols = c(d_norm_nnS)))
+  
+out_d %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Method))) + 
+  geom_point(aes(color = Method)) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
+
+
 rbind(d_diff_sqrt2,
       d_diff,
       d_diff_0,
