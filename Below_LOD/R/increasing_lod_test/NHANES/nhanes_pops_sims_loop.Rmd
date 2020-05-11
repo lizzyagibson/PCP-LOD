@@ -563,29 +563,6 @@ sim_all <- sim_all %>%
          L_lod50 = map(results_50, extract_l),
          S_lod50 = map(results_50, extract_s))
 
-#extract_l(sim_all$results_0[[1]])
-
-# head(sim_all[1,]$results_0[[1]]$L)[,1:5]
-# sim_all %>% mutate(L_lod0  = map(results_0[[1]], as_tibble)) %>% select(L_lod0) %>% .[1,1] %>% unnest(cols = c(L_lod0))
-# sim_all %>% mutate(L_lod0  = map(results_0[[1]][1], as_tibble)) %>% select(L_lod0) %>% unnest(cols = c(L_lod0))
-# sim_all %>% select(L_lod0) %>% mutate_all(as_tibble) %>% unnest(cols = c(L_lod0))
-# 
-# sim_all %>%
-#   select(seed, results_0) %>% 
-#   mutate(L_lod0 = map(results_0, extract_l)) %>% select(L_lod0)
-# 
-#   mutate(L_lod0  = map(results_0[[1]][[1]][1], as_tibble))
-#          
-# # EQUAL
-# head(sim_all$results_0[[1]]$L)[,1:5]
-# head(sim_all$L_lod0[[1]])[,1:5]
-# 
-# # NOT EQUAL
-# norm((sim_all$sims[[3]] - sim_all$results_50[[3]]$L - sim_all$results_50[[3]]$S), type = "F")/
-#   norm((sim_all$sims[[3]]), type = "F")
-# norm((sim_all$sims[[3]] - as.matrix(sim_all$L_lod50[[3]]) - as.matrix(sim_all$S_lod50[[3]])), type = "F")/
-#  norm((sim_all$sims[[3]]), type = "F")
-
 sim_all <- sim_all %>% 
   mutate(L_lod0_0  = map(results_0_0, extract_l),
          S_lod0_0  = map(results_0_0, extract_s),
@@ -642,9 +619,8 @@ sim_all <- sim_all %>%
          L_lod50_nnS = map(results_50_nnS, extract_l),
          S_lod50_nnS = map(results_50_nnS, extract_s))
 
-# sim_all <- sim_all %>% 
-#   select(-grep("results", colnames(.))) %>% 
-#   modify_depth(2, as.matrix)
+sim_all <- sim_all %>%
+  select(-grep("results", colnames(.)))
 ```
 
 ## X - L - S
@@ -1461,216 +1437,383 @@ out_d %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Metho
 
 ## Values \<LOD
 
-```{r, l22s, include=FALSE, cache = TRUE}
-t_na_lod_0 <- sim_all %>% 
+```{r, below_lod, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+create_below_NA <- function (sim_neg1, solution) {
+  tf_lod <- sim_neg1 %>% 
   as_tibble() %>% 
   mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_0_na <- as_tibble(t_na_lod_0*L_lod0)
-s_blod_0_na <- as_tibble(t_na_lod_0*S_lod0)
-blod_0_na <- as_tibble(sim_all*t_na_lod_0)
-
-t_na_lod_10 <- mix_data_lod_10 %>% 
-  as_tibble() %>%
-  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_10_na <- as_tibble(t_na_lod_10*L_lod10)
-s_blod_10_na <- as_tibble(t_na_lod_10*S_lod10)
-blod_10_na <- as_tibble(sim_all*t_na_lod_10)
-
-t_na_lod_20 <- mix_data_lod_20 %>% 
-  as_tibble() %>% 
-  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_20_na <- as_tibble(t_na_lod_20*L_lod20)
-s_blod_20_na <- as_tibble(t_na_lod_20*S_lod20)
-blod_20_na <- as_tibble(sim_all*t_na_lod_20)
-
-t_na_lod_30 <- mix_data_lod_30 %>% 
-  as_tibble() %>% 
-  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_30_na <- as_tibble(t_na_lod_30*L_lod30)
-s_blod_30_na <- as_tibble(t_na_lod_30*S_lod30)
-blod_30_na <- as_tibble(sim_all*t_na_lod_30)
-
-t_na_lod_40 <- mix_data_lod_40 %>% 
-  as_tibble() %>% 
-  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_40_na <- as_tibble(t_na_lod_40*L_lod40)
-s_blod_40_na <- as_tibble(t_na_lod_40*S_lod40)
-blod_40_na <- as_tibble(sim_all*t_na_lod_40)
-
-t_na_lod_50 <- mix_data_lod_50 %>% 
-  as_tibble() %>% 
-  mutate_all(function(x) ifelse(x == -1, TRUE, NA))
-l_blod_50_na <- as_tibble(t_na_lod_50*L_lod50)
-s_blod_50_na <- as_tibble(t_na_lod_50*S_lod50)
-blod_50_na <- as_tibble(sim_all*t_na_lod_50) 
-
-L_blod_0_sqrt2_na <- as_tibble(t_na_lod_0*L_lod0_sqrt2)
-S_blod_0_sqrt2_na <- as_tibble(t_na_lod_0*S_lod0_sqrt2)
-
-L_blod_10_sqrt2_na <- as_tibble(t_na_lod_10*L_lod10_sqrt2)
-S_blod_10_sqrt2_na <- as_tibble(t_na_lod_10*S_lod10_sqrt2)
-
-L_blod_20_sqrt2_na <- as_tibble(t_na_lod_20*L_lod20_sqrt2)
-S_blod_20_sqrt2_na <- as_tibble(t_na_lod_20*S_lod20_sqrt2)
-
-L_blod_30_sqrt2_na <- as_tibble(t_na_lod_30*L_lod30_sqrt2)
-S_blod_30_sqrt2_na <- as_tibble(t_na_lod_30*S_lod30_sqrt2)
-
-L_blod_40_sqrt2_na <- as_tibble(t_na_lod_40*L_lod40_sqrt2)
-S_blod_40_sqrt2_na <- as_tibble(t_na_lod_40*S_lod40_sqrt2)
-
-L_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*L_lod50_sqrt2)
-S_blod_50_sqrt2_na <- as_tibble(t_na_lod_50*S_lod50_sqrt2)
-
-LOD10 <- delta10 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "10%")
-LOD20 <- delta20 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "20%")
-LOD30 <- delta30 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "30%")
-LOD40 <- delta40 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "40%")
-LOD50 <- delta50 %>% as.matrix() %>% t() %>% as_tibble() %>% rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "50%")
-LODall <- rbind(LOD10, LOD20, LOD30, LOD40, LOD50)
   
-plot_10 <- blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "10%")
-plotl_10 <- l_blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plots_10 <- s_blod_10_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plotall_10 <- (l_blod_10_na + s_blod_10_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
+  above_below <- as.matrix(solution*tf_lod)
+  above_below
+}
 
-plot_20 <- blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "20%") 
-plotl_20 <- l_blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plots_20 <- s_blod_20_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plotall_20 <- (l_blod_20_na + s_blod_20_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent")) 
+sim_all <- sim_all %>% 
+  mutate(blod_na_0 = map2(sims, sims, create_below_NA),
+         blod_na_10 = map2(mix_data_lod_10, sims, create_below_NA),
+         blod_na_20 = map2(mix_data_lod_20, sims, create_below_NA),
+         blod_na_30 = map2(mix_data_lod_30, sims, create_below_NA),
+         blod_na_40 = map2(mix_data_lod_40, sims, create_below_NA),
+         blod_na_50 = map2(mix_data_lod_50, sims, create_below_NA))
 
-plot_30 <- blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "30%")
-plotl_30 <- l_blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent"))
-plots_30 <- s_blod_30_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-plotall_30 <- (l_blod_30_na + s_blod_30_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-
-plot_40 <- blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "40%") 
-plotl_40 <- l_blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plots_40 <- s_blod_40_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plotall_40 <- (l_blod_40_na + s_blod_40_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-
-plot_50 <- blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Original, -rowid) %>% mutate(Percent = "50%") 
-plotl_50 <- l_blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-plots_50 <- s_blod_50_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent")) 
-plotall_50 <- (l_blod_50_na + s_blod_50_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-
-org <- rbind(plot_10,
-        plot_20,
-        plot_30,
-        plot_40,
-        plot_50) %>% rename(Value = Original) %>% 
-  mutate(Compare = "Original") %>% 
-  left_join(., LODall, by = c("POP", "Percent"))
-
-plotall <- rbind(plotl_10,
-      plots_10,
-      plotall_10,
-      plotl_20,
-      plots_20,
-      plotall_20,
-      plotl_30,
-      plots_30,
-      plotall_30, 
-      plotl_40,
-      plots_40,
-      plotall_40,
-      plotl_50,
-      plots_50,
-      plotall_50)
-
-l_blod_0_nnS_na <- as_tibble(t_na_lod_0*L_lod0_nnS)
-s_blod_0_nnS_na <- as_tibble(t_na_lod_0*S_lod0_nnS)
-
-l_blod_10_nnS_na <- as_tibble(t_na_lod_10*L_lod10_nnS)
-s_blod_10_nnS_na <- as_tibble(t_na_lod_10*S_lod10_nnS)
-
-l_blod_20_nnS_na <- as_tibble(t_na_lod_20*L_lod20_nnS)
-s_blod_20_nnS_na <- as_tibble(t_na_lod_20*S_lod20_nnS)
-
-l_blod_30_nnS_na <- as_tibble(t_na_lod_30*L_lod30_nnS)
-s_blod_30_nnS_na <- as_tibble(t_na_lod_30*S_lod30_nnS)
-
-l_blod_40_nnS_na <- as_tibble(t_na_lod_40*L_lod40_nnS)
-s_blod_40_nnS_na <- as_tibble(t_na_lod_40*S_lod40_nnS)
-
-l_blod_50_nnS_na <- as_tibble(t_na_lod_50*L_lod50_nnS)
-s_blod_50_nnS_na <- as_tibble(t_na_lod_50*S_lod50_nnS)
-
-plotl_10_nnS <- l_blod_10_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plots_10_nnS <- s_blod_10_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plotall_10_nnS <- (l_blod_10_nnS_na + s_blod_10_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-
-plotl_20_nnS <- l_blod_20_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plots_20_nnS <- s_blod_20_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plotall_20_nnS <- (l_blod_20_nnS_na + s_blod_20_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent")) 
-
-plotl_30_nnS <- l_blod_30_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent"))
-plots_30_nnS <- s_blod_30_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-plotall_30_nnS <- (l_blod_30_nnS_na + s_blod_30_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-
-plotl_40_nnS <- l_blod_40_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plots_40_nnS <- s_blod_40_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plotall_40_nnS <- (l_blod_40_nnS_na + s_blod_40_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-
-plotl_50_nnS <- l_blod_50_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-plots_50_nnS <- s_blod_50_nnS_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent")) 
-plotall_50_nnS <- (l_blod_50_nnS_na + s_blod_50_nnS_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-
-plotall_nns <- rbind(plotl_10_nnS,
-      plots_10_nnS,
-      plotall_10_nnS,
-      plotl_20_nnS,
-      plots_20_nnS,
-      plotall_20_nnS,
-      plotl_30_nnS,
-      plots_30_nnS,
-      plotall_30_nnS, 
-      plotl_40_nnS,
-      plots_40_nnS,
-      plotall_40_nnS,
-      plotl_50_nnS,
-      plots_50_nnS,
-      plotall_50_nnS)
-
-plotl_10_sqrt2 <- L_blod_10_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plots_10_sqrt2 <- S_blod_10_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-plotall_10_sqrt2 <- (L_blod_10_sqrt2_na + S_blod_10_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "10%") %>% left_join(., plot_10, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD10, by = c("POP", "Percent"))
-
-plotl_20_sqrt2 <- L_blod_20_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plots_20_sqrt2 <- S_blod_20_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent"))
-plotall_20_sqrt2 <- (L_blod_20_sqrt2_na + S_blod_20_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "20%") %>% left_join(., plot_20, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD20, by = c("POP", "Percent")) 
-
-plotl_30_sqrt2 <- L_blod_30_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent"))
-plots_30_sqrt2 <- S_blod_30_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-plotall_30_sqrt2 <- (L_blod_30_sqrt2_na + S_blod_30_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "30%") %>% left_join(., plot_30, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD30, by = c("POP", "Percent")) 
-
-plotl_40_sqrt2 <- L_blod_40_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plots_40_sqrt2 <- S_blod_40_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-plotall_40_sqrt2 <- (L_blod_40_sqrt2_na + S_blod_40_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "40%") %>% left_join(., plot_40, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD40, by = c("POP", "Percent"))
-
-plotl_50_sqrt2 <- L_blod_50_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Low Rank Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-plots_50_sqrt2 <- S_blod_50_sqrt2_na %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Sparse Solution", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent")) 
-plotall_50_sqrt2 <- (L_blod_50_sqrt2_na + S_blod_50_sqrt2_na) %>% as_tibble(.) %>% rowid_to_column(.) %>% gather(key = POP, value = Value, -rowid) %>% mutate(Compare = "Model Prediction", Percent = "50%") %>% left_join(., plot_50, by = c("rowid", "POP", "Percent")) %>% left_join(., LOD50, by = c("POP", "Percent"))
-
-plotall_sqrt2 <- rbind(plotl_10_sqrt2,
-      plots_10_sqrt2,
-      plotall_10_sqrt2,
-      plotl_20_sqrt2,
-      plots_20_sqrt2,
-      plotall_20_sqrt2,
-      plotl_30_sqrt2,
-      plots_30_sqrt2,
-      plotall_30_sqrt2, 
-      plotl_40_sqrt2,
-      plots_40_sqrt2,
-      plotall_40_sqrt2,
-      plotl_50_sqrt2,
-      plots_50_sqrt2,
-      plotall_50_sqrt2)
+sim_all <- sim_all %>% 
+  mutate(l_blod_na_0 = map2(as.matrix(sims), L_lod0, create_below_NA),
+         s_blod_na_0 = map2(sims, S_lod0, create_below_NA),
+         l_blod_na_10 = map2(mix_data_lod_10, L_lod10, create_below_NA),
+         s_blod_na_10 = map2(mix_data_lod_10, S_lod10, create_below_NA),
+         l_blod_na_20 = map2(mix_data_lod_20, L_lod20, create_below_NA),
+         s_blod_na_20 = map2(mix_data_lod_20, S_lod20, create_below_NA),
+         l_blod_na_30 = map2(mix_data_lod_30, L_lod30, create_below_NA),
+         s_blod_na_30 = map2(mix_data_lod_30, S_lod30, create_below_NA),
+         l_blod_na_40 = map2(mix_data_lod_40, L_lod40, create_below_NA),
+         s_blod_na_40 = map2(mix_data_lod_40, S_lod40, create_below_NA),
+         l_blod_na_50 = map2(mix_data_lod_50, L_lod50, create_below_NA),
+         s_blod_na_50 = map2(mix_data_lod_50, S_lod50, create_below_NA),
+       l_blod_na_0_sqrt2 = map2(sims, L_lod0_sqrt2, create_below_NA),
+       s_blod_na_0_sqrt2 = map2(sims, S_lod0_sqrt2, create_below_NA),
+       l_blod_na_10_sqrt2 = map2(mix_data_lod_10, L_lod10_sqrt2, create_below_NA),
+       s_blod_na_10_sqrt2 = map2(mix_data_lod_10, S_lod10_sqrt2, create_below_NA),
+       l_blod_na_20_sqrt2 = map2(mix_data_lod_20, L_lod20_sqrt2, create_below_NA),
+       s_blod_na_20_sqrt2 = map2(mix_data_lod_20, S_lod20_sqrt2, create_below_NA),
+       l_blod_na_30_sqrt2 = map2(mix_data_lod_30, L_lod30_sqrt2, create_below_NA),
+       s_blod_na_30_sqrt2 = map2(mix_data_lod_30, S_lod30_sqrt2, create_below_NA),
+       l_blod_na_40_sqrt2 = map2(mix_data_lod_40, L_lod40_sqrt2, create_below_NA),
+       s_blod_na_40_sqrt2 = map2(mix_data_lod_40, S_lod40_sqrt2, create_below_NA),
+       l_blod_na_50_sqrt2 = map2(mix_data_lod_50, L_lod50_sqrt2, create_below_NA),
+       s_blod_na_50_sqrt2 = map2(mix_data_lod_50, S_lod50_sqrt2, create_below_NA),
+       l_blod_na_0_nnS = map2(sims, L_lod0_nnS, create_below_NA),
+       s_blod_na_0_nnS = map2(sims, S_lod0_nnS, create_below_NA),
+       l_blod_na_10_nnS = map2(mix_data_lod_10, L_lod10_nnS, create_below_NA),
+       s_blod_na_10_nnS = map2(mix_data_lod_10, S_lod10_nnS, create_below_NA),
+       l_blod_na_20_nnS = map2(mix_data_lod_20, L_lod20_nnS, create_below_NA),
+       s_blod_na_20_nnS = map2(mix_data_lod_20, S_lod20_nnS, create_below_NA),
+       l_blod_na_30_nnS = map2(mix_data_lod_30, L_lod30_nnS, create_below_NA),
+       s_blod_na_30_nnS = map2(mix_data_lod_30, S_lod30_nnS, create_below_NA),
+       l_blod_na_40_nnS = map2(mix_data_lod_40, L_lod40_nnS, create_below_NA),
+       s_blod_na_40_nnS = map2(mix_data_lod_40, S_lod40_nnS, create_below_NA),
+       l_blod_na_50_nnS = map2(mix_data_lod_50, L_lod50_nnS, create_below_NA),
+       s_blod_na_50_nnS = map2(mix_data_lod_50, S_lod50_nnS, create_below_NA))
 ```
 
+```{r, lod, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+sim_all <- sim_all %>% 
+  mutate(LOD10 = map(delta10, function (x) {x %>% as.matrix() %>% t() %>% as_tibble() %>% 
+      rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "10%")}),
+      LOD20 = map(delta20, function (x) {x %>% as.matrix() %>% t() %>% as_tibble() %>% 
+      rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "20%")}),
+      LOD30 = map(delta30, function (x) {x %>% as.matrix() %>% t() %>% as_tibble() %>% 
+      rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "30%")}),
+      LOD40 = map(delta40, function (x) {x %>% as.matrix() %>% t() %>% as_tibble() %>% 
+      rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "40%")}),
+      LOD50 = map(delta50, function (x) {x %>% as.matrix() %>% t() %>% as_tibble() %>% 
+      rename_all(., list(~str_sub(., start = 1, end = -5))) %>% gather(POP, LOD) %>% mutate(Percent = "50%")}))
+
+sim_all <- sim_all %>% mutate(LODall = pmap(list(LOD10, LOD20, LOD30, LOD40, LOD50),
+                                function (LOD10, LOD20, LOD30, LOD40, LOD50) 
+                                  {rbind(LOD10, LOD20, LOD30, LOD40, LOD50)}))
+```
+
+```{r, below_lod2, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+sim_all <- sim_all %>% 
+  mutate(plot_10 = map(blod_na_10, function (x) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% mutate(Percent = "10%")}),
+    plot_20 = map(blod_na_20, function (x) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% mutate(Percent = "20%")}),
+    plot_30 = map(blod_na_30, function (x) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% mutate(Percent = "30%")}),
+    plot_40 = map(blod_na_40, function (x) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% mutate(Percent = "40%")}),
+    plot_50 = map(blod_na_50, function (x) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% mutate(Percent = "50%")}))
+
+sim_all <- sim_all %>% 
+  mutate(org = pmap(list(plot_10, plot_20, plot_30, plot_40, plot_50, LODall),
+                    function (plot_10, plot_20, plot_30, plot_40, plot_50, LODall)
+                      {rbind(plot_10, plot_20, plot_30, plot_40, plot_50) %>%  
+  mutate(Compare = "Original") %>% 
+  left_join(., LODall, by = c("POP", "Percent"))}))
+```
+
+```{r, below_lod3, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+sim_all <- sim_all %>% 
+  mutate(plotl_10 = map2(l_blod_na_10, LOD10, function(x,y) 
+    {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "10%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+    plots_10 = map2(s_blod_na_10, LOD10, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+        gather(key = POP, value = Value, -rowid) %>% 
+         mutate(Compare = "Sparse Solution", Percent = "10%") %>% 
+        left_join(., y, by = c("POP", "Percent"))}),
+    plotall_10 = pmap(list(l_blod_na_10, s_blod_na_10, LOD10), function(x,y,z) 
+      {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+        gather(key = POP, value = Value, -rowid) %>% 
+        mutate(Compare = "Model Prediction", Percent = "10%") %>%
+        left_join(., z, by = c("POP", "Percent"))}),
+          plotl_20 = map2(l_blod_na_20, LOD20, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Low Rank Solution", Percent = "20%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plots_20 = map2(s_blod_na_20, LOD20, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Sparse Solution", Percent = "20%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plotall_20 = pmap(list(l_blod_na_20, s_blod_na_20, LOD20), function(x,y,z) 
+      {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Model Prediction", Percent = "20%") %>%
+          left_join(., z, by = c("POP", "Percent"))}),
+          plotl_30 = map2(l_blod_na_30, LOD30, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Low Rank Solution", Percent = "30%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plots_30 = map2(s_blod_na_30, LOD30, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Sparse Solution", Percent = "30%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plotall_30 = pmap(list(l_blod_na_30, s_blod_na_30, LOD30), function(x,y,z) 
+      {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Model Prediction", Percent = "30%") %>%
+          left_join(., z, by = c("POP", "Percent"))}),
+          plotl_40 = map2(l_blod_na_40, LOD40, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Low Rank Solution", Percent = "40%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plots_40 = map2(s_blod_na_40, LOD40, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Sparse Solution", Percent = "40%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plotall_40 = pmap(list(l_blod_na_40, s_blod_na_40, LOD40), function(x,y,z) 
+      {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Model Prediction", Percent = "40%") %>%
+          left_join(., z, by = c("POP", "Percent"))}),
+                plotl_50 = map2(l_blod_na_50, LOD50, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Low Rank Solution", Percent = "50%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plots_50 = map2(s_blod_na_50, LOD50, function(x,y) 
+      {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Sparse Solution", Percent = "50%") %>% 
+          left_join(., y, by = c("POP", "Percent"))}),
+      plotall_50 = pmap(list(l_blod_na_50, s_blod_na_50, LOD50), function(x,y,z) 
+      {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+          gather(key = POP, value = Value, -rowid) %>% 
+          mutate(Compare = "Model Prediction", Percent = "50%") %>%
+          left_join(., z, by = c("POP", "Percent"))}))
+
+sim_all <- sim_all %>% 
+  mutate(plotall = pmap(list(plotl_10,plots_10,plotall_10,plotl_20,plots_20,plotall_20,
+                             plotl_30,plots_30,plotall_30,plotl_40,plots_40,plotall_40,
+                             plotl_50,plots_50,plotall_50),
+                        function(plotl_10,plots_10,plotall_10,plotl_20,plots_20,plotall_20,
+                                plotl_30,plots_30,plotall_30,plotl_40,plots_40,plotall_40,
+                                plotl_50,plots_50,plotall_50) 
+                          {rbind(plotl_10,plots_10,plotall_10,plotl_20,plots_20,plotall_20,
+                              plotl_30,plots_30,plotall_30,plotl_40,plots_40,plotall_40,
+                              plotl_50,plots_50,plotall_50)}))
+```
+
+```{r, below_lod4, include=FALSE, cache=TRUE, cache.lazy=FALSE}
+sim_all <- sim_all %>% 
+  mutate(plotl_10_sqrt2 = map2(l_blod_na_10_sqrt2, LOD10, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "10%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_10_sqrt2 = map2(s_blod_na_10_sqrt2, LOD10, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "10%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_10_sqrt2 = pmap(list(l_blod_na_10_sqrt2, s_blod_na_10_sqrt2, LOD10), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "10%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_20_sqrt2 = map2(l_blod_na_20_sqrt2, LOD20, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "20%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_20_sqrt2 = map2(s_blod_na_20_sqrt2, LOD20, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "20%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_20_sqrt2 = pmap(list(l_blod_na_20_sqrt2, s_blod_na_20_sqrt2, LOD20), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "20%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_30_sqrt2 = map2(l_blod_na_30_sqrt2, LOD30, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "30%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_30_sqrt2 = map2(s_blod_na_30_sqrt2, LOD30, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "30%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_30_sqrt2 = pmap(list(l_blod_na_30_sqrt2, s_blod_na_30_sqrt2, LOD30), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "30%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_40_sqrt2 = map2(l_blod_na_40_sqrt2, LOD40, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "40%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_40_sqrt2 = map2(s_blod_na_40_sqrt2, LOD40, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "40%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_40_sqrt2 = pmap(list(l_blod_na_40_sqrt2, s_blod_na_40_sqrt2, LOD40), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "40%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_50_sqrt2 = map2(l_blod_na_50_sqrt2, LOD50, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "50%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_50_sqrt2 = map2(s_blod_na_50_sqrt2, LOD50, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "50%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_50_sqrt2 = pmap(list(l_blod_na_50_sqrt2, s_blod_na_50_sqrt2, LOD50), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "50%") %>%
+      left_join(., z, by = c("POP", "Percent"))}))
+
+sim_all <- sim_all %>% 
+  mutate(plotall_sqrt2 = pmap(list(plotl_10_sqrt2,plots_10_sqrt2,plotall_10_sqrt2,plotl_20_sqrt2,plots_20_sqrt2,plotall_20_sqrt2,
+                             plotl_30_sqrt2,plots_30_sqrt2,plotall_30_sqrt2,plotl_40_sqrt2,plots_40_sqrt2,plotall_40_sqrt2,
+                             plotl_50_sqrt2,plots_50_sqrt2,plotall_50_sqrt2),
+                        function(plotl_10_sqrt2,plots_10_sqrt2,plotall_10_sqrt2,plotl_20_sqrt2,plots_20_sqrt2,plotall_20_sqrt2,
+                                 plotl_30_sqrt2,plots_30_sqrt2,plotall_30_sqrt2,plotl_40_sqrt2,plots_40_sqrt2,plotall_40_sqrt2,
+                                 plotl_50_sqrt2,plots_50_sqrt2,plotall_50_sqrt2) 
+                        {rbind(plotl_10_sqrt2,plots_10_sqrt2,plotall_10_sqrt2,plotl_20_sqrt2,plots_20_sqrt2,plotall_20_sqrt2,
+                               plotl_30_sqrt2,plots_30_sqrt2,plotall_30_sqrt2,plotl_40_sqrt2,plots_40_sqrt2,plotall_40_sqrt2,
+                               plotl_50_sqrt2,plots_50_sqrt2,plotall_50_sqrt2)}))
+```
+
+```{r, below_lod5, include=FALSE, cache=TRUE, cache.lazy=FALSE}
+sim_all <- sim_all %>% 
+  mutate(plotl_10_nnS = map2(l_blod_na_10_nnS, LOD10, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "10%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_10_nnS = map2(s_blod_na_10_nnS, LOD10, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "10%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_10_nnS = pmap(list(l_blod_na_10_nnS, s_blod_na_10_nnS, LOD10), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "10%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_20_nnS = map2(l_blod_na_20_nnS, LOD20, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "20%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_20_nnS = map2(s_blod_na_20_nnS, LOD20, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "20%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_20_nnS = pmap(list(l_blod_na_20_nnS, s_blod_na_20_nnS, LOD20), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "20%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_30_nnS = map2(l_blod_na_30_nnS, LOD30, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "30%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_30_nnS = map2(s_blod_na_30_nnS, LOD30, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "30%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_30_nnS = pmap(list(l_blod_na_30_nnS, s_blod_na_30_nnS, LOD30), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "30%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_40_nnS = map2(l_blod_na_40_nnS, LOD40, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "40%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_40_nnS = map2(s_blod_na_40_nnS, LOD40, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "40%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_40_nnS = pmap(list(l_blod_na_40_nnS, s_blod_na_40_nnS, LOD40), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "40%") %>%
+      left_join(., z, by = c("POP", "Percent"))}),
+  plotl_50_nnS = map2(l_blod_na_50_nnS, LOD50, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Low Rank Solution", Percent = "50%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plots_50_nnS = map2(s_blod_na_50_nnS, LOD50, function(x,y) 
+  {x %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Sparse Solution", Percent = "50%") %>% 
+      left_join(., y, by = c("POP", "Percent"))}),
+  plotall_50_nnS = pmap(list(l_blod_na_50_nnS, s_blod_na_50_nnS, LOD50), function(x,y,z) 
+  {(x + y) %>% as_tibble(.) %>% rowid_to_column(.) %>% 
+      gather(key = POP, value = Value, -rowid) %>% 
+      mutate(Compare = "Model Prediction", Percent = "50%") %>%
+      left_join(., z, by = c("POP", "Percent"))}))
+
+sim_all <- sim_all %>% 
+  mutate(plotall_nnS = pmap(list(plotl_10_nnS,plots_10_nnS,plotall_10_nnS,plotl_20_nnS,plots_20_nnS,plotall_20_nnS,
+                             plotl_30_nnS,plots_30_nnS,plotall_30_nnS,plotl_40_nnS,plots_40_nnS,plotall_40_nnS,
+                             plotl_50_nnS,plots_50_nnS,plotall_50_nnS),
+                        function(plotl_10_nnS,plots_10_nnS,plotall_10_nnS,plotl_20_nnS,plots_20_nnS,plotall_20_nnS,
+                                 plotl_30_nnS,plots_30_nnS,plotall_30_nnS,plotl_40_nnS,plots_40_nnS,plotall_40_nnS,
+                                 plotl_50_nnS,plots_50_nnS,plotall_50_nnS) 
+                        {rbind(plotl_10_nnS,plots_10_nnS,plotall_10_nnS,plotl_20_nnS,plots_20_nnS,plotall_20_nnS,
+                               plotl_30_nnS,plots_30_nnS,plotall_30_nnS,plotl_40_nnS,plots_40_nnS,plotall_40_nnS,
+                               plotl_50_nnS,plots_50_nnS,plotall_50_nnS)}))
+```
+
+### Tables
+
 ```{r}
-plotall %>% 
+sim_all %>% select(seed, plotall) %>% 
+  #filter(seed == 1) %>% 
+  unnest(cols = c('plotall')) %>% 
   filter(Compare == "Low Rank Solution") %>% 
   drop_na(.) %>% 
   mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
@@ -1682,7 +1825,9 @@ plotall %>%
   select(Percent, Proportion) %>% 
   kable(., caption = "LOD PCP Low Rank Solution Values >LOD")
 
-plotall_nns %>% 
+sim_all %>% select(seed, plotall_nnS) %>% 
+  #filter(seed == 1) %>% 
+  unnest(cols = c('plotall_nnS')) %>% 
   filter(Compare == "Low Rank Solution") %>% 
   drop_na(.) %>% 
   mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
@@ -1694,7 +1839,9 @@ plotall_nns %>%
   select(Percent, Proportion) %>% 
   kable(., caption = "nnS LOD PCP Low Rank Solution Values >LOD")
 
-plotall_sqrt2 %>% 
+sim_all %>% select(seed, plotall_sqrt2) %>% 
+  #filter(seed == 1) %>% 
+  unnest(cols = c('plotall_sqrt2')) %>%  
   filter(Compare == "Low Rank Solution") %>% 
   drop_na(.) %>% 
   mutate(above_lod = ifelse(Value > LOD, 1, 0)) %>%
@@ -1706,25 +1853,28 @@ plotall_sqrt2 %>%
   select(Percent, Proportion) %>% 
   kable(., caption = "Original PCP w/ LOD/sqrt(2) Low Rank Solution Values >LOD")
 
-rbind(plots_10,
-      plots_20,
-      plots_30,
-      plots_40,
-      plots_50) %>% 
-  drop_na(.) %>% 
-  group_by(Compare, Percent) %>% 
-  summarise(Min = min(Value),
-            Ave = mean(Value),
-            Max = max(Value)) %>% 
-  ungroup(.) %>% 
-  mutate_if(is.numeric, round, 2) %>% 
-  select(-Compare) %>% kable(., caption = "LOD PCP Sparse Solutions")
+sim_all %>% 
+  mutate(sparse = pmap(list(plots_10, plots_20, plots_30, plots_40, plots_50),
+                       function (plots_10, plots_20, plots_30, plots_40, plots_50)
+                         {rbind(plots_10, plots_20, plots_30, plots_40, plots_50)})) %>%
+  select(seed, sparse) %>%
+  unnest(cols = 'sparse') %>% 
+                          drop_na(.) %>% 
+                          group_by(Compare, Percent) %>% 
+                          summarise(Min = min(Value),
+                                    Ave = mean(Value),
+                                    Max = max(Value)) %>% 
+                          ungroup(.) %>% 
+                          mutate_if(is.numeric, round, 2) %>% 
+                          select(-Compare) %>% kable(., caption = "LOD PCP Sparse Solutions")
 
-rbind(plots_10_nnS,
-      plots_20_nnS,
-      plots_30_nnS,
-      plots_40_nnS,
-      plots_50_nnS) %>% 
+
+sim_all %>% 
+  mutate(sparse_nnS = pmap(list(plots_10_nnS, plots_20_nnS, plots_30_nnS, plots_40_nnS, plots_50_nnS),
+                       function (plots_10_nnS, plots_20_nnS, plots_30_nnS, plots_40_nnS, plots_50_nnS)
+                       {rbind(plots_10_nnS, plots_20_nnS, plots_30_nnS, plots_40_nnS, plots_50_nnS)})) %>%
+  select(seed, sparse_nnS) %>%
+  unnest(cols = 'sparse_nnS') %>% 
   drop_na(.) %>% 
   group_by(Compare, Percent) %>%
   summarise(Min = min (Value),
@@ -1734,11 +1884,12 @@ rbind(plots_10_nnS,
   mutate_if(is.numeric, round, 2) %>% 
   select(-Compare) %>% kable(., caption = "nnS LOD PCP Sparse Solutions")
 
-rbind(plots_10_sqrt2,
-      plots_20_sqrt2,
-      plots_30_sqrt2,
-      plots_40_sqrt2,
-      plots_50_sqrt2) %>% 
+sim_all %>% 
+  mutate(sparse_sqrt2 = pmap(list(plots_10_sqrt2, plots_20_sqrt2, plots_30_sqrt2, plots_40_sqrt2, plots_50_sqrt2),
+                       function (plots_10_sqrt2, plots_20_sqrt2, plots_30_sqrt2, plots_40_sqrt2, plots_50_sqrt2)
+                       {rbind(plots_10_sqrt2, plots_20_sqrt2, plots_30_sqrt2, plots_40_sqrt2, plots_50_sqrt2)})) %>%
+  select(seed, sparse_sqrt2) %>%
+  unnest(cols = 'sparse_sqrt2') %>% 
   drop_na(.) %>% 
   group_by(Compare, Percent) %>%
   summarise(Min = min (Value),
@@ -1749,12 +1900,16 @@ rbind(plots_10_sqrt2,
   select(-Compare) %>% kable(., caption = "Original PCP w/ LOD/sqrt(2) Sparse Solutions")
 ```
 
+
+### Figures
+
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall) %>% 
+  unnest(cols = 'plotall') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Original") %>% 
   # with and without Original
@@ -1777,9 +1932,10 @@ plotall %>%
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall) %>% 
+  unnest(cols = 'plotall') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   filter(Compare != "Original") %>% 
   # with and without Original
@@ -1801,9 +1957,10 @@ plotall %>%
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall_nns %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_nnS) %>% 
+  unnest(cols = 'plotall_nnS') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Original") %>% 
   # with and without Original
@@ -1826,9 +1983,10 @@ plotall_nns %>%
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall_nns %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_nnS) %>% 
+  unnest(cols = 'plotall_nnS') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   filter(Compare != "Original") %>% 
   # with and without Original
@@ -1850,9 +2008,10 @@ plotall_nns %>%
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall_sqrt2 %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_sqrt2) %>% 
+  unnest(cols = 'plotall_sqrt2') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Original") %>% 
   # with and without Original
@@ -1875,9 +2034,10 @@ plotall_sqrt2 %>%
 * Plus sign (\+) indicates LOD for each chemical
 
 ```{r, fig.align = "center"}
-plotall_sqrt2 %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_sqrt2) %>% 
+  unnest(cols = 'plotall_sqrt2') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   filter(Compare != "Original") %>% 
   # with and without Original
@@ -1897,10 +2057,11 @@ plotall_sqrt2 %>%
 ```
 
 ```{r, message=FALSE, fig.align = "center"}
-plotall %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
-  drop_na(.) %>% 
+sim_all %>% 
+  select(seed, plotall) %>% 
+  unnest(cols = 'plotall') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
+  drop_na(.) %>%  
   mutate(Value_SD = Value - LOD) %>%
   #filter(Compare != "Sparse Solution") %>% 
   ggplot(aes(x = Value)) + 
@@ -1913,9 +2074,10 @@ plotall %>%
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 
-plotall_nns %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_nnS) %>% 
+  unnest(cols = 'plotall_nnS') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Sparse Solution") %>% 
   ggplot(aes(x = Value)) + 
@@ -1928,9 +2090,10 @@ plotall_nns %>%
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 
-plotall_sqrt2 %>% 
-  select(-Original) %>% 
-  rbind(., org) %>% 
+sim_all %>% 
+  select(seed, plotall_sqrt2) %>% 
+  unnest(cols = 'plotall_sqrt2') %>% 
+  rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Sparse Solution") %>% 
   ggplot(aes(x = Value)) + 
@@ -1943,4 +2106,5 @@ plotall_sqrt2 %>%
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
 
