@@ -683,6 +683,19 @@ out_f %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Metho
        title = "Relative Prediction Error")
 ```
 
+```{r, fig.align = "center"}
+out_f %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+    Median = median(norm),
+    q75 = quantile(norm, probs = .75)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, group = Method, ymin = q25, ymax = q75)) + 
+  geom_pointrange(aes(color = Method), size = 0.5) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Prediction Error")
+```
+
+
 ## Individual Solution Matrices
 
 ```{r, ind, include=FALSE, cache= TRUE}
@@ -779,6 +792,18 @@ out_ls <- sim_ls %>%
 out_ls %>% 
   ggplot(aes(x = percent_blod, y = norm, group = interaction(Matrix,Method,seed), color = Method)) + 
   geom_point() + geom_path(aes(linetype = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
+       title = "Relative Error in Solution Matrices")
+```
+
+```{r, fig.align="center"}
+out_ls %>% 
+  group_by(Method, percent_blod, Matrix) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+            Median = median(norm),
+            q75 = quantile(norm, probs = .75)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, group = interaction(Method,Matrix), ymin = q25, ymax = q75)) + 
+  geom_pointrange(aes(color = Method), size = 0.5) + geom_path(aes(linetype = Matrix, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
        title = "Relative Error in Solution Matrices")
 ```
@@ -1111,6 +1136,22 @@ out_ab %>%
        title = "Relative Error in Values < LOD & > LOD")
 ```
 
+```{r, fig.align="center"}
+out_ab %>% 
+  group_by(Method, percent_blod, Values) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+            Median = median(norm),
+            q75 = quantile(norm, probs = .75)) %>% 
+  mutate(Median = ifelse(Values == "> LOD" & Method == "LOD PCP", Median + 0.005, Median),
+         Median = ifelse(Values == "> LOD" & Method == "PCP w/ 0", Median - 0.005, Median)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, group = interaction(Values, Method), color = Method, ymin = q25, ymax = q75)) + 
+  geom_pointrange(size = 0.5) + geom_path(aes(linetype = Values)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "(norm(X-L-S) / norm(X)",
+       title = "Relative Error in Values < LOD & > LOD")
+```
+
+
 ## SVD
 
 ### Right singular vectors
@@ -1281,6 +1322,18 @@ out_v %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Metho
        title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
+```{r, fig.align="center"}
+out_v %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+            Median = median(norm),
+            q75 = quantile(norm, probs = .75)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, ymin = q25, ymax = q75, group = Method)) + 
+  geom_pointrange(aes(color = Method), size = 0.5) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
+```
+
 ### Left singular vectors
 
 ```{r, matchleft, include=FALSE, cache= TRUE, cache.lazy=FALSE}
@@ -1381,6 +1434,18 @@ out_u %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Metho
        title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
+```{r, fig.align="center"}
+out_u %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+            Median = median(norm),
+            q75 = quantile(norm, probs = .75)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, ymin = q25, ymax = q75, group = Method)) + 
+  geom_pointrange(aes(color = Method), size = 0.5) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
+```
+
 ### Singular Values
 
 ```{r, sv, include=FALSE, cache=TRUE, cache.lazy=FALSE}
@@ -1431,6 +1496,18 @@ out_d <- sim_svd %>%
   
 out_d %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Method))) + 
   geom_point(aes(color = Method)) + geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Low-Rank Solution Singular Values")
+```
+
+```{r, fig.align="center"}
+out_d %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .25),
+            Median = median(norm),
+            q75 = quantile(norm, probs = .75)) %>% 
+  ggplot(aes(x = percent_blod, y = Median, ymin = q25, ymax = q75, group = Method)) + 
+  geom_pointrange(aes(color = Method), size = 0.5) + geom_path(aes(color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
        title = "Relative Error in Low-Rank Solution Singular Values")
 ```
@@ -2064,12 +2141,12 @@ sim_all %>%
   drop_na(.) %>%  
   mutate(Value_SD = Value - LOD) %>%
   #filter(Compare != "Sparse Solution") %>% 
-  ggplot(aes(x = Value)) + 
+  ggplot(aes(x = Value, y = ..density..)) + 
   geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
-       y = "Count",
+       y = "Density",
        title = "LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
@@ -2080,12 +2157,12 @@ sim_all %>%
   rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Sparse Solution") %>% 
-  ggplot(aes(x = Value)) + 
-  geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
+  ggplot(aes(x = Value, y = ..density..)) + 
+  geom_histogram(aes(fill = Compare, color = Compare)) + 
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
-       y = "Count",
+       y = "Density",
        title = "nnS LOD PCP Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
@@ -2096,12 +2173,12 @@ sim_all %>%
   rbind(., (sim_all %>% select(seed, org) %>% unnest(cols = 'org'))) %>% 
   drop_na(.) %>% 
   #filter(Compare != "Sparse Solution") %>% 
-  ggplot(aes(x = Value)) + 
+  ggplot(aes(x = Value, y = ..density..)) + 
   geom_histogram(aes(fill = Compare, color = Compare), alpha = 0.25) + 
   theme_bw() +
   facet_wrap(.~Percent, scales = "free") +
   labs(x = "Solution Value", 
-       y = "Count",
+       y = "Density",
        title = "Original PCP w/ LOD/sqrt(2) Solution Values <LOD + Original Values") +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 90, hjust = 1))
