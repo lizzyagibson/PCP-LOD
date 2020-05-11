@@ -1456,17 +1456,6 @@ out_d <- sim_svd %>%
 out_d %>% ggplot(aes(x = percent_blod, y = norm, group = interaction(seed, Method))) + 
   geom_point(aes(color = Method)) + geom_path(aes(color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
-       title = "Relative Error in Low-Rank Solution Left Singular Vectors")
-
-
-rbind(d_diff_sqrt2,
-      d_diff,
-      d_diff_0,
-      d_diff_2,
-      d_diff_nnS) %>% ggplot(aes(x = percent_blod, y = norm, group = Method, color = Method)) + 
-  geom_point() + geom_path() + theme_bw() +
-  labs(x = "Percent Below LOD", 
-       y = "norm(SV - SV_lod0) / norm(SV_lod0)",
        title = "Relative Error in Low-Rank Solution Singular Values")
 ```
 
