@@ -32,6 +32,7 @@ library(GGally)
 library(grDevices)
 library(plotly)
 library(Cairo)
+library(Matrix)
 ```
 
 ```{r, nhanes, include=FALSE, cache = TRUE}
@@ -623,6 +624,33 @@ sim_all <- sim_all %>%
   select(-grep("results", colnames(.)))
 ```
 
+## Tables
+
+```{r, tables1, cache=TRUE, cache.lazy=FALSE}
+sim_all %>% select(seed, grep("L_lod", colnames(.))) %>%
+  gather(key = Label, value = Matrix, -seed) %>% 
+  mutate(rank = map(Matrix, rankMatrix)) %>%
+  select(-Matrix) %>% 
+  unnest(cols = rank) %>%
+  group_by(Label) %>% 
+  summarize(min = min(rank),
+            med = median(rank),
+            max = max(rank)) %>% 
+  filter(!(grepl("0_0", Label) | grepl("0_2", Label))) %>% kable(caption = "Rank of low rank")
+
+sim_all %>% select(seed, grep("S_lod", colnames(.))) %>%
+  gather(key = Label, value = Matrix, -seed) %>% 
+  mutate(sparse = map(Matrix, function(x) ifelse(x > 0.0001, 1, 0))) %>%
+  mutate(sum = map(sparse, function(x) sum(x)/(1000*8))) %>% 
+  select(-Matrix, -sparse) %>% 
+  unnest(cols = sum) %>%
+  group_by(Label) %>% 
+  summarize(min = min(sum),
+            med = median(sum),
+            max = max(sum)) %>% 
+  filter(!(grepl("0_0", Label) | grepl("0_2", Label))) %>% kable(caption = "Proportion non-sparse")
+```
+
 ## X - L - S
 
 ```{r, xls, include=FALSE, cache=TRUE}
@@ -681,15 +709,30 @@ out_f <- sim_f %>%
 ```{r, pred_fig95, cache=TRUE, fig.align = "center"}
 out_f %>% 
   group_by(Method, percent_blod) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-    Mean = mean(norm),
-    q75 = quantile(norm, probs = .95)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, group = Method, ymin = q25, ymax = q75, color = Method)) + 
+  summarize(q25 = quantile(norm, probs = .025),
+    median = median(norm),
+    q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = Method, ymin = q25, ymax = q75, color = Method)) + 
     geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
        title = "Relative Prediction Error")
+```
+
+```{r, pred_fig95sub, cache=TRUE, fig.align = "center"}
+out_f %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>% 
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+    median = median(norm),
+    q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = Method, ymin = q25, ymax = q75, color = Method)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Prediction Error")
 ```
 
 ## Individual Solution Matrices
@@ -789,16 +832,32 @@ out_ls <- sim_ls %>%
 ```{r, ls_fi95, cache=TRUE, fig.align="center"}
 out_ls %>% 
   group_by(Method, percent_blod, Matrix) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-            Mean = mean(norm),
-            q75 = quantile(norm, probs = .95)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, group = interaction(Method,Matrix), 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = interaction(Method,Matrix), 
              ymin = q25, ymax = q75, color = Method)) + 
     geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(linetype = Matrix, color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
        title = "Relative Error in Solution Matrices")
+```
+
+```{r,ls_fig95sub2, cache=TRUE, fig.align = "center"}
+out_ls %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>% 
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod, Matrix) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = interaction(Method,Matrix), 
+             ymin = q25, ymax = q75, color = Method)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(linetype = Matrix, color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Difference in Solution Matrices")
 ```
 
 ## Values \<LOD vs \>LOD
@@ -1022,7 +1081,7 @@ sim_ab <- sim_all %>%
                                        mix_data_lod_30_0, l_above_blod_30_sqrt2, s_above_blod_30_sqrt2, 
                                        mix_data_lod_40_0, l_above_blod_40_sqrt2, s_above_blod_40_sqrt2, 
                                        mix_data_lod_50_0, l_above_blod_50_sqrt2, s_above_blod_50_sqrt2, 
-                                       "PCP w/ LOD/sqrt2"), 
+                                       paste0("PCP w/ LOD/", intToUtf8(8730),2)), 
                                   function (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)
                              make_above_diff(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)),
          above_diff_nnS = pmap(list(sims, l_above_blod_0_nnS, s_above_blod_0_nnS, 
@@ -1065,7 +1124,7 @@ sim_ab <- sim_ab %>%
                                      blod_30,l_blod_30_sqrt2, s_blod_30_sqrt2, 
                                      blod_40, l_blod_40_sqrt2, s_blod_40_sqrt2,
                                      blod_50, l_blod_50_sqrt2, s_blod_50_sqrt2, 
-                                      "PCP w/ LOD/sqrt2"), make_below_diff),
+                                      paste0("PCP w/ LOD/", intToUtf8(8730),2)), make_below_diff),
          less_diff_nnS = pmap(list(blod_0, l_blod_0_nnS, s_blod_0_nnS, 
                                    blod_10, l_blod_10_nnS, s_blod_10_nnS, 
                                    blod_20,l_blod_20_nnS, s_blod_20_nnS, 
@@ -1123,12 +1182,12 @@ out_ab <- sim_ab %>%
 ```{r, ab_fi95, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
 out_ab %>% 
   group_by(Method, percent_blod, Values) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-            Mean = mean(norm),
-            q75 = quantile(norm, probs = .95)) %>% 
-  mutate(Median = ifelse(Values == "> LOD" & Method == "LOD PCP", Median + 0.005, Median),
-         Median = ifelse(Values == "> LOD" & Method == "PCP w/ 0", Median - 0.005, Median)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, group = interaction(Values, Method), color = Method, ymin = q25, ymax = q75)) + 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  mutate(median = ifelse(Values == "> LOD" & Method == "LOD PCP", median + 0.005, median),
+         median = ifelse(Values == "> LOD" & Method == "PCP w/ 0", median - 0.005, median)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = interaction(Values, Method), color = Method, ymin = q25, ymax = q75)) + 
     geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(linetype = Values)) + theme_bw() +
@@ -1137,11 +1196,30 @@ out_ab %>%
        title = "Relative Error in Values < LOD & > LOD")
 ```
 
+```{r,ls_fig95sub, cache=TRUE, fig.align = "center"}
+out_ab %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>% 
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod, Values) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  mutate(median = ifelse(Values == "> LOD" & Method == "LOD PCP", median + 0.005, median),
+         median = ifelse(Values == "> LOD" & Method == "PCP w/ 0", median - 0.005, median)) %>% 
+  ggplot(aes(x = percent_blod, y = median, group = interaction(Values, Method), color = Method, ymin = q25, ymax = q75)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(linetype = Values)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Prediction Error in Values < LOD & > LOD")
+```
+
 ## SVD
 
 ### Right singular vectors
 
 ```{r, svdv, include=FALSE, cache= TRUE, cache.lazy=FALSE}
+
 # Extract right singular vectors from each low rank solution matrix
 extract_SVD <- function (L_lod0, L_lod10, L_lod20, L_lod30, L_lod40, L_lod50) {
         v_lod0  <- svd(L_lod0)$v[,1:7]
@@ -1254,7 +1332,14 @@ sim_svd <- sim_svd %>%
 ```
 
 ```{r, svdvnorm, include=FALSE, cache= TRUE, cache.lazy=FALSE}
+
 make_Vnorm <- function (mix, L10, L20, L30, L40, L50, Name) {
+  mix <- as.matrix(mix)
+  L10 <- as.matrix(L10)
+  L20 <- as.matrix(L20)
+  L30 <- as.matrix(L30)
+  L40 <- as.matrix(L40)
+  L50 <- as.matrix(L50)
   V_norm <- as_tibble(cbind(`0%` = norm((mix - mix), type = "F")/norm((mix), type = "F"),
       `10%` = norm((mix - L10), type = "F")/norm((mix), type = "F"),
       `20%` = norm((mix - L20), type = "F")/norm((mix), type = "F"),
@@ -1273,7 +1358,7 @@ sim_svd <- sim_svd %>%
                                     v_lod40_2, v_lod50_2, "PCP w/ LOD/2"),
               function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
          v_norm_sqrt2 = pmap(list(v_lod0_sqrt2, v_lod10_sqrt2, v_lod20_sqrt2, v_lod30_sqrt2, v_lod40_sqrt2,
-                                  v_lod50_sqrt2, "PCP w/ LOD/sqrt2"), 
+                                  v_lod50_sqrt2, paste0("PCP w/ LOD/", intToUtf8(8730),2)), 
             function (mix, L10, L20, L30, L40, L50, Name) make_Vnorm(mix, L10, L20, L30, L40, L50, Name)),
          v_norm_nnS = pmap(list(v_lod0_nnS, v_lod10_nnS, v_lod20_nnS, v_lod30_nnS, v_lod40_nnS, 
                                 v_lod50_nnS, "LOD PCP nnS"), 
@@ -1285,6 +1370,7 @@ sim_svd <- sim_svd %>%
 * Reference is right singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
 
 ```{r, v_fig, cache=TRUE, cache.lazy=FALSE, fig.align = "center"}
+
 out_v <- sim_svd %>% 
   select(seed, v_norm) %>% 
   unnest(cols = c(v_norm)) %>% 
@@ -1303,12 +1389,13 @@ out_v <- sim_svd %>%
 ```
 
 ```{r, v_fig95, message=FALSE, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
+
 out_v %>% 
   group_by(Method, percent_blod) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-            Mean = mean(norm),
-            q75 = quantile(norm, probs = .95)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
     geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(color = Method)) + theme_bw() +
@@ -1316,7 +1403,24 @@ out_v %>%
        title = "Relative Error in Low-Rank Solution Right Singular Vectors")
 ```
 
+```{r,v_fig95sub, cache=TRUE, fig.align = "center"}
+
+out_v %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>%
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Difference in Low-Rank Solution Right Singular Vectors")
+```
+
 ```{r, v_figdense, message=FALSE, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
+
 out_v %>% 
   filter(percent_blod != "0%") %>% 
   ggplot(aes(x = norm)) + 
@@ -1333,6 +1437,7 @@ out_v %>%
 ### Left singular vectors
 
 ```{r, matchleft, include=FALSE, cache= TRUE, cache.lazy=FALSE}
+
 match_scores <- function (v, reordered, u) {
   u <- as.matrix(u)
   v <- as.matrix(v)
@@ -1381,7 +1486,14 @@ sim_svd <- sim_svd %>%
 ```
 
 ```{r, svdu, include=FALSE, cache = TRUE, cache.lazy=FALSE}
+
 make_unorm <- function (mix, L10, L20, L30, L40, L50, Name) {
+  mix <- as.matrix(mix)
+  L10 <- as.matrix(L10)
+  L20 <- as.matrix(L20)
+  L30 <- as.matrix(L30)
+  L40 <- as.matrix(L40)
+  L50 <- as.matrix(L50)
   u_norm <- as_tibble(cbind(`0%` = norm((mix - mix), type = "F")/norm((mix), type = "F"),
                             `10%` = norm((mix - L10), type = "F")/norm((mix), type = "F"),
                             `20%` = norm((mix - L20), type = "F")/norm((mix), type = "F"),
@@ -1398,7 +1510,7 @@ sim_svd <- sim_svd %>%
          u_norm_2 = pmap(list(u_lod0_2, u_lod10_2, u_lod20_2, u_lod30_2, u_lod40_2, 
                               u_lod50_2, "PCP w/ LOD/2"), make_unorm),
          u_norm_sqrt2 = pmap(list(u_lod0_sqrt2, u_lod10_sqrt2, u_lod20_sqrt2, u_lod30_sqrt2, u_lod40_sqrt2,
-                                  u_lod50_sqrt2, "PCP w/ LOD/sqrt2"), make_unorm),
+                                  u_lod50_sqrt2, paste0("PCP w/ LOD/", intToUtf8(8730),2)), make_unorm),
          u_norm_nnS = pmap(list(u_lod0_nnS, u_lod10_nnS, u_lod20_nnS, u_lod30_nnS, u_lod40_nnS, 
                                 u_lod50_nnS, "LOD PCP nnS"), make_unorm),
          u_norm_0 = pmap(list(u_lod0_0, u_lod10_0, u_lod20_0, u_lod30_0, 
@@ -1408,6 +1520,7 @@ sim_svd <- sim_svd %>%
 * Reference is left singular vector matrix of SVD of low rank solution matix with 0\% \<LOD
 
 ```{r, u_fig, cache=TRUE, cache.lazy=FALSE, fig.align = "center"}
+
 out_u <- sim_svd %>% 
   select(seed, u_norm) %>% 
   unnest(cols = c(u_norm)) %>% 
@@ -1426,12 +1539,13 @@ out_u <- sim_svd %>%
 ```
 
 ```{r, u_fig95, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
+
 out_u %>% 
   group_by(Method, percent_blod) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-            Mean = mean(norm),
-            q75 = quantile(norm, probs = .95)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
     geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(color = Method)) + theme_bw() +
@@ -1439,7 +1553,24 @@ out_u %>%
        title = "Relative Error in Low-Rank Solution Left Singular Vectors")
 ```
 
+```{r,u_fig95sub, cache=TRUE, fig.align = "center"}
+
+out_u %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>% 
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Difference in Low-Rank Solution Left Singular Vectors")
+```
+
 ```{r, u_figdense, message=FALSE, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
+
 out_u %>% 
   filter(percent_blod != "0%") %>% 
   ggplot(aes(x = norm)) + 
@@ -1456,6 +1587,7 @@ out_u %>%
 ### Singular Values
 
 ```{r, sv, include=FALSE, cache=TRUE, cache.lazy=FALSE}
+
 norm_vec <- function(x) sqrt(sum(x^2))
 
 make_dnorm <- function (mix, L10, L20, L30, L40, L50, Name) {
@@ -1470,16 +1602,16 @@ make_dnorm <- function (mix, L10, L20, L30, L40, L50, Name) {
   d_norm
 }
 
-sim_svd <- sim_svd %>% 
-  mutate(d_norm = pmap(list(d_lod0, d_lod10, d_lod20, d_lod30, d_lod40, d_lod50, "LOD PCP"), make_dnorm),
-         d_norm_2 = pmap(list(d_lod0_2, d_lod10_2, d_lod20_2, d_lod30_2, 
-                              d_lod40_2, d_lod50_2, "PCP w/ LOD/2"), make_dnorm),
-         d_norm_sqrt2 = pmap(list(d_lod0_sqrt2, d_lod10_sqrt2, d_lod20_sqrt2, d_lod30_sqrt2, d_lod40_sqrt2,
-                                  d_lod50_sqrt2, "PCP w/ LOD/sqrt2"), make_dnorm),
-         d_norm_nnS = pmap(list(d_lod0_nnS, d_lod10_nnS, d_lod20_nnS, d_lod30_nnS, d_lod40_nnS, 
-                                d_lod50_nnS, "LOD PCP nnS"), make_dnorm),
-         d_norm_0 = pmap(list(d_lod0_0, d_lod10_0, d_lod20_0, d_lod30_0, d_lod40_0, 
-                              d_lod50_0, "PCP w/ 0"), make_dnorm))
+sim_svd <- sim_svd %>% colnames()
+  mutate(d_norm = pmap(list(d_lod0_old, d_lod10_old, d_lod20_old, d_lod30_old, d_lod40_old, d_lod50_old, "LOD PCP"), make_dnorm),
+         d_norm_2 = pmap(list(d_lod0_2_old, d_lod10_2_old, d_lod20_2_old, d_lod30_2_old, 
+                              d_lod40_2_old, d_lod50_2_old, "PCP w/ LOD/2"), make_dnorm),
+         d_norm_sqrt2 = pmap(list(d_lod0_sqrt2_old, d_lod10_sqrt2_old, d_lod20_sqrt2_old, d_lod30_sqrt2_old, d_lod40_sqrt2_old,
+                                  d_lod50_sqrt2_old, paste0("PCP w/ LOD/", intToUtf8(8730),2)), make_dnorm),
+         d_norm_nnS = pmap(list(d_lod0_nnS_old, d_lod10_nnS_old, d_lod20_nnS_old, d_lod30_nnS_old, d_lod40_nnS_old, 
+                                d_lod50_nnS_old, "LOD PCP nnS"), make_dnorm),
+         d_norm_0 = pmap(list(d_lod0_0_old, d_lod10_0_old, d_lod20_0_old, d_lod30_0_old, d_lod40_0_old, 
+                              d_lod50_0_old, "PCP w/ 0"), make_dnorm))
 ```
 
 * Reference is singular value vector of SVD of low rank solution matix with 0\% \<LOD
@@ -1505,15 +1637,30 @@ out_d <- sim_svd %>%
 ```{r, d_fig95, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
 out_d %>% 
   group_by(Method, percent_blod) %>% 
-  summarize(q25 = quantile(norm, probs = .05),
-            Mean = mean(norm),
-            q75 = quantile(norm, probs = .95)) %>% 
-  ggplot(aes(x = percent_blod, y = Mean, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
   geom_point() + 
   geom_errorbar(width=0.1) +
   geom_path(aes(color = Method)) + theme_bw() +
   labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
        title = "Relative Error in Low-Rank Solution Singular Values")
+```
+
+```{r, d_fig95sub, cache=TRUE, fig.align = "center"}
+out_d %>% 
+  filter(!(Method %in% c("LOD PCP", "PCP w/ 0", "PCP w/ LOD/2"))) %>% 
+  mutate(Method = ifelse(Method == "LOD PCP nnS", "PCP-LOD", Method)) %>% 
+  group_by(Method, percent_blod) %>% 
+  summarize(q25 = quantile(norm, probs = .025),
+            median = median(norm),
+            q75 = quantile(norm, probs = .975)) %>% 
+  ggplot(aes(x = percent_blod, y = median, ymin = q25, ymax = q75, group = Method, color = Method)) + 
+    geom_point() + 
+  geom_errorbar(width=0.1) +
+  geom_path(aes(color = Method)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Difference in Low-Rank Solution Singular Values")
 ```
 
 ```{r, d_figdense, message=FALSE, cache=TRUE, cache.lazy=FALSE, fig.align="center"}
