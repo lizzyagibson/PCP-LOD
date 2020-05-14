@@ -651,6 +651,54 @@ sim_all %>% select(seed, grep("S_lod", colnames(.))) %>%
   filter(!(grepl("0_0", Label) | grepl("0_2", Label))) %>% kable(caption = "Proportion non-sparse")
 ```
 
+
+##Distributional Assumptions
+
+```{r}
+sim_all %>% 
+  select(seed, grep("L_lod", colnames(.))) %>%
+  gather(key = Label, value = DF, -seed) %>% 
+  mutate(DF = map(DF, as_tibble)) %>% 
+  unnest(cols=DF) %>% 
+  select(seed, Label, V1) %>%
+  mutate(percent = case_when(grepl("10", Label) ~ "10%",
+                           grepl("20", Label) ~ "20%",
+                           grepl("30", Label) ~ "30%",
+                           grepl("40", Label) ~ "40%", 
+                           grepl("50", Label) ~ "50%", 
+                           TRUE ~ "0%"),
+         model = case_when(grepl("0_2", Label) ~ "LOD/2",
+                           grepl("0_0", Label) ~ "LOD/0",
+                           grepl("0_nnS", Label) ~ "PCP-LOD nns",
+                           grepl("sqrt", Label) ~ "LOD/sqrt(2)", TRUE ~ "PCP-LOD")) %>% 
+  ggplot(aes(x = V1, group = Label, color = model, fill = model)) +
+  geom_density(alpha = 0.25) +
+  facet_wrap(.~percent) + theme_bw() +
+  theme(legend.position = "bottom") + labs(y = "Density")
+
+sim_all %>% 
+  select(seed, L_lod50_nnS) %>% 
+  filter(seed == 1) %>%
+  mutate(L_lod50_nnS = map(L_lod50_nnS, as_tibble)) %>% 
+  unnest(cols=L_lod50_nnS) %>% 
+  gather(key = Chemical, value = Value, -seed) %>% 
+  ggplot(aes(x = Value)) +
+  geom_histogram() +
+  facet_wrap(.~Chemical)
+
+sim_all %>% 
+  select(seed, L_lod50_sqrt2) %>% 
+  filter(seed == 1) %>%
+  mutate(L_lod50_sqrt2 = map(L_lod50_sqrt2, as_tibble)) %>% 
+  unnest(cols=L_lod50_sqrt2) %>% 
+  gather(key = Chemical, value = Value, -seed) %>% 
+  ggplot(aes(x = Value)) +
+  geom_histogram() +
+  facet_wrap(.~Chemical)
+
+```
+
+
 ## X - L - S
 
 ```{r, xls, include=FALSE, cache=TRUE}
