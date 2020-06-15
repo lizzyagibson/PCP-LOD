@@ -1,0 +1,363 @@
+---
+title: "One Pattern -- PCA"
+author: "Lizzy Gibson"
+date: "6/09/2020"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    toc_depth: 5
+---
+
+```{r setup, include=FALSE}
+require("knitr")
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+options(scipen = 999)
+library(R.matlab)
+library(tidyverse)
+library(gridExtra)
+library(Matrix)
+library(matconv)
+library(patchwork)
+library(janitor)
+library(ggcorrplot)
+library(ggfortify)  
+library(factoextra)
+library(knitr)
+library(haven)
+library(rlist)
+library(mvtnorm)
+library(reshape2)
+library(GGally)
+library(grDevices)
+```
+
+```{r, scores1, include=FALSE}
+# Simulate independent scores
+set.seed(1988)
+scores <- exp(rnorm(100))
+# summary(scores)
+# sd(scores)
+
+scores %>%
+  enframe() %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram() + 
+  theme_minimal()
+
+# Simulate 1 pattern
+pattern <- t(c(1,1,1,1,1,1,0,0,0,0))
+
+# Add noise
+noise <- matrix(NA, nrow = 100, ncol = 10)
+seeds <- 1:10
+for (i in 1:length(seeds)) {
+  set.seed(seeds[i])
+  noise[,i] <- exp(rnorm(100, mean = 0, sd = 1))
+}
+
+# Multiply scores by pattern
+sim_all <- as_tibble((scores %*% pattern) + noise)
+#summary(sim_all)
+sim_all[sim_all < 0] <- 0 # non-negative
+sim_all <- as_tibble(scale(sim_all, center = FALSE, 
+                           scale = apply(sim_all, 2, sd, na.rm = TRUE))) # standardize do not center
+#sim_all
+
+# Create mean vector for un-centering
+sim_means_sqrt2 <- apply(sim_all, 2, mean)
+
+sim_all %>%
+  mutate(id = 1:nrow(.)) %>% 
+  gather(key = pop, value = value, -id) %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram() + facet_wrap(~pop) +
+  theme_minimal()
+
+ggcorr(sim_all, method = c("everything", "spearman"), limits = FALSE,
+       label = TRUE, label_size = 3, label_alpha = TRUE,
+       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1)
+```
+
+```{r, neg3, include=FALSE}
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .10), (quantile(V1, probs = .10)/sqrt(2)), V1)) %>% as.matrix()
+mix_10_means_sqrt2 <- apply(mix_data_lod_10_sqrt2, 2, mean)
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .20), (quantile(V1, probs = .20)/sqrt(2)), V1)) %>% as.matrix()
+mix_20_means_sqrt2 <- apply(mix_data_lod_20_sqrt2, 2, mean)
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .30), (quantile(V1, probs = .30)/sqrt(2)), V1)) %>% as.matrix()
+mix_30_means_sqrt2 <- apply(mix_data_lod_30_sqrt2, 2, mean)
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .40), (quantile(V1, probs = .40)/sqrt(2)), V1)) %>% as.matrix()
+mix_40_means_sqrt2 <- apply(mix_data_lod_40_sqrt2, 2, mean)
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .50), (quantile(V1, probs = .50)/sqrt(2)), V1)) %>% as.matrix()
+mix_50_means_sqrt2 <- apply(mix_data_lod_50_sqrt2, 2, mean)
+```
+
+## PCA
+
+```{r, runpca, include=FALSE}
+mix <- as.matrix(sim_all)
+
+pca_0  <- prcomp(mix)
+pca_10 <- prcomp(mix_data_lod_10_sqrt2)
+pca_20 <- prcomp(mix_data_lod_20_sqrt2)
+pca_30 <- prcomp(mix_data_lod_30_sqrt2)
+pca_40 <- prcomp(mix_data_lod_40_sqrt2)
+pca_50 <- prcomp(mix_data_lod_50_sqrt2)
+
+# pca_50$sdev
+plot(pca_50)
+```
+
+### Variance Explained
+
+```{r, var, echo=FALSE}
+PCA_0 <- pca_0$sdev^2/sum(pca_0$sdev^2) *100
+PCA_50 <- pca_50$sdev^2/sum(pca_50$sdev^2) *100
+
+round(cbind(Component = 1:10, PCA_0, PCA_50), 2) %>% 
+  as_tibble() %>% 
+  mutate(Cumulative_0=cumsum(PCA_0),
+         Cumulative_50 = cumsum(PCA_50)) %>% 
+  select(Component, PCA_0, Cumulative_0, PCA_50, Cumulative_50) %>% 
+  kable()
+```
+
+## Predicted Values
+
+```{r, predict}
+# prcomp centers, does not scale
+# need to UNCENTER predictions to compare
+# REMOVE SV
+
+rep.row<-function(x,n){
+  matrix(rep(x,each=n),nrow=n)
+}
+
+pca_pred_0  <- pca_0$x[,1:5] %*% t(pca_0$rotation)[1:5,] + rep.row(sim_means_sqrt2, 100)
+pca_pred_10 <- pca_10$x[,1:5] %*% t(pca_10$rotation)[1:5,] + rep.row(mix_10_means_sqrt2, 100)
+pca_pred_20 <- pca_20$x[,1:5] %*% t(pca_20$rotation)[1:5,] + rep.row(mix_20_means_sqrt2, 100)
+pca_pred_30 <- pca_30$x[,1:5] %*% t(pca_30$rotation)[1:5,] + rep.row(mix_30_means_sqrt2, 100)
+pca_pred_40 <- pca_40$x[,1:5] %*% t(pca_40$rotation)[1:5,] + rep.row(mix_40_means_sqrt2, 100)
+pca_pred_50 <- pca_50$x[,1:5] %*% t(pca_50$rotation)[1:5,] + rep.row(mix_50_means_sqrt2, 100)
+
+# mix[1,]
+# pca_pred_0[1,]
+# mix_data_lod_50_sqrt2[1,]
+# pca_pred_50[1,]
+```
+
+```{r, tp_lod1, include=FALSE}
+pred_pca <- as_tibble(cbind(Simulated = mix[,1],
+                          `0%` = pca_pred_0[,1],
+                          `10%` = pca_pred_10[,1],
+                          `20%` = pca_pred_20[,1],
+                          `30%` = pca_pred_30[,1],
+                          `40%` = pca_pred_40[,1],
+                          `50%` = pca_pred_50[,1],
+          id = 1:100)) %>% gather(key = Percent, value = Predicted, -Simulated, -id) %>% 
+  mutate(LOD = c(rep(0, 100), rep(quantile(mix[,1], .10), 100),
+                 rep(quantile(mix[,1], .20), 100),
+                 rep(quantile(mix[,1], .30), 100),
+                 rep(quantile(mix[,1], .40), 100),
+                 rep(quantile(mix[,1], .50), 100)))
+
+# pred_pca
+```
+
+## Viz
+
+```{r, fig.align="center", echo=FALSE}
+pred_pca %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "Log Normal Simulated v. Predicted Values for POP V1")
+
+pred_pca %>% 
+  filter(Simulated <= LOD) %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "Log Normal Simulated v. Predicted Values for POP V1 <LOD")
+
+pred_pca %>% 
+  gather(key = Data, value = Value, -id, -Percent, -LOD) %>% 
+  ggplot(aes(x = Value)) + 
+  geom_histogram(aes(fill = Data, color = Data), alpha = 0.25) + 
+  theme_bw() +
+  facet_wrap(.~Percent) +
+  labs(y = "Count",
+       title = "Log Normal Simulated Data + PCA Solution") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+pred_pca %>% 
+  filter(Simulated <= LOD) %>% 
+  gather(key = Data, value = Value, -id, -Percent, -LOD) %>% 
+  ggplot(aes(x = Value)) + 
+  geom_histogram(aes(fill = Data, color = Data), alpha = 0.25) + 
+  theme_bw() +
+  facet_wrap(.~Percent) +
+  labs(y = "Count",
+       title = "Log Normal Simulated Data + PCA Solution <LOD") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Relative Error
+
+### V1
+
+```{r, relerror, echo=FALSE}
+### <LOD
+plot_pred1 <- pred_pca %>%
+  filter(Simulated < LOD) %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent) %>% 
+           summarise(Fro = round(sqrt(sum(l2))/sqrt(sum(Simulated^2)),2),
+                     l1 = round(sqrt(sum(l1))/sqrt(sum(Simulated)),2),
+                     linf = round(max(l1)/max(Simulated),2)) %>% 
+  mutate(Group = "V1 <LOD") %>% 
+  select(Group, everything())
+
+plot_pred1 %>% 
+  select(-Group) %>% 
+  kable(caption = "Relative Error in V1 <LOD")
+
+### Overall
+plot_pred2 <- pred_pca %>%
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent) %>% 
+           summarise(Fro = round(sqrt(sum(l2))/sqrt(sum(Simulated^2)),2),
+                     l1 = round(sqrt(sum(l1))/sqrt(sum(Simulated)),2),
+                     linf = round(max(l1)/max(Simulated),2)) %>% 
+  mutate(Group = "All V1") %>% 
+  select(Group, everything())
+
+plot_pred2 %>% 
+  select(-Group) %>% 
+  kable(caption = "Relative Error in All V1")
+
+### >LOD
+plot_pred3 <- pred_pca %>%
+  filter(Simulated >= LOD) %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent) %>% 
+           summarise(Fro = round(sqrt(sum(l2))/sqrt(sum(Simulated^2)),2),
+                     l1 = round(sqrt(sum(l1))/sqrt(sum(Simulated)),2),
+                     linf = round(max(l1)/max(Simulated),2)) %>% 
+  mutate(Group = "V1 >LOD") %>% 
+  select(Group, everything())
+
+plot_pred3 %>% 
+  select(-Group) %>% 
+  kable(caption = "Relative Error in V1 >LOD")
+```
+
+### All
+
+```{r, makeall, include=FALSE}
+pred_sim <- sim_all %>% 
+  mutate(id = 1:100) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Simulated")
+
+add_lods <- as_tibble(rbind(c("0%",0), 
+      c("10%", quantile(mix[,1], .10)), 
+      c("20%", quantile(mix[,1], .20)),
+      c("30%", quantile(mix[,1], .30)), 
+      c("40%", quantile(mix[,1], .40)),
+      c("50%", quantile(mix[,1], .50)))) %>% rename(Percent = 1, LOD = 2) %>% 
+  mutate(LOD = as.numeric(LOD),
+         Variable = "V1")
+
+pred_all <- pca_pred_0 %>% as_tibble() %>% mutate(Percent = "0%") %>% 
+  rbind(., pca_pred_10 %>% as_tibble() %>% mutate(Percent = "10%")) %>% 
+  rbind(., pca_pred_20 %>% as_tibble() %>% mutate(Percent = "20%")) %>% 
+  rbind(., pca_pred_30 %>% as_tibble() %>% mutate(Percent = "30%")) %>% 
+  rbind(., pca_pred_40 %>% as_tibble() %>% mutate(Percent = "40%")) %>% 
+  rbind(., pca_pred_50 %>% as_tibble() %>% mutate(Percent = "50%")) %>%
+  mutate(id = rep(1:100, 6)) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Predicted") %>% 
+  left_join(., pred_sim, by = c("id", "Variable")) %>% 
+  left_join(., add_lods, by = c("Percent", "Variable")) %>% 
+  replace_na(list(LOD = 0))
+
+# check
+# pred_all %>% filter(Variable == "V1") %>% slice(550:560)
+# pred_pca[550:560,]
+```
+
+```{r, allerror, echo=FALSE}
+### <LOD are only V1
+
+### Overall
+plot_pred4 <- pred_all %>%
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent) %>% 
+           summarise(Fro = round(sqrt(sum(l2))/sqrt(sum(Simulated^2)),2),
+                     l1 = round(sqrt(sum(l1))/sqrt(sum(Simulated)),2),
+                     linf = round(max(l1)/max(Simulated),2)) %>% 
+  mutate(Group = "Overall") %>% 
+  select(Group, everything())
+
+plot_pred4 %>% 
+  select(-Group) %>% 
+  kable(caption = "Overall Relative Error")
+
+### >LOD
+plot_pred5 <- pred_all %>%
+  filter(Simulated >= LOD) %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent) %>% 
+           summarise(Fro = round(sqrt(sum(l2))/sqrt(sum(Simulated^2)),2),
+                     l1 = round(sqrt(sum(l1))/sqrt(sum(Simulated)),2),
+                     linf = round(max(l1)/max(Simulated),2)) %>% 
+  mutate(Group = "All >LOD") %>% 
+  select(Group, everything())
+
+plot_pred5 %>% 
+  select(-Group) %>%   
+  kable(caption = "Relative Error in All >LOD")
+```
+
+### Viz
+
+```{r, fig.align = "center", echo = FALSE}
+rbind(plot_pred1, plot_pred2, plot_pred3, plot_pred5, plot_pred4) %>% ggplot(aes(x = Percent, y = Fro)) + 
+  geom_point(aes(color = Group)) + geom_path(aes(group = Group, color = Group)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Overall Relative Prediction Error")
+```
