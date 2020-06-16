@@ -33,7 +33,7 @@ names(pops) <- str_replace(names(pops), "lbxf", "F")
 names(pops) <- str_replace(names(pops), "lbx", "PCB")
 pops
 
-#write_csv(pops, "nhanes_10.csv")
+#write_csv(pops, "./Data/nhanes_10.csv")
 
 ## Vector of NHANES means
 ## log to approx normal dist
@@ -47,7 +47,7 @@ covs <- cov(log(pops))
 ## exp multi-normal to get multi-log normal
 set.seed(1988)
 sim <- exp(rmvnorm(100, mean = means, sigma = covs)) %>% as_tibble()
-sim <- as_tibble(apply(sim, 2, scale, center = FALSE))
+sim <- as_tibble(apply(sim, 2, function (x) x/sd(x))) ### DONT USE SCALE FUNCTION
 
 ## Viz
 sim %>%
