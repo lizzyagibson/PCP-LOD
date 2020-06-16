@@ -33,6 +33,8 @@ names(pops) <- str_replace(names(pops), "lbxf", "F")
 names(pops) <- str_replace(names(pops), "lbx", "PCB")
 pops
 
+#write_csv(pops, "nhanes_10.csv")
+
 ## Vector of NHANES means
 ## log to approx normal dist
 means <- as_vector(map(log(pops), function(x) mean(x, na.rm = TRUE)))
@@ -100,6 +102,8 @@ names(pops_all) <- str_replace(names(pops_all), "lbxd", "D")
 names(pops_all) <- str_replace(names(pops_all), "lbxf", "F")
 names(pops_all) <- str_replace(names(pops_all), "lbx", "PCB")
 pops_all
+
+#write_csv(pops_all, "nhanes_18.csv")
 
 ## Vector of NHANES means
 ## log to approx normal dist
