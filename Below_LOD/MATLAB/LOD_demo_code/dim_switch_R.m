@@ -2,7 +2,7 @@
 clear;
 
 %% Initialize variables.
-filename = '/Users/lizzy/Principle.Component.Pursuit/Below_LOD/R/BLOD_airpol_data/mix_data_lod_10.csv';
+filename = '/Users/lizzy/Principle.Component.Pursuit/Below_LOD/R/BLOD_airpol_data/mix_data_lod_50.csv';
 delimiter = ',';
 startRow = 2;
 formatSpec = '%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%[^\n\r]';
