@@ -1,0 +1,577 @@
+---
+title: "Original PCP, increasing <LOD, EDC example"
+author: "Lizzy Gibson"
+date: "10/9/2019"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+    code_folding: 'hide'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+options(scipen = 999)
+library(haven)
+library(tidyverse)
+library(janitor)
+library(reshape2)
+library(broom)
+library(tableone)
+library(knitr)
+library(ggcorrplot)
+library(ggfortify)  
+library(gridExtra)
+library(factoextra)
+library(Matrix)
+library(rlist)
+library(ggrepel)
+library(broom)
+library(RColorBrewer)
+library(gplots)
+library(grid)
+```
+
+## Read Data
+
+```{r read}
+library(MNdata)
+
+edc <- mn_edc %>% select(1:18) %>% 
+                    rename("TCS" = 17,
+                                "BPA" = 18,
+                                "BP_3" = 14,
+                                "DCP_24" = 11,
+                                "DCP_25" = 12,
+                                "B_PB" = 13,
+                                "M_PB" = 15,
+                                "P_PB" = 16,
+                                "MECPP" = 2,
+                                "MEHHP" = 3,
+                                "MEOHP" = 4,
+                                "MCPP" = 5,
+                                "MIBP" = 6,
+                                "MBP" = 7,
+                                "MBZP" = 8,
+                                "MEP" = 9,
+                                "MEHP" = 10) %>% 
+  drop_na()
+
+mixture_data <- edc %>%
+  mutate_if(is.numeric, scale, center = FALSE, scale = TRUE) %>% 
+  select(-sid) %>% 
+  drop_na()
+```
+
+## Steps
+
+1. Run ORIGINAL PCP on original air pollution data.
+2. Artificially assign increasing LOD's (10%, 20%, 30%, 40%, and 50% <LOD) to separate test datasets.
+3. Run ORIGINAL PCP version on all 5 <LOD datasets, save L and S matrices from each.
+4. Evaluate relative error -- compare results from <LOD datasets with original.
+
+## Create \<LOD Datasets
+
+*Push values \<LOD to LOD/sqrt(2)*
+
+```{r}
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .10), (quantile(., probs = .10)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .20), (quantile(., probs = .20)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .30), (quantile(., probs = .30)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .40), (quantile(., probs = .40)/sqrt(2)), .)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50 <- mixture_data %>% 
+  mutate_all(~ifelse(. <= quantile(., probs = .50), (quantile(., probs = .50)/sqrt(2)), .)) %>% as.matrix()
+```
+
+### Original PCP
+
+```{r}
+soft_thresholding <- function(v, lambda) {
+  myzero <- matrix(data = 0, ncol = ncol(v), nrow = nrow(v))
+  w <- sign(v) * pmax(abs(v) - lambda, myzero)
+  w
+} 
+
+soft_thresholding_diag <- function(v, lambda) {
+  myzero <- vector("numeric", length = length(v))
+  w <- sign(v) * pmax(abs(v) - lambda, myzero)
+  w
+} 
+
+singular_value_threshold <- function(M, lambda) {
+  
+  USV <- svd(M)
+  U <- USV$u
+  S <- USV$d
+  V <- USV$v
+    
+  N <- U %*% diag(soft_thresholding_diag(S, lambda)) %*% t(V)
+  
+  v  <- sum(soft_thresholding_diag(S, lambda))
+  
+  svt <- list(N = N, v = v) 
+  svt
+}
+
+original_pcp <- function(D, lambda, mu) {
+  
+  m <- nrow(D)
+  n <- ncol(D)
+  
+  S <- matrix(0, nrow = m, ncol = n)
+  L <- matrix(0, nrow = m, ncol = n)
+  
+  iter <- 0
+  MAX_ITER <- 20
+  done <- FALSE
+  
+  while (!done) {
+    
+    iter <- iter + 1
+    
+    svt <- singular_value_threshold((D - S), 1/mu)
+    L <- svt[[1]] #svt$N
+    v <- svt[[2]]
+    
+    S <- soft_thresholding((D - L), lambda/mu)
+    
+    obj <- v + lambda * sum(abs(S)) + (mu/2) * norm((D - L - S), type = "F")^2
+    
+    print(str_c(iter, " Obj: ", obj))
+    
+    if (iter >= MAX_ITER) {done <- TRUE}
+    
+  }
+  list(L = L, S = S, Lambda = lambda, Mu = mu, obj_value = obj)
+}
+```
+
+## Run PCP
+
+Run ORIGINAL PCP on separate datasets.
+
+```{r}
+m <- nrow(mixture_data)
+
+results_0  <- original_pcp(as.matrix(mixture_data), 1/sqrt(m), 0.3)
+results_10 <- original_pcp(mix_data_lod_10, 1/sqrt(m), 0.3)
+results_20 <- original_pcp(mix_data_lod_20, 1/sqrt(m), 0.3)
+results_30 <- original_pcp(mix_data_lod_30, 1/sqrt(m), 0.3)
+results_40 <- original_pcp(mix_data_lod_40, 1/sqrt(m), 0.3)
+results_50 <- original_pcp(mix_data_lod_50, 1/sqrt(m), 0.3)
+
+L_lod0 <- results_0[[1]]
+S_lod0 <- results_0[[2]]
+L_lod10 <- results_10[[1]]
+S_lod10 <- results_10[[2]]
+L_lod20 <- results_20[[1]]
+S_lod20 <- results_20[[2]]
+L_lod30 <- results_30[[1]]
+S_lod30 <- results_30[[2]]
+L_lod40 <- results_40[[1]]
+S_lod40 <- results_40[[2]]
+L_lod50 <- results_50[[1]]
+S_lod50 <- results_50[[2]]
+```
+
+## Compare Results
+
+### X - L - S
+
+```{r}
+X <- as.matrix(mixture_data)
+
+F_norm <- as_tibble(cbind(lod0 = norm((X - L_lod0 - S_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - L_lod10 - S_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - L_lod20 - S_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - L_lod30 - S_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - L_lod40 - S_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - L_lod50 - S_lod50), type = "F")/norm((X), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Both")
+
+F_norm_s <- as_tibble(cbind(lod0 = norm((X - S_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - S_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - S_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - S_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - S_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - S_lod50), type = "F")/norm((X), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Sparse")
+
+F_norm_l <- as_tibble(cbind(lod0 = norm((X - L_lod0), type = "F")/norm((X), type = "F"),
+      lod10 = norm((X - L_lod10), type = "F")/norm((X), type = "F"),
+      lod20 = norm((X - L_lod20), type = "F")/norm((X), type = "F"),
+      lod30 = norm((X - L_lod30), type = "F")/norm((X), type = "F"),
+      lod40 = norm((X - L_lod40), type = "F")/norm((X), type = "F"),
+      lod50 = norm((X - L_lod50), type = "F")/norm((X), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Low-Rank")
+
+#pdf("edc_original_lod_sqrt2_Fnorm.pdf")
+F_norm %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X-L-S) / norm(X))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+
+rbind(F_norm, F_norm_l, F_norm_s) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error\n(norm(X - .) / norm(X))")
+```
+
+### Individual Solution Matrices
+
+```{r}
+L_diff <- as_tibble(cbind(lod0 = norm((L_lod0 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod10 = norm((L_lod10 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod20 = norm((L_lod20 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod30 = norm((L_lod30 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod40 = norm((L_lod40 - L_lod0), type = "F")/norm((L_lod0), type = "F"),
+      lod50 = norm((L_lod50 - L_lod0), type = "F")/norm((L_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Low-Rank")
+
+S_diff <- as_tibble(cbind(lod0 = norm((S_lod0 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod10 = norm((S_lod10 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod20 = norm((S_lod20 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod30 = norm((S_lod30 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod40 = norm((S_lod40 - S_lod0), type = "F")/norm((S_lod0), type = "F"),
+      lod50 = norm((S_lod50 - S_lod0), type = "F")/norm((S_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Matrix = "Sparse")
+
+#pdf("edc_original_lod_sqrt2_LandS.pdf")
+rbind(L_diff, S_diff) %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Matrix)) + geom_path(aes(group = Matrix, color = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "Relative Error in Solution Matrices\n(norm(difference) / norm(lod0))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD low rank vs. \<LOD
+
+```{r}
+# Extract right singular vectors from each low rank solution matrix
+V_lod0  <- svd(L_lod0)$v[,1:5]
+V_lod10 <- svd(L_lod10)$v[,1:5]
+V_lod20 <- svd(L_lod20)$v[,1:5]
+V_lod30 <- svd(L_lod30)$v[,1:5]
+V_lod40 <- svd(L_lod40)$v[,1:5]
+V_lod50 <- svd(L_lod50)$v[,1:5]
+
+V_diff <- as_tibble(cbind(lod0 =norm((V_lod0 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod10 =norm((V_lod10 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod20 =norm((V_lod20 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod30 =norm((V_lod30 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod40 =norm((V_lod40 - V_lod0), type = "F")/norm((V_lod0), type = "F"),
+      lod50 =norm((V_lod50 - V_lod0), type = "F")/norm((V_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_singular_vectors.pdf")
+V_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+V_orig <- svd(X)$v[,1:5]
+
+V_diff2 <- as_tibble(cbind(lod0 =norm((V_lod0 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod10 =norm((V_lod10 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod20 =norm((V_lod20 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod30 =norm((V_lod30 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod40 =norm((V_lod40 - V_orig), type = "F")/norm((V_orig), type = "F"),
+      lod50 =norm((V_lod50 - V_orig), type = "F")/norm((V_orig), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_singular_vectors_vs_original.pdf")
+V_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### Values \<LOD vs \>LOD
+
+* Are values \<LOD estimated more poorly than those \>LOD? Are \<LOD driving the increased error?
+* Rescale by range/variance of values \<LOD.
+    * Wider range -> more error
+
+```{r}
+# This one is all zeros bc nothing is <LOD to begin with
+tf_lod_0 <- mixture_data %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, FALSE))
+# T/F dataset, T = <LOD
+l_blod_0 <- as.matrix(tf_lod_0*L_lod0)
+s_blod_0 <- as.matrix(tf_lod_0*S_lod0)
+# keep <LOD predictions, >LOD predictions are zero
+# Solution matrices with >LOD values as zero
+true_0 <- as.matrix(mixture_data*tf_lod_0)
+# keep zeros as values, push >LOD values to zero
+# Original matrix with only zeros, all >LOD set to zero
+
+tf_lod_10 <- mix_data_lod_10 %>% 
+  as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+
+# T/F dataset, T = <LOD
+l_blod_10 <- as.matrix(tf_lod_10*L_lod10)
+s_blod_10 <- as.matrix(tf_lod_10*S_lod10)
+# keep <LOD predictions, >LOD predictions are zero
+# Solution matrice with >LOD values as zero
+true_10 <- as.matrix(mixture_data*tf_lod_10)
+# keep 10% lowest true values, push >LOD values to zero
+# Original matrix with only bottom 10percent, all >LOD set to zero
+
+tf_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+l_blod_20 <- as.matrix(tf_lod_20*L_lod20)
+s_blod_20 <- as.matrix(tf_lod_20*S_lod20)
+true_20 <- as.matrix(mixture_data*tf_lod_20)
+
+tf_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+l_blod_30 <- as.matrix(tf_lod_30*L_lod30)
+s_blod_30 <- as.matrix(tf_lod_30*S_lod30)
+true_30 <- as.matrix(mixture_data*tf_lod_30)
+
+tf_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+l_blod_40 <- as.matrix(tf_lod_40*L_lod40)
+s_blod_40 <- as.matrix(tf_lod_40*S_lod40)
+true_40 <- as.matrix(mixture_data*tf_lod_40)
+
+tf_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), TRUE, FALSE))
+l_blod_50 <- as.matrix(tf_lod_50*L_lod50)
+s_blod_50 <- as.matrix(tf_lod_50*S_lod50)
+true_50 <- as.matrix(mixture_data*tf_lod_50) 
+
+#Subtract true values and divide by norm of true
+less_diff <- as_tibble(cbind(lod0  = norm((true_0  - l_blod_0  - s_blod_0),  type = "F"), #/norm((true_0), type = "F"),
+                             lod10 = norm((true_10 - l_blod_10 - s_blod_10), type = "F")/norm((true_10), type = "F"),
+                             lod20 = norm((true_20 - l_blod_20 - s_blod_20), type = "F")/norm((true_20), type = "F"),
+                             lod30 = norm((true_30 - l_blod_30 - s_blod_30), type = "F")/norm((true_30), type = "F"),
+                             lod40 = norm((true_40 - l_blod_40 - s_blod_40), type = "F")/norm((true_40), type = "F"),
+                             lod50 = norm((true_50 - l_blod_50 - s_blod_50), type = "F")/norm((true_40), type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Values = "< LOD")
+```
+
+```{r}
+l_above_blod_0 <- L_lod0
+s_above_blod_0 <- S_lod0
+above_true_0 <- as.matrix(mixture_data)
+
+above_lod_10 <- mix_data_lod_10 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
+# T/F dataset, T = >LOD
+l_above_blod_10 <- as.matrix(above_lod_10*L_lod10)
+s_above_blod_10 <- as.matrix(above_lod_10*S_lod10)
+# keep >LOD predictions, BLOD predictions are zero
+above_true_10 <- as.matrix(mixture_data*above_lod_10)
+# keep 10% lowest true values, push >LOD values to zero
+
+above_lod_20 <- mix_data_lod_20 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
+l_above_blod_20 <- as.matrix(above_lod_20*L_lod20)
+s_above_blod_20 <- as.matrix(above_lod_20*S_lod20)
+above_true_20 <- as.matrix(mixture_data*above_lod_20)
+
+above_lod_30 <- mix_data_lod_30 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
+l_above_blod_30 <- as.matrix(above_lod_30*L_lod30)
+s_above_blod_30 <- as.matrix(above_lod_30*S_lod30)
+above_true_30 <- as.matrix(mixture_data*above_lod_30)
+
+above_lod_40 <- mix_data_lod_40 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
+l_above_blod_40 <- as.matrix(above_lod_40*L_lod40)
+s_above_blod_40 <- as.matrix(above_lod_40*S_lod40)
+above_true_40 <- as.matrix(mixture_data*above_lod_40)
+
+above_lod_50 <- mix_data_lod_50 %>% as_tibble(.) %>% 
+  mutate_all(~ifelse(. == min(.), FALSE, TRUE))
+l_above_blod_50 <- as.matrix(above_lod_50*L_lod50)
+s_above_blod_50 <- as.matrix(above_lod_50*S_lod50)
+above_true_50 <- as.matrix(mixture_data*above_lod_50) 
+```
+
+```{r}
+#divide by true values
+above_diff <- as_tibble(cbind(
+  lod0  = norm((above_true_0  - l_above_blod_0  - s_above_blod_0),  type = "F")/norm(above_true_0,  type = "F"),
+  lod10 = norm((above_true_10 - l_above_blod_10 - s_above_blod_10), type = "F")/norm(above_true_10, type = "F"),
+  lod20 = norm((above_true_20 - l_above_blod_20 - s_above_blod_20), type = "F")/norm(above_true_20, type = "F"),
+  lod30 = norm((above_true_30 - l_above_blod_30 - s_above_blod_30), type = "F")/norm(above_true_30, type = "F"),
+  lod40 = norm((above_true_40 - l_above_blod_40 - s_above_blod_40), type = "F")/norm(above_true_40, type = "F"),
+  lod50 = norm((above_true_50 - l_above_blod_50 - s_above_blod_50), type = "F")/norm(above_true_50, type = "F"))) %>% 
+  gather(percent_blod, norm) %>% 
+  mutate(Values = "> LOD")
+
+#pdf("edc_original_lod_sqrt2_above_below.pdf")
+rbind(above_diff, less_diff) %>% 
+  ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point(aes(color = Values)) + geom_path(aes(group = Values, color = Values)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Values < LOD & > LOD\n(norm(X-L-S) / norm(X))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD compare scores - low rank vs. no \<LOD
+
+```{r}
+# Extract left singular vectors from each low rank solution matrix
+u_lod0  <-  svd(L_lod0)$u
+u_lod10 <- svd(L_lod10)$u
+u_lod20 <- svd(L_lod20)$u
+u_lod30 <- svd(L_lod30)$u
+u_lod40 <- svd(L_lod40)$u
+u_lod50 <- svd(L_lod50)$u
+
+u_diff <- as_tibble(cbind(lod0 =norm((u_lod0 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod10 =norm((u_lod10 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod20 =norm((u_lod20 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod30 =norm((u_lod30 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod40 =norm((u_lod40 - u_lod0), type = "F")/norm((u_lod0), type = "F"),
+      lod50 =norm((u_lod50 - u_lod0), type = "F")/norm((u_lod0), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_score_vectors.pdf")
+u_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD compare scores - low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+u_orig <- svd(X)$u
+
+u_diff2 <- as_tibble(cbind(lod0 =norm((u_lod0 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod10 =norm((u_lod10 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod20 =norm((u_lod20 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod30 =norm((u_lod30 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod40 =norm((u_lod40 - u_orig), type = "F")/norm((u_orig), type = "F"),
+      lod50 =norm((u_lod50 - u_orig), type = "F")/norm((u_orig), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_score_vectors_vs_original.pdf")
+u_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Vectors\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD compare singular values - low rank vs. no \<LOD
+
+```{r}
+# Extract left singular vectors from each low rank solution matrix
+d_lod0  <-  svd(L_lod0)$d
+d_lod10 <- svd(L_lod10)$d
+d_lod20 <- svd(L_lod20)$d
+d_lod30 <- svd(L_lod30)$d
+d_lod40 <- svd(L_lod40)$d
+d_lod50 <- svd(L_lod50)$d
+norm_vec <- function(x) sqrt(sum(x^2))
+
+d_diff <- as_tibble(cbind(lod0 = norm_vec(d_lod0 - d_lod0)/norm_vec(d_lod0),
+      lod10 = norm_vec(d_lod10 - d_lod0)/norm_vec(d_lod0),
+      lod20 = norm_vec(d_lod20 - d_lod0)/norm_vec(d_lod0),
+      lod30 = norm_vec(d_lod30 - d_lod0)/norm_vec(d_lod0),
+      lod40 = norm_vec(d_lod40 - d_lod0)/norm_vec(d_lod0),
+      lod50 = norm_vec(d_lod50 - d_lod0)/norm_vec(d_lod0))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_penalty_sv.pdf")
+d_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_lod0) / norm(SV_lod0))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+### SVD compare singular values - low rank vs. original
+
+```{r}
+# Extract right singular vectors from original matrix
+d_orig <- svd(X)$d
+
+d_diff2 <- as_tibble(cbind(lod0 = norm_vec(d_lod0 - d_orig)/norm_vec(d_orig),
+      lod10 =norm_vec(d_lod10 - d_orig)/norm_vec(d_orig),
+      lod20 =norm_vec(d_lod20 - d_orig)/norm_vec(d_orig),
+      lod30 =norm_vec(d_lod30 - d_orig)/norm_vec(d_orig),
+      lod40 =norm_vec(d_lod40 - d_orig)/norm_vec(d_orig),
+      lod50 =norm_vec(d_lod50 - d_orig)/norm_vec(d_orig))) %>% 
+  gather(percent_blod, norm)
+
+#pdf("edc_original_lod_sqrt2_penalty_sv_vs_original.pdf")
+d_diff2 %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank Solution Singular Values\n(norm(SV - SV_orig) / norm(SV_orig))",
+       title = "Original PCP w/ LOD/sqrt(2)")
+#dev.off()
+```
+
+## Sanity Check
+
+SVD results should produce original matrix solution.
+
+```{r}
+dim(svd(X)$u)
+length(svd(X)$d)
+dim(svd(X)$v)
+
+# Does svd give v or v' ?
+# Should = zero
+norm((X - (svd(X)$u %*% diag(svd(X)$d) %*% t(svd(X)$v))), type = "F")
+norm((X - (svd(X)$u %*% diag(svd(X)$d) %*% svd(X)$v)), type = "F")
+
+svd_diff <- as_tibble(cbind(
+      lod0  = norm((L_lod0 - (u_lod0  %*% diag(d_lod0)  %*% t(svd(L_lod0)$v))),  type = "F")/norm((L_lod0),  type = "F"),
+      lod10 =norm((L_lod10 - (u_lod10 %*% diag(d_lod10) %*% t(svd(L_lod10)$v))), type = "F")/norm((L_lod10), type = "F"),
+      lod20 =norm((L_lod20 - (u_lod20 %*% diag(d_lod20) %*% t(svd(L_lod20)$v))), type = "F")/norm((L_lod20), type = "F"),
+      lod30 =norm((L_lod30 - (u_lod30 %*% diag(d_lod30) %*% t(svd(L_lod30)$v))), type = "F")/norm((L_lod30), type = "F"),
+      lod40 =norm((L_lod40 - (u_lod40 %*% diag(d_lod40) %*% t(svd(L_lod40)$v))), type = "F")/norm((L_lod40), type = "F"),
+      lod50 =norm((L_lod50 - (u_lod50 %*% diag(d_lod50) %*% t(svd(L_lod50)$v))), type = "F")/norm((L_lod50), type = "F"))) %>% 
+  gather(percent_blod, norm)
+
+# Basically zero
+svd_diff %>% ggplot(aes(x = percent_blod, y = norm)) + 
+  geom_point() + geom_path(aes(group = 1)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "Relative Error in Low-Rank SVD Solution",
+       title = "Original PCP w/ 0")
+```
