@@ -28,7 +28,8 @@ library(reshape2)
 library(GGally)
 library(grDevices)
 library(gplots)
-
+library(pcpr)
+library(here)
 options(scipen = 999)
 ```
 
@@ -37,12 +38,62 @@ options(scipen = 999)
 CDC imputes values \<LOD as LOD/sqrt(2). Here, if comment code = "below detectable limit", set value to -1.
 
 ```{r}
-nhanes <- read_csv('./Data/nhanes_18.csv')
-nhanes
+nhanes <- read_sas(here("./Data/studypop_lod.sas7bdat")) %>% 
+  clean_names() %>% 
+  mutate(lbx074la = ifelse(lbd074lc == 1, -1, lbx074la),
+         lbx099la = ifelse(lbd099lc == 1, -1, lbx099la),
+         lbx105la = ifelse(lbd105lc == 1, -1, lbx105la),
+         lbx118la = ifelse(lbd118lc == 1, -1, lbx118la),
+         lbx138la = ifelse(lbd138lc == 1, -1, lbx138la),
+         lbx153la = ifelse(lbd153lc == 1, -1, lbx153la),
+         lbx156la = ifelse(lbd156lc == 1, -1, lbx156la),
+         lbx157la = ifelse(lbd157lc == 1, -1, lbx157la),
+         lbx167la = ifelse(lbd167lc == 1, -1, lbx167la),
+         lbx170la = ifelse(lbd170lc == 1, -1, lbx170la),
+         lbx180la = ifelse(lbd180lc == 1, -1, lbx180la),
+         lbx187la = ifelse(lbd187lc == 1, -1, lbx187la),
+         lbxd01la = ifelse(lbdd01lc == 1, -1, lbxd01la),
+         lbxd03la = ifelse(lbdd03lc == 1, -1, lbxd03la),
+         lbxd04la = ifelse(lbdd04lc == 1, -1, lbxd04la),
+         lbxd05la = ifelse(lbdd05lc == 1, -1, lbxd05la),
+         lbxd07la = ifelse(lbdd07lc == 1, -1, lbxd07la),
+         lbxf01la = ifelse(lbdf01lc == 1, -1, lbxf01la),
+         lbxf02la = ifelse(lbdf02lc == 1, -1, lbxf02la),
+         lbxf03la = ifelse(lbdf03lc == 1, -1, lbxf03la),
+         lbxf04la = ifelse(lbdf04lc == 1, -1, lbxf04la),
+         lbxf05la = ifelse(lbdf05lc == 1, -1, lbxf05la),
+         lbxf06la = ifelse(lbdf06lc == 1, -1, lbxf06la),
+         lbxf07la = ifelse(lbdf07lc == 1, -1, lbxf07la),
+         lbxf08la = ifelse(lbdf08lc == 1, -1, lbxf08la),
+         lbxpcbla = ifelse(lbdpcblc == 1, -1, lbxpcbla),
+         lbxtcdla = ifelse(lbdtcdlc == 1, -1, lbxtcdla),
+         lbxhxcla = ifelse(lbdhxclc == 1, -1, lbxhxcla),
+         lbx189la = ifelse(lbd189lc == 1, -1, lbx189la),
+         lbx194la = ifelse(lbd194lc == 1, -1, lbx194la),
+         lbx196la = ifelse(lbd196lc == 1, -1, lbx196la),
+         lbx199la = ifelse(lbd199lc == 1, -1, lbx199la),
+         lbxd02la = ifelse(lbdd02lc == 1, -1, lbxd02la),
+         lbxf09la = ifelse(lbdf09lc == 1, -1, lbxf09la))
 ```
 
 ```{r}
-ggcorr(nhanes, method = c("everything", "spearman"), limits = FALSE,
+# this takes proportion detected (1 - proportion nondetect)
+prop <- function (x) {1 - (sum(x, na.rm = TRUE)/length(x))}
+
+names <- nhanes %>% select(names(.)[grep("lc", names(.))]) %>% 
+  summarize_all(prop) %>% select_if(~. > 0.6) %>% names() %>% str_sub(., 4, 6) %>% str_c("lbx", ., "la") %>% as.vector()
+
+pops <- nhanes %>% 
+  select(!!names) %>% na.omit(.)
+
+names(pops) <- str_sub(names(pops), 1, 6)
+names(pops) <- str_replace(names(pops), "lbxd", "D")
+names(pops) <- str_replace(names(pops), "lbxf", "F")
+names(pops) <- str_replace(names(pops), "lbxtcd", "TCDD")
+names(pops) <- str_replace(names(pops), "lbx", "PCB")
+pops <- pops %>% rename(PCB169 = PCBhxc, PCB126 = PCBpcb)
+
+ggcorr(pops, method = c("everything", "spearman"), limits = FALSE,
        label = TRUE, label_size = 3, label_alpha = TRUE,
        hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Persistent organic pollutants \n in NHANES 2001-2002")
 ```
@@ -52,7 +103,7 @@ Here, make matrix of LODs to use in LOD PCP. Comment code = 1 means "below detec
 ```{r}
 # Matrix of 0/1
 lod_names <- nhanes %>% select(names(.)[grep("lc", names(.))]) %>% 
-  summarize_all(prop) %>% select_if(~. > 0.2) %>% names() %>% as.vector()
+  summarize_all(prop) %>% select_if(~. > 0.6) %>% names() %>% as.vector()
 
 lods <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
   clean_names() %>% 
@@ -74,9 +125,7 @@ lod_matrix <- as.matrix(lod_matrix)
 #summary(lod_matrix)
 ```
 
-**Need to scale LODs, too!**
-
-Need to scale PCBs because they have super different ranges. Need to get rid of values less than LOD to scale and then add them back.
+Need to scale POPs because they have super different ranges. Need to get rid of values less than LOD to scale and then add them back.
 
 ```{r}
 #summary(pops)
@@ -84,16 +133,9 @@ Need to scale PCBs because they have super different ranges. Need to get rid of 
 # make <LOD NA so they dont affect the scaling
 pops[pops < 0] <- NA
 
-# Get stand dev of values > LDO
-pop_sd <- as.vector(apply(as.matrix(pops), 2, sd, na.rm = TRUE))
-
-# head(pops[,5])
-# head(pop_sd[5])
-# head(pops[,5]/pop_sd[5])
-
 # Scale bc way different ranges
 # Scale by sd vector of length equal to the number of columns of x.
-pops <- scale(pops, center = FALSE, scale = pop_sd)
+pops <- scale(pops, center = FALSE, scale = apply(pops, 2, sd, na.rm = TRUE))
 
 # make <LOD negative again
 pops[is.na(pops)] <- -1
@@ -105,6 +147,9 @@ mixture_data <- pops
 Also want to scale the LODS!
 
 ```{r}
+# Get stand dev of values > LDO
+pop_sd <- as.vector(apply(as.matrix(pops), 2, sd, na.rm = TRUE))
+
 # Scale lod matrix by stand dev of measurements
 lod_matrix <- scale(lod_matrix, center = FALSE, scale = pop_sd)
 
@@ -113,155 +158,7 @@ lod_matrix <- scale(lod_matrix, center = FALSE, scale = pop_sd)
 
 ## Function
 
-```{r, jingkai}
-prox_l1 <- function(Y, c) {
-  
-  myzero <- matrix(data = 0, ncol = ncol(Y), nrow = nrow(Y))
-  X <- sign(Y) * pmax(abs(Y) - c, myzero, na.rm = TRUE)
-  X
-} 
-
-############################################################
-
-prox_nuclear <- function(Y, c) {
-  
-  USV <- svd(Y)
-  U <- USV$u
-  S <- USV$d
-  V <- USV$v
-  
-  myzero <- vector("numeric", length = length(S))
-  S_new <- sign(S) * pmax(abs(S) - c, myzero, na.rm = TRUE)
-  X <- U %*% diag(S_new) %*% t(V)
-  nuclearX  <- sum(abs(S_new))
-
-    list(X = X, nuclearX = nuclearX)
-}
-
-############################################################
-
-is_same <- function(SAME_THRESH, ...) {
-  flag <- TRUE
-  varargin <- list(...)
-  if (length(varargin) == 2) {
-    if (max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) {
-      flag <- FALSE
-    }
-  }
-  else if (length(varargin) == 3) {
-    if ((max(abs(varargin[[1]] - varargin[[2]])) > SAME_THRESH) |
-        (max(abs(varargin[[1]] - varargin[[3]])) > SAME_THRESH) |
-        (max(abs(varargin[[2]] - varargin[[3]])) > SAME_THRESH)) {
-      flag <- FALSE
-    }
-  }
-  flag
-}
-
-loss_lod <- function(X, D, LOD) {
-
-    X_lod <- ((X - D)     * (D >= 0)) +
-             ((X - LOD)   * (D < 0 & (X > LOD))) +
-              (X          * (D < 0 & X < 0))
-  
-  l <- sum(X_lod^2) / 2
-  l
-}
-
-############################################################
-
-pcp_lod <- function(D, lambda, mu, LOD) {
-  
-  m <- nrow(D)
-  n <- ncol(D)
-  rho <- 1 # Augmented Lagrangian coefficient (rate)
-  
-  L1 <- matrix(0, m, n)
-  L2 <- matrix(0, m, n)
-  L3 <- matrix(0, m, n)
-  
-  S1 <- matrix(0, m, n)
-  S2 <- matrix(0, m, n)
-  
-  Z1 <- matrix(0, m, n)
-  Z2 <- matrix(0, m, n)
-  Z3 <- matrix(0, m, n)
-  
-  # Max iteration
-  MAX_ITER <- 5000
-  
-  # Convergence Thresholds
-  LOSS_THRESH <- 1e-5
-  SAME_THRESH <- 1e-4
-  
-  if (is.vector(LOD)) {
-    empty = matrix(1, nrow = nrow(D), ncol = ncol(D))
-    LOD = t(t(empty) * LOD)
-  }
-  
-  loss <- vector("numeric", MAX_ITER)
-  
-  for (i in 1:MAX_ITER) {
-    
-    nuc <- prox_nuclear( ((L2 + L3 - (Z1 + Z2)/rho)/2), 1/2/rho)
-    L1 <- nuc[[1]]
-    nuclearL1 <- nuc[[2]] #nuclearX
-    
-    S1 <- prox_l1((S2 - Z3/rho), lambda/rho)
-    
-      L2_opt1 <- (mu*rho*D     + (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
-      L2_opt2 <- L1 + Z1/rho
-      L2_opt3 <- ((mu*rho*LOD + (((mu + rho)*Z1) - (mu*Z3) + ((mu + rho)*rho*L1) - (mu*rho*S1)))) / ((2*mu*rho) + (rho^2))
-      L2_opt4 <- (               (mu + rho)*Z1 - mu*Z3 + (mu + rho)*rho*L1 - mu*rho*S1) / (2*mu*rho + rho^2)
-
-      L2_new <- (L2_opt1 * (D >= 0)) +
-        (L2_opt2 * ((D < 0) & (((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
-        (L2_opt3 * ((D < 0) & (((L2 + S2) > LOD)))) +
-        (L2_opt4 * ((D < 0) & (((L2 + S2) < 0))))
-
-      S2_opt1 <- (mu*rho*D     + (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
-      S2_opt2 <- S1 + (Z3/rho)
-      S2_opt3 <- (((mu*rho*LOD) + (((mu + rho)*Z3) - (mu*Z1) + ((mu + rho)*rho*S1) - (mu*rho*L1)))) / ((2*mu*rho) + (rho^2))
-      S2_opt4 <- (               (mu + rho)*Z3 - (mu*Z1) + (mu + rho)*rho*S1 - mu*rho*L1) / (2*mu*rho + rho^2)
-
-      S2 <- (S2_opt1 * (D >= 0)) +
-        (S2_opt2 * (((D < 0) & ((L2 + S2) >= 0) & ((L2 + S2) <= LOD)))) +
-        (S2_opt3 * (((D < 0) & ((L2 + S2) > LOD)))) +
-        (S2_opt4 * (((D < 0) & ((L2 + S2) < 0))))
-   
-    L2 <- L2_new
-    
-    L3 <- pmax(L1 + Z2/rho, 0, na.rm = TRUE)
-    # % Non-Negativity constraint!
-    
-    Z1 <- Z1 + rho*(L1 - L2)
-    Z2 <- Z2 + rho*(L1 - L3)
-    Z3 <- Z3 + rho*(S1 - S2)
-    # % Z accumulate differnces between L and L and between S and S
-    
-    loss[i] <- nuclearL1 + 
-      (lambda*sum(abs(S1))) +
-      (mu*loss_lod((L2 + S2), D, LOD)) +
-      sum(Z1*(L1 - L2)) +
-      sum(Z2*(L1 - L3)) +
-      sum(Z3*(S1 - S2)) +
-      (rho/2 * (sum((L1-L2)^2) + sum((L1 - L3)^2) + sum((S1 - S2)^2)))
-    # % The code block above takes LOD into account.
-    
-    print(str_c(i, " Obj: ", loss[i]))
-        
-    if ((i != 1) && 
-        (abs(loss[i-1] - loss[i]) < LOSS_THRESH) && 
-        is_same(SAME_THRESH, L1, L2, L3) &&
-        is_same(SAME_THRESH, S1, S2)) {
-      break} # % Convergence criteria!
-  }
-  
-  L <- L3 # (L1 + L2 + L3) / 3
-  S <- S1 #(S1 + S2) / 2
-  list(L = L, S = S, loss = loss)
-}
-```
+**Input function here if package pcpr doens't work.**
 
 ## Run PCP
 
@@ -269,126 +166,17 @@ pcp_lod <- function(D, lambda, mu, LOD) {
 m <- nrow(mixture_data)
 p <- ncol(mixture_data)
 
-lambda_mix <- 1/sqrt(m)
+lambda_mix <- 1/sqrt(m) # these are default parameter values
 mu_mix <- sqrt(p/(2*log(m*p)))
 
-results_0  <- pcp_lod(D = mixture_data, lambda = lambda_mix, mu = mu_mix, LOD = lod_matrix)
+pcp_out  <- pcp_lod(D = mixture_data, lambda = lambda_mix, mu = mu_mix, LOD = lod_matrix)
 
-L_lod0 <- results_0[[1]]
-S_lod0 <- results_0[[2]]
+# low rank matrix
+L_lod0 <- pcp_out[[1]]
+
+#sparse matrix
+S_lod0 <- pcp_out[[2]]
 ```
-
-## Vary $\mu$
-
-Create function to output new low rank matrix, sparse matrix, singular values and rank of new low rank matrix, and $\lambda$ and $\mu$ parameters used
-
-```{r mu_lam}
-mu_value <- c(seq(0.01, mu_mix, by = 0.5), seq(mu_mix, 10, by = 0.5))
-
-make_L_mu <- function(mu){ 
-  mixture_mu <- pcp_lod(as.matrix(mixture_data), 1/sqrt(m), mu, as.matrix(lod_matrix))
-  L <- mixture_mu$L
-  S <- mixture_mu$S
-  sv_diag <- svd(L)$d # singular values on new low rank matrix
-  sv_count <- sum(sv_diag > 0.001) # rank of new low rank matrix
-  list(L = L, SV = sv_diag, S = S, Count = sv_count, Mu = mu, Lambda = 1/sqrt(m))
-}
-```
-
-Loop over $\mu$ pairs.
-
-```{r looop, results = FALSE, cache = TRUE}
-range_out <- map(mu_value, make_L_mu)
-```
-
-### Changing Low Rank Matrix
-
-Examine how rank of low rank matrix changes with varying $\lambda$ and $\mu$.
-
-```{r rank_ml}
-singular_value_count <- range_out %>% list.map(.[4]) %>% unlist() %>% 
-  cbind(sv_count = ., mu = mu_value) %>% as_tibble() 
-```
-
-```{r}
-singular_value_count %>% 
-  ggplot(aes(x = mu, y = sv_count)) +
-  geom_point() + geom_line() +
-  theme_bw() +
-  labs(y = "Rank",
-       x = expression(mu),
-       title = expression(paste("Changing rank of low rank matrix with varying ", mu)))
-```
-
-### Changing Sparse Matrix
-
-Examine how sparsity of sparse matrix changes with varying $\lambda$ and $\mu$.
-
-```{r mu_sparse2}
-sparse <- range_out %>% list.map(.[3])
-# Extract all sparse matrices
-
-loop.vector2 <- 1:length(mu_value)
-
-cells <- m*p
-prop_not_zero <- vector(length = length(mu_value))
-
-for (i in loop.vector2) { # Loop over loop.vector2
-
- not_zeros <- sum(sparse[[i]]$S != 0)
-  # Create proportion of non-zero values across all cells in sparse matrix
-  prop_not_zero[i] <- not_zeros/cells
-}
-
-sparseness <- cbind(prop_not_zero, singular_value_count) %>% as_tibble()
-```
-
-```{r}
-sparseness %>%
-  ggplot(aes(x = mu, y = prop_not_zero)) +
-  geom_point() + geom_line() +
-  theme_bw() +
-  labs(y = "Proportion Non-Zero",
-       x = expression(mu),
-       title = expression(paste("Changing sparsity of sparse matrix with varying ", mu)))
-```
-
-### Error
-
-Each PCP creates a low rank L matrix and a sparse matrix that sum to the original D matrix with some error. To choose the best value for $\mu$, we add the L and S matrices to form D', then subtract D - D' to get an error matrix for each $\mu$. We then take the RMSE of the low rank matrix and the F norm of each error matrix, divided by the norm of the original matrix, to get relative error.
-
-```{r cv_both}
-# low_rank and sparse are lists of L and S matrices for each 
-loop.vector2 <- 1:length(mu_value)
-rmse <- vector(length = length(mu_value))
-rel_error <- vector(length = length(mu_value))
-new_ml <- list()
-
-low_rank_ml <- range_out %>% list.map(.[1])
-sparse_ml <- range_out %>% list.map(.[3])
-
-for (i in loop.vector2) { # Loop over loop.vector
-  new_ml[[i]]  <- low_rank_ml[[i]]$L + sparse_ml[[i]]$S
-  rmse[i]      <- sqrt(mean((mixture_data - new_ml[[i]])^2))
-  rel_error[i] <- norm((mixture_data - new_ml[[i]]), type = "F")/norm(mixture_data, type = "F")
-  }
-
-cv <- cbind(mu_value, rmse, rel_error) %>% as_tibble()
-```
-
-#### Plot Error
-
-```{r}
-cv %>% 
-  ggplot(aes(y = rmse, x = mu_value)) + 
-  geom_point() + geom_line() +
-  theme_bw() +
-  labs(y = "Root Mean Squared Error",
-       x = expression(mu),
-       title = expression(paste("Changing RMSE with varying ", mu)))
-```
-
-## Best $\mu$
 
 ### Sparse Matrix
 
@@ -397,7 +185,8 @@ plot_sparse <- S_lod0 %>% as_tibble() %>%
   mutate(id = 1:nrow(S_lod0)) %>% 
   select(id, everything()) %>% 
   gather(key = exposure, value = value, -id) %>%
-  mutate(binary = ifelse(value < 0.00001, 0, 1))
+  mutate(binary = ifelse(value < 0.00001, 0, 1)) # sparse event (0) vs non-sparse event (not zero)
+# this isn't exactly right bc sparse matrix can have negative values, this treats negative as sparse event, too
 
 sparse_matrix <- plot_sparse %>% 
   select(id, exposure, binary) %>% 
@@ -413,26 +202,27 @@ heatmap.2(sparse_matrix, key.xlab = "Sparsity",
                                margins =c(4,8), keysize = 1.25,
           col = c("white", "red"), density.info="none", trace="none", dendrogram = "column", key.title = "")
 
-plot_sparse %>% 
-ggplot(aes(x = exposure, y = id)) +
-  geom_tile(aes(fill = as.factor(binary))) + 
-  labs(x = "Exposure", y = "Participant", title = "Sparse matrix of rare events", legend = "Magnitude") + 
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom")
+# Similar plot in ggplot but without clustering of axes
+# plot_sparse %>% 
+# ggplot(aes(x = exposure, y = id)) +
+#   geom_tile(aes(fill = as.factor(binary))) + 
+#   labs(x = "Exposure", y = "Participant", title = "Sparse matrix of rare events", legend = "Magnitude") + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1),
+#         legend.position = "bottom")
 ```
 
 ### Patterns
 
 ```{r}
 rankMatrix(L_lod0)
-# rank 7
+# rank 6
 
 length(L_lod0[L_lod0 >= 0])/length(L_lod0)
-# all non-negative
+# all non-negative 
 
 length(S_lod0[S_lod0 > 0])/length(S_lod0)
-# 65% sparsity
+# 69% sparsity is not that sparse
 ```
 
 ```{r}
@@ -443,20 +233,24 @@ ggcorr(L_lod0, method = c("everything", "spearman"), limits = FALSE,
        hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Low Rank Matrix from LOD PCP")
 ```
 
+#### PCA of low rank matrix
+
 ```{r}
+# Default is scale = false but this is ok bc we scaled data to begin with
 pcp_pca <- prcomp(L_lod0)
 pcp_pca$sdev
 
 fviz_eig(pcp_pca, main = "PCA on Low Rank Matrix",
          xlab = "Principal components") 
 
+# plot rotations (loadings) of chemicals on patterns in low rank matrix
 pcp_pca$rotation %>% 
   as_tibble() %>% 
   mutate(Chemicals = colnames(mixture_data)) %>% 
   select(Chemicals, PC1:PC7) %>% 
   gather(key = Component, value = Loadings, -Chemicals) %>%
   mutate(Chemicals = fct_inorder(Chemicals)) %>% 
-  mutate(Group = ifelse(grepl("D|TCDD", Chemicals), "Dioxins", 
+  mutate(Group = ifelse(grepl("D|TCDD", Chemicals), "Dioxins", # this groups chemicals based on expert knowledge
                   ifelse(grepl("F", Chemicals), "Furans",
                     ifelse(grepl("126|169", Chemicals), "Non-Ortho PCBs",
                      ifelse(grepl("105|118|156|157|167|198", Chemicals), "Mono-Ortho PCBs", "Non-Dioxin-like PCBs"))))) %>%
@@ -468,46 +262,10 @@ pcp_pca$rotation %>%
         strip.background = element_blank())
 ```
 
-### Scores
+##### Scores
 
 ```{r}
 scores <- pcp_pca$x
-```
-
-### NMF
-
-```{r, nmf, cache = TRUE}
-any(L_lod0 < 0)
-any(is.na(L_lod0))
-
-# One participant has all zeros in low rank matrix
-L_nmf <- L_lod0[-220,]
-
-pcp_nmf <- nmf(L_nmf, rank = 7, nrun = 50)
-```
-
-```{r}
-nmf_loadings <- coef(pcp_nmf)
-mnf_scores <- basis(pcp_nmf)
-```
-
-```{r}
-nmf_loadings %>% 
-  t() %>% 
-  as_tibble() %>% 
-  mutate(Chemicals = colnames(mixture_data)) %>% 
-  gather(key = Factor, value = Loadings, -Chemicals) %>%
-  mutate(Chemicals = fct_inorder(Chemicals)) %>% 
-  mutate(Group = ifelse(grepl("D|TCDD", Chemicals), "Dioxins", 
-                  ifelse(grepl("F", Chemicals), "Furans",
-                    ifelse(grepl("126|169", Chemicals), "Non-Ortho PCBs",
-                     ifelse(grepl("105|118|156|157|167|198", Chemicals), "Mono-Ortho PCBs", "Non-Dioxin-like PCBs"))))) %>%
-  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
-  geom_segment(aes(yend=0, xend = Chemicals)) +
-  facet_wrap(.~Factor) + theme_bw(base_size = 15) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1),
-        legend.position = "bottom",
-        strip.background = element_blank())
 ```
 
 ## PCA
@@ -518,10 +276,11 @@ just_pca <- prcomp(mixture_data)
 
 ```{r}
 rankMatrix(mixture_data)
-# rank 7
+# rank 18
 
 rankMatrix(just_pca$rotation)
 rankMatrix(just_pca$x)
+# still rank 18
 
 just_pca$sdev
 ```
@@ -557,9 +316,8 @@ scores_pca <- just_pca$x
 ## PCP v PCA
 
 ```{r}
-PCP <- pcp_pca$sdev^2/sum(pcp_pca$sdev^2) *100
-PCA <- just_pca$sdev^2/sum(just_pca$sdev^2) *100
-round(cbind(Component = 1:27, PCP, PCA), 4) %>% stargazer::stargazer(., summary = NULL)
+PCP_PCA <- pcp_pca$sdev^2/sum(pcp_pca$sdev^2) *100
+just_PCA <- just_pca$sdev^2/sum(just_pca$sdev^2) *100
+round(cbind(Component = 1:18, PCP_PCA, just_PCA), 4) %>% kable()
 ```
-
 
