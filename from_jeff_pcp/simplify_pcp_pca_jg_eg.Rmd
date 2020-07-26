@@ -36,45 +36,32 @@ set.seed(10)
 ## Simulate
 
 ```{r, scores}
+# Simulate independent scores
 set.seed(1988)
-
-n = 100
-
-#scores <- matrix(exp(rnorm(n)), nrow = n, ncol = 1)
-scores <- matrix(runif(n), nrow = n, ncol = 1)
-
-#pattern <- t(c(1,1,1,1,1,1,0,0,0,0))
-patterns <- matrix(runif(n), nrow = 1, ncol = 10)
-
+scores <- exp(rnorm(100))
+# summary(scores)
+# sd(scores)
+# scores %>%
+#   as_tibble() %>% 
+#   ggplot(aes(x = value)) +
+#   geom_histogram() + 
+#   theme_minimal()
+# Simulate 1 pattern
+pattern <- t(c(1,1,1,1,1,1,0,0,0,0))
 # Add noise
-noise <- 
-  mvtnorm::rmvnorm(n, mean = rep(0, 10), sigma = diag(.1, 10, 10)) #%>% 
-  #exp()
-
+noise <- matrix(NA, nrow = 100, ncol = 10)
+seeds <- 1:10
+for (i in 1:length(seeds)) {
+  set.seed(seeds[i])
+  noise[,i] <- exp(rnorm(100, mean = 0, sd = 1))
+}
 # Multiply scores by pattern
 sim_all <- as_tibble((scores %*% pattern) + noise)
-sim_all[sim_all < 0] <- 0 
+#summary(sim_all)
+sim_all[sim_all < 0] <- 0 # non-negative
 sim_all <- as_tibble(scale(sim_all, center = FALSE, 
                            scale = apply(sim_all, 2, sd, na.rm = TRUE))) # standardize do not center
-
-apply((scores %*% pattern), 2, sd)
-apply(sim_all, 2, sd)
-
-sim_all %>%
-  mutate(id = 1:nrow(.)) %>% 
-  gather(key = pop, value = value, -id) %>% 
-  ggplot(aes(x = value)) +
-  geom_histogram() + facet_wrap(~pop)
-
-sim_all %>% 
-  mutate(subj = row_number()) %>% 
-  pivot_longer(
-    V1:V10,
-    names_to = "chem",
-    values_to = "value"
-  ) %>% 
-  ggplot(aes(x = chem, y = value, group = subj)) +
-  geom_line()
+#sim_all
 ```
 
 ```{r}
@@ -162,6 +149,8 @@ fit_df =
     pca = map(mat, pca_jg),
     pcp = map2(mat, delta, ~pcpr::pcp_lod(.x, lambda_mix, mu_mix, .y)),
   )
+
+fit_df
 ```
 
 define a quick function to compute residuals ...
@@ -175,8 +164,8 @@ col_residual = function(fit, target_mat) {
   }
   
   else {
-   as_tibble(target_mat - fit$L - fit$S) %>% 
-#    as_tibble(target_mat - fit$L ) %>% 
+#   as_tibble(target_mat - fit$L - fit$S) %>% 
+    as_tibble(target_mat - fit$L ) %>% 
       select(resid = V1)
   }
 }
@@ -203,60 +192,6 @@ results_df =
   ) %>% 
   select(-delta, -mat, -fit) %>% 
   unnest(cols = c(below_lod, col1_resid))
-```
-
-```{r}
-results_df %>% 
-  filter(mechanism != 'lod_imp_mat') %>% 
-  filter(!(method == 'pca' & mechanism == 'lod_mat')) %>% 
-  filter(method == 'pca') %>% 
-  select(resid) %>% summary() # PCA SAME
-
-results_df %>% 
-  filter(mechanism != 'lod_imp_mat') %>% 
-  filter(!(method == 'pca' & mechanism == 'lod_mat')) %>% 
-  filter(method == 'pcp' & mechanism == 'lod_mat') %>% 
-  select(resid) %>% summary() # SAME
-
-results_df %>% 
-  filter(mechanism != 'lod_imp_mat') %>% 
-  filter(!(method == 'pca' & mechanism == 'lod_mat')) %>% 
-  filter(method == 'pcp' & mechanism == 'lod_sq2_mat') %>% 
-  select(resid) %>% summary() # SAME
-```
-
-```{r}
-# PCP-LOD
-# quant == 0
-# low rank
-fit_pcplod_l <- fit_df[1,]$pcp[[1]]$L
-
-#L_lod0 - fit_pcplod_l #-- zero, good!
-
-# PCP sq2
-# quant == 0
-# low rank
-fit_pcplod_l <- fit_df[3,]$pcp[[1]]$L
-fit_pca <- fit_df[3,]$pca[[1]]
-
-#pca_pred_0 - fit_pca
-#L_lod0_sqrt2 - fit_pcplod_l #-- zero, good!
-
-# PCP-LOD
-# quant == 0.5
-# low rank
-fit_pcplod_l <- fit_df[16,]$pcp[[1]]$L
-
-#L_lod50 - fit_pcplod_l #-- zero, good!
-
-# PCP sq2
-# quant == 0.5
-# low rank
-fit_pcplod_l <- fit_df[18,]$pcp[[1]]$L
-fit_pca <- fit_df[18,]$pca[[1]]
-
-#pca_pred_50 - fit_pca
-#L_lod50_sqrt2 - fit_pcplod_l #-- zero, good!
 ```
 
 ```{r}
@@ -291,6 +226,15 @@ agg_results %>%
   pivot_wider(
     names_from = quant,
     values_from = mean_sq
+  ) %>% 
+  knitr::kable(digits = 3)
+
+agg_results %>% 
+  filter(below_lod == FALSE) %>% 
+  select(mechanism, quant, rel_norm) %>% 
+  pivot_wider(
+    names_from = quant,
+    values_from = rel_norm
   ) %>% 
   knitr::kable(digits = 3)
 ```
