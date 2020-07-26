@@ -1,0 +1,436 @@
+---
+title: "One Pattern Sims"
+author: "Lizzy Gibson"
+date: "6/09/2020"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    toc_depth: 5
+---
+
+```{r setup, include=FALSE}
+require("knitr")
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+options(scipen = 999)
+library(R.matlab)
+library(tidyverse)
+library(gridExtra)
+library(Matrix)
+library(matconv)
+library(patchwork)
+library(janitor)
+library(ggcorrplot)
+library(ggfortify)  
+library(factoextra)
+library(knitr)
+library(haven)
+library(rlist)
+library(mvtnorm)
+library(reshape2)
+library(GGally)
+library(grDevices)
+library(pcpr)
+```
+
+## Simulate
+
+```{r, scores}
+# Simulate independent scores
+set.seed(1988)
+#scores <- exp(rnorm(100))
+n = 100
+scores <- matrix(exp(rnorm(n)), nrow = n, ncol = 1)
+# Simulate 1 pattern
+pattern <- t(c(1,1,1,1,1,1,0,0,0,0))
+
+noise <- 
+  mvtnorm::rmvnorm(n, mean = rep(0, 10), sigma = diag(.1, 10, 10)) %>% 
+  exp()
+
+# Multiply scores by pattern
+sim_all <- as_tibble((scores %*% pattern) + noise)
+sim_all[sim_all < 0] <- 0 # non-negative
+sim_all <- as_tibble(scale(sim_all, center = FALSE, 
+                           scale = apply(sim_all, 2, sd, na.rm = TRUE))) # standardize do not center
+#sim_all
+```
+
+```{r, jeff_functions}
+create_lod_mat = function(df, quant) {
+  df %>%
+    mutate(V1 = ifelse(V1 < quantile(V1, probs = quant), -1, V1)) %>% 
+    as.matrix()
+}
+
+create_lod_imp_mat = function(df, quant) {
+  df = 
+    df %>%
+    mutate(V1 = ifelse(V1 < quantile(V1, probs = quant), NA, V1))
+  mod = lm(V1 ~ V2 + V3 + V4 + V5, data = df)
+  
+  df %>%
+    modelr::add_predictions(mod) %>% 
+    mutate(
+      V1 = case_when(
+        is.na(V1) ~ pred,
+        TRUE      ~ V1
+      )) %>% 
+    select(-pred) %>% 
+    as.matrix()
+}
+
+create_lod_sqrt2_mat = function(df, quant) {
+  df %>%
+    mutate(V1 = ifelse(
+      V1 < quantile(V1, probs = quant), 
+      (quantile(V1, probs = quant)/sqrt(2)), V1)) %>%
+    as.matrix()
+}
+
+create_v1_missing_ind = function(mat) {
+  tibble(below_lod = (mat[,1] == -1))
+}
+
+col_residual = function(fit, target_mat) {
+  if (is.matrix(fit)) {
+    as_tibble(target_mat - fit) %>% 
+      select(resid = V1)
+  }
+  
+  else {
+#    as_tibble(target_mat - fit$L - fit$S) %>% 
+    as_tibble(target_mat - fit$L ) %>% 
+      select(resid = V1)
+  }
+}
+```
+
+```{r}
+lod_mat_df = 
+  tibble(
+    quant = seq(0, .5, by = .1)
+  ) %>% 
+  mutate(
+    lod_mat =     map(quant, ~create_lod_mat(df = sim_all, quant = .x)), # -1 for pcp
+    lod_imp_mat = map(quant, ~create_lod_imp_mat(df = sim_all, quant = .x)),
+    lod_sq2_mat = map(quant, ~create_lod_sqrt2_mat(df = sim_all, quant = .x)),
+    delta =       map(quant, ~c(quantile(sim_all$V1, probs = .x), rep(0, times = 9))),
+    below_lod   = map(lod_mat, create_v1_missing_ind))
+```
+
+```{r}
+m <- nrow(sim_all)
+p <- ncol(sim_all)
+
+lambda_mix <- 1/sqrt(m)
+mu_mix <- sqrt(p/(2*log(m*p)))
+
+fit_df = 
+  lod_mat_df %>% 
+  pivot_longer(
+    lod_mat:lod_sq2_mat,
+    names_to = "mechanism",
+    values_to = "mat"
+  ) %>% 
+  mutate(
+    pca_jg = map(mat, pca_jg),
+    pcp = map2(mat, delta, ~pcpr::pcp_lod(.x, lambda_mix, mu_mix, .y)),
+  )
+
+fit_pca <- fit_df %>% 
+  filter(mechanism == "lod_sq2_mat") %>% 
+  mutate(
+    pca_lz = map(mat, pca_lz)) %>% 
+  select(quant, mechanism, pca_lz)
+
+pca_lz <- fit_pca %>% 
+  mutate(pca_lz = map(pca_lz, as_tibble),
+         number = 1:nrow(.)) %>% 
+  unnest(pca_lz) %>% 
+  group_by(number) %>% 
+  mutate(id = 1:n()) %>% 
+  pivot_longer(grep("V", colnames(.)),
+               values_to = "Predicted",
+               names_to = "Variable") %>% 
+  mutate(model = "pca_reg")
+```
+
+```{r}
+target = scores %*% pattern
+# target = as.matrix(sim_all)
+
+pred_lz <- fit_df %>% 
+  mutate(pcp_l = map(pcp, function(x) as_tibble(x$L)),
+         pcp_s = map(pcp, function(x) as_tibble(x$S)),
+         pcp_pred = map2(pcp_l, pcp_s, function(x,y) x + y),
+         number = 1:nrow(.)) %>% #number is lod*mechanism
+  pivot_longer(c(pca_jg, pcp_l, pcp_s, pcp_pred),
+               names_to = "model") %>% 
+  mutate(value = map(value, as_tibble)) %>% 
+  unnest(value) %>% 
+  group_by(number, model) %>% 
+  mutate(id = 1:n()) %>% 
+  select(-pcp, -delta, -mat, -below_lod) %>% 
+  pivot_longer(grep("V", colnames(.)),
+               values_to = "Predicted",
+               names_to = "Variable")
+
+pred_lz <- full_join(pca_lz, pred_lz)
+```
+
+### Predicted Values
+
+```{r, tp_lod}
+pred_sim <- sim_all %>% 
+  mutate(id = 1:100) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Simulated")
+
+pred_target <- target %>% as_tibble() %>% 
+  mutate(id = 1:100) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Target") %>% 
+  full_join(., pred_sim)
+```
+
+## Metrics
+
+```{r}
+all_pred2 <-  full_join(pred_target, pred_lz) %>% 
+  select(Percent = quant, Method = model, everything()) %>% 
+  filter(Method != "pcp_l" & Method != "pcp_s") %>% 
+  filter(mechanism != "lod_imp_mat")
+
+all_pred2 %>% 
+  #filter(Method == "pcp_pred" & mechanism == "lod_mat") %>% 
+  #filter(Method == "pcp_pred" & mechanism == "lod_sq2_mat") %>% 
+  filter(Method == "pca_jg" & mechanism == "lod_sq2_mat") %>% 
+  arrange(Percent, Method)
+```
+
+### X - L - S
+
+* X = simulated dataset
+* L = low rank solution matrix
+* S = sparse solution matrix
+
+```{r}
+all_pred2 %>%
+  filter(Method != "pca_jg") %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent, Method, mechanism) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Simulated^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Simulated)),
+                     linf = max(l1)/max(Simulated)) %>% 
+  ggplot(aes(x = Percent, y = Fro, color = interaction(Method, mechanism))) + 
+  geom_point() + geom_path() + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Prediction Error")
+
+all_pred %>%
+  filter(Method != "pca") %>% 
+  mutate(l2 = (Target - Predicted)^2,
+         l1 = abs(Target - Predicted)) %>%
+  group_by(Percent, Method, mechanism) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Target^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Target)),
+                     linf = max(l1)/max(Simulated)) %>% 
+  ggplot(aes(x = Percent, y = Fro, color = interaction(Method, mechanism))) + 
+  geom_point() + geom_path() + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Prediction Error")
+```
+
+### Individual Solution Matrices
+
+* Reference is solution matix with 0\% \<LOD  
+* Low rank solution matrices compared with low rank solution with 0\% \<LOD
+* Sparse solution matrices compared with sparse solution with 0\% \<LOD
+
+```{r}
+pcp_pred %>% 
+  pivot_longer(cols = Low_Rank:Sparse,
+               names_to = "Matrix",
+               values_to = "low_sparse") %>% 
+  pivot_longer(cols = base_low:base_sparse,
+               names_to = "Matrix2",
+               values_to = "Base") %>% 
+  filter((Matrix == "Low_Rank" & Matrix2 == "base_low") |
+           (Matrix == "Sparse" & Matrix2 == "base_sparse")) %>%
+  mutate(l2 = (Base - low_sparse)^2,
+         l1 = abs(Base - low_sparse)) %>% 
+  group_by(Percent, Method, Matrix) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Base^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Base)),
+                     linf = max(l1)/max(Base)) %>% 
+  ggplot(aes(x = Percent, y = Fro, group = interaction(Method, Matrix), color = Method)) + 
+  geom_point() + geom_path(aes(linetype = Matrix)) + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(difference) / norm(lod0))",
+       title = "Relative Error in Solution Matrices")
+```
+
+### Values \<LOD vs \>LOD
+
+* Values \> and \< LOD stratified
+* Sum of low rank and sparse solution matrices (L \+ S) compared to simulated data (X)
+
+```{r}
+all_pred %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>% 
+  group_by(Percent, Method, Value) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Simulated^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Simulated)),
+                     linf = max(l1)/max(Simulated)) %>%
+  ggplot(aes(x = Percent, y = Fro, group = interaction(Method, Value), color = Method)) + 
+  geom_point() + geom_path(aes(linetype = Value)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Values < LOD & > LOD")
+```
+
+```{r}
+pcp_pred %>% 
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>% 
+  group_by(Percent, Method, Value) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Simulated^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Simulated)),
+                     linf = max(l1)/max(Simulated)) %>%
+  ggplot(aes(x = Percent, y = Fro, group = interaction(Method, Value), color = Method)) + 
+  geom_point() + geom_path(aes(linetype = Value)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Values < LOD & > LOD")
+```
+
+## True v. Predicted
+
+```{r}
+pcp_pred %>%
+  filter(Variable == "V1" & Method == "PCP-LOD") %>%
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "PCP-LOD Simulated v. Predicted Values (L + S) for POP V1")
+
+pcp_pred %>%
+  filter(Variable == "V1" & Method == "PCP-LOD") %>%
+  filter(Simulated <= LOD) %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "PCP-LOD Simulated v. Predicted Values (L + S) for POP V1 <LOD")
+
+pcp_pred %>%
+  filter(Variable == "V1" & Method == "Original PCP") %>%
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "Original PCP w/ LOD/sqrt(2) Simulated v. Predicted Values (L + S) for POP V1")
+
+pcp_pred %>%
+  filter(Variable == "V1" & Method == "Original PCP") %>%
+  filter(Simulated <= LOD) %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "Original PCP w/ LOD/sqrt(2) Simulated v. Predicted Values (L + S) for POP V1 <LOD")
+
+pca_pred %>% 
+  filter(Variable == "V1") %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "PCA Simulated v. Predicted Values for POP V1")
+
+pca_pred %>% 
+  filter(Variable == "V1" & Simulated <= LOD) %>% 
+  ggplot(aes(x = Simulated, y = Predicted)) + 
+  geom_hline(yintercept = 0, color = 'grey', linetype = 'dashed') +
+  geom_rect(aes(xmin = 0, xmax = LOD, ymin = 0, ymax = LOD),
+                   fill = "pink", alpha = 0.03) +
+  geom_abline(intercept = 0, slope = 1, color = 'grey', linetype = 'dashed') +
+  geom_point(aes(color = Percent)) +
+  facet_wrap(~Percent) +
+  theme_bw() + theme(legend.position = "none") +
+  labs(title= "PCA Simulated v. Predicted Values for POP V1 <LOD")
+```
+
+## Values \<LOD
+
+```{r}
+pcp_pred %>% 
+  filter(Simulated < LOD) %>% 
+  drop_na(.) %>% 
+  mutate(above_lod = ifelse(Low_Rank > LOD, 1, 0)) %>%
+  group_by(Method, Percent) %>% 
+  summarise(above = sum(above_lod),
+            total = n()) %>% 
+  mutate(Proportion = round(above/total, 2)) %>% 
+  ungroup(.) %>% 
+  select(Method, Percent, Proportion) %>% 
+  kable(., caption = "Low Rank Solution Values >LOD for TRUE POP V1 <LOD")
+
+pcp_pred %>% 
+  filter(Simulated < LOD) %>% 
+  drop_na(.) %>% 
+  group_by(Method, Percent) %>% 
+  summarise(Min = min(Sparse),
+            Ave = mean(Sparse),
+            Max = max(Sparse)) %>% 
+  ungroup(.) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable(., caption = "PCP Sparse Solutions for TRUE POP V1 <LOD")
+```
+
+* Plus sign (\+) indicates LOD for each chemical
+
+```{r}
+pcp_pred %>% 
+  filter(Simulated < LOD) %>% 
+  pivot_longer(cols = c(Predicted, Simulated, Low_Rank, Sparse),
+               names_to = "Compare") %>% 
+  ggplot(aes(x = Method, y = value)) + 
+  #geom_jitter(aes(color = Compare), alpha = 0.5, width = 0.10, height = 0) + 
+  geom_boxplot(aes(color = Compare), width = 0.5, size = 0.75) +
+  theme_bw() +
+  geom_point(aes(y = LOD), shape = 3, size = 2) +
+  facet_wrap(.~Percent) +
+  labs(x = "% < LOD", 
+       y = "Solution Value",
+       title = "PCP Solution Values <LOD + Original Values for POP V1") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+

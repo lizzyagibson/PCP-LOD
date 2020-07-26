@@ -1,0 +1,442 @@
+---
+title: "Compare PCA w/ NA"
+author: "Lizzy Gibson"
+date: "6/09/2020"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    toc_depth: 5
+---
+
+```{r setup, include=FALSE}
+require("knitr")
+opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+options(scipen = 999)
+library(R.matlab)
+library(tidyverse)
+library(gridExtra)
+library(Matrix)
+library(matconv)
+library(patchwork)
+library(janitor)
+library(ggcorrplot)
+library(ggfortify)  
+library(factoextra)
+library(knitr)
+library(haven)
+library(rlist)
+library(mvtnorm)
+library(reshape2)
+library(GGally)
+library(grDevices)
+library(pcpr)
+```
+
+```{r, scores}
+# Simulate independent scores
+set.seed(1988)
+scores <- exp(rnorm(100))
+
+# Simulate 1 pattern
+pattern <- t(c(1,1,1,1,1,1,0,0,0,0))
+
+# Add noise
+noise <- matrix(NA, nrow = 100, ncol = 10)
+seeds <- 1:10
+for (i in 1:length(seeds)) {
+  set.seed(seeds[i])
+  noise[,i] <- exp(rnorm(100, mean = 0, sd = 1))
+}
+
+# Multiply scores by pattern
+sim_all <- as_tibble((scores %*% pattern) + noise)
+#summary(sim_all)
+sim_all[sim_all < 0] <- 0 # non-negative
+sim_all <- as_tibble(scale(sim_all, center = FALSE, 
+                           scale = apply(sim_all, 2, sd, na.rm = TRUE))) # standardize do not center
+sim_all_pca <- as_tibble(scale(sim_all, center = TRUE, 
+                           scale = FALSE)) # standardize do not center
+```
+
+```{r, neg}
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .10), (quantile(V1, probs = .10)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .20), (quantile(V1, probs = .20)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .30), (quantile(V1, probs = .30)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .40), (quantile(V1, probs = .40)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_sqrt2 <- sim_all %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .50), (quantile(V1, probs = .50)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 10% lowest values for each variable as below the LOD
+mix_data_lod_10_sqrt2_pca <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .10), (quantile(V1, probs = .10)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 20% lowest values for each variable as below the LOD
+mix_data_lod_20_sqrt2_pca <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .20), (quantile(V1, probs = .20)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 30% lowest values for each variable as below the LOD
+mix_data_lod_30_sqrt2_pca <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .30), (quantile(V1, probs = .30)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 40% lowest values for each variable as below the LOD
+mix_data_lod_40_sqrt2_pca <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .40), (quantile(V1, probs = .40)/sqrt(2)), V1)) %>% as.matrix()
+
+# Create version with 50% lowest values for each variable as below the LOD
+mix_data_lod_50_sqrt2_pca <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .50), (quantile(V1, probs = .50)/sqrt(2)), V1)) %>% as.matrix()
+
+# LODs
+delta10 <- c(quantile(sim_all$V1, probs = 0.10), rep(0, times = 9))
+
+delta20 <- c(quantile(sim_all$V1, probs = 0.20), rep(0, times = 9))
+
+delta30 <- c(quantile(sim_all$V1, probs = 0.30), rep(0, times = 9))
+
+delta40 <- c(quantile(sim_all$V1, probs = 0.40), rep(0, times = 9))
+
+delta50 <- c(quantile(sim_all$V1, probs = 0.50), rep(0, times = 9))
+
+mix_data_lod_10_na <- sim_all_pca %>%
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .10), NA, V1)) %>% as.matrix()
+  
+# Create version with 20% lowest value below the LOD
+mix_data_lod_20_na <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .20), NA, V1)) %>% as.matrix()
+
+# Create version with 30% lowest value below the LOD
+mix_data_lod_30_na <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .30), NA, V1)) %>% as.matrix()
+
+# Create version with 40% lowest value below the LOD
+mix_data_lod_40_na <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .40), NA, V1)) %>% as.matrix()
+
+# Create version with 50% lowest value below the LOD
+mix_data_lod_50_na <- sim_all_pca %>% 
+  mutate(V1 = ifelse(V1 < quantile(V1, probs = .50), NA, V1)) %>% as.matrix()
+```
+
+## PCA w/ LOD/sqrt2
+
+```{r}
+mix <- as.matrix(sim_all)
+mix_pca <- as.matrix(sim_all_pca)
+
+pca_0  <- prcomp(mix)
+pca_10 <- prcomp(mix_data_lod_10_sqrt2)
+pca_20 <- prcomp(mix_data_lod_20_sqrt2)
+pca_30 <- prcomp(mix_data_lod_30_sqrt2)
+pca_40 <- prcomp(mix_data_lod_40_sqrt2)
+pca_50 <- prcomp(mix_data_lod_50_sqrt2)
+```
+
+### Predicted Values
+
+```{r}
+# Create mean vector for un-centering
+sim_means_sqrt2 <- apply(sim_all, 2, mean)
+mix_10_means_sqrt2 <- apply(mix_data_lod_10_sqrt2, 2, mean)
+mix_20_means_sqrt2 <- apply(mix_data_lod_20_sqrt2, 2, mean)
+mix_30_means_sqrt2 <- apply(mix_data_lod_30_sqrt2, 2, mean)
+mix_40_means_sqrt2 <- apply(mix_data_lod_40_sqrt2, 2, mean)
+mix_50_means_sqrt2 <- apply(mix_data_lod_50_sqrt2, 2, mean)
+```
+
+```{r, echo = TRUE}
+rep.row<-function(x,n){
+  matrix(rep(x,each=n),nrow=n)
+}
+
+pca_pred_0  <- pca_0$x[,1:5] %*% t(pca_0$rotation)[1:5,]   + rep.row(sim_means_sqrt2, 100)
+pca_pred_10 <- pca_10$x[,1:5] %*% t(pca_10$rotation)[1:5,] + rep.row(mix_10_means_sqrt2, 100)
+pca_pred_20 <- pca_20$x[,1:5] %*% t(pca_20$rotation)[1:5,] + rep.row(mix_20_means_sqrt2, 100)
+pca_pred_30 <- pca_30$x[,1:5] %*% t(pca_30$rotation)[1:5,] + rep.row(mix_30_means_sqrt2, 100)
+pca_pred_40 <- pca_40$x[,1:5] %*% t(pca_40$rotation)[1:5,] + rep.row(mix_40_means_sqrt2, 100)
+pca_pred_50 <- pca_50$x[,1:5] %*% t(pca_50$rotation)[1:5,] + rep.row(mix_50_means_sqrt2, 100)
+```
+
+```{r, tp_lod2, include=FALSE}
+pred_sim <- sim_all %>% 
+  mutate(id = 1:100) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Simulated")
+
+pred_sim_pca <- sim_all_pca %>% 
+  mutate(id = 1:100) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Simulated")
+
+add_lods <- as_tibble(rbind(c("0%",0), 
+      c("10%", quantile(mix[,1], .10)), 
+      c("20%", quantile(mix[,1], .20)),
+      c("30%", quantile(mix[,1], .30)), 
+      c("40%", quantile(mix[,1], .40)),
+      c("50%", quantile(mix[,1], .50)))) %>% rename(Percent = 1, LOD = 2) %>% 
+  mutate(LOD = as.numeric(LOD),
+         Variable = "V1")
+
+add_lods_pca <- as_tibble(rbind(c("0%",min(mix_pca[,1])-0.0001), 
+      c("10%", quantile(mix_pca[,1], .10)), 
+      c("20%", quantile(mix_pca[,1], .20)),
+      c("30%", quantile(mix_pca[,1], .30)), 
+      c("40%", quantile(mix_pca[,1], .40)),
+      c("50%", quantile(mix_pca[,1], .50)))) %>% rename(Percent = 1, LOD = 2) %>% 
+  mutate(LOD = as.numeric(LOD),
+         Variable = "V1")
+
+pca_pred <- (pca_pred_0) %>% as_tibble() %>% mutate(Percent = "0%") %>% 
+  rbind(., (pca_pred_10) %>% as_tibble() %>% mutate(Percent = "10%")) %>% 
+  rbind(., (pca_pred_20) %>% as_tibble() %>% mutate(Percent = "20%")) %>% 
+  rbind(., (pca_pred_30) %>% as_tibble() %>% mutate(Percent = "30%")) %>% 
+  rbind(., (pca_pred_40) %>% as_tibble() %>% mutate(Percent = "40%")) %>% 
+  rbind(., (pca_pred_50) %>% as_tibble() %>% mutate(Percent = "50%")) %>%
+  mutate(id = rep(1:100, 6)) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Predicted") %>% 
+  left_join(., pred_sim, by = c("id", "Variable")) %>% 
+  left_join(., add_lods, by = c("Percent", "Variable")) %>% 
+  replace_na(list(LOD = 0)) %>% 
+  mutate(Value = ifelse(Simulated < LOD, "< LOD", "> LOD"),
+         Method = "PCA w/ LOD/sqrt2")
+```
+
+## PCA w/ NA
+
+```{r}
+# Covariance
+cov0 <- cov(mix_pca, use = "pairwise.complete.obs")
+
+values0 <- eigen(cov0)$values
+vectors0 <- eigen(cov0)$vectors # loadings
+
+mixt <- t(mix_pca)
+
+colnames(vectors0) <- paste0("PC", 1:10)
+
+full <- as_tibble(cbind(mixt, vectors0))
+colnames(full)[1:100] <- paste0("person", 1:100)
+
+scores0r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full)
+  scores0r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+### Same steps with NA
+
+```{r}
+# Covariance
+cov10 <- cov(mix_data_lod_10_na, use = "pairwise.complete.obs")
+
+# Eigen decomposition of covariance
+values10 <- eigen(cov10)$values
+vectors10 <- eigen(cov10)$vectors # loadings
+
+mix10t <- t(mix_data_lod_10_na)
+colnames(vectors10) <- paste0("PC", 1:10)
+
+full10 <- as_tibble(cbind(mix10t, vectors10))
+colnames(full10)[1:100] <- paste0("person", 1:100)
+
+scores10r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full10)
+  scores10r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+```{r}
+# Covariance
+cov20 <- cov(mix_data_lod_20_na, use = "pairwise.complete.obs")
+
+# Eigen decomposition of covariance
+values20 <- eigen(cov20)$values
+vectors20 <- eigen(cov20)$vectors # loadings
+
+mix20t <- t(mix_data_lod_20_na)
+colnames(vectors20) <- paste0("PC", 1:10)
+
+full20 <- as_tibble(cbind(mix20t, vectors20))
+colnames(full20)[1:100] <- paste0("person", 1:100)
+
+scores20r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full20)
+  scores20r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+```{r}
+# Covariance
+cov30 <- cov(mix_data_lod_30_na, use = "pairwise.complete.obs")
+
+# Eigen decomposition of covariance
+values30 <- eigen(cov30)$values
+vectors30 <- eigen(cov30)$vectors # loadings
+
+mix30t <- t(mix_data_lod_30_na)
+colnames(vectors30) <- paste0("PC", 1:10)
+
+full30 <- as_tibble(cbind(mix30t, vectors30))
+colnames(full30)[1:100] <- paste0("person", 1:100)
+
+scores30r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full30)
+  scores30r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+```{r}
+# Covariance
+cov40 <- cov(mix_data_lod_40_na, use = "pairwise.complete.obs")
+
+# Eigen decomposition of covariance
+values40 <- eigen(cov40)$values
+vectors40 <- eigen(cov40)$vectors # loadings
+
+mix40t <- t(mix_data_lod_40_na)
+colnames(vectors40) <- paste0("PC", 1:10)
+
+full40 <- as_tibble(cbind(mix40t, vectors40))
+colnames(full40)[1:100] <- paste0("person", 1:100)
+
+scores40r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full40)
+  scores40r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+#### 50%
+
+```{r, echo=TRUE}
+# Covariance
+cov50 <- cov(mix_data_lod_50_na, use = "pairwise.complete.obs")
+
+# Eigen decomposition of covariance
+values50 <- eigen(cov50)$values
+vectors50 <- eigen(cov50)$vectors # loadings
+
+mix50t <- t(mix_data_lod_50_na)
+colnames(vectors50) <- paste0("PC", 1:10)
+
+full50 <- as_tibble(cbind(mix50t, vectors50))
+colnames(full50)[1:100] <- paste0("person", 1:100)
+
+scores50r <- matrix(NA, nrow = nrow(mix), ncol = ncol(mix))
+for (i in 1:100) {
+  p1 <- paste0("person", i)
+  model <- lm(as.formula(paste(p1, "~ 0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10")), data = full50)
+  scores50r[i,] <- as.data.frame(model$coefficient) %>% t()
+  }
+```
+
+### Predicted Values
+
+```{r, echo = TRUE}
+pca_pred_0_na  <- scores0r[,1:5] %*% t(vectors0)[1:5,]
+pca_pred_10_na <- scores10r[,1:5] %*% t(vectors10)[1:5,]
+pca_pred_20_na <- scores20r[,1:5] %*% t(vectors20)[1:5,]
+pca_pred_30_na <- scores30r[,1:5] %*% t(vectors30)[1:5,]
+pca_pred_40_na <- scores40r[,1:5] %*% t(vectors40)[1:5,]
+pca_pred_50_na <- scores50r[,1:5] %*% t(vectors50)[1:5,]
+```
+
+```{r, tp_lod, include=FALSE}
+pca_pred_na <- (pca_pred_0_na) %>% as_tibble() %>% mutate(Percent = "0%") %>% 
+  rbind(., (pca_pred_10_na) %>% as_tibble() %>% mutate(Percent = "10%")) %>% 
+  rbind(., (pca_pred_20_na) %>% as_tibble() %>% mutate(Percent = "20%")) %>% 
+  rbind(., (pca_pred_30_na) %>% as_tibble() %>% mutate(Percent = "30%")) %>% 
+  rbind(., (pca_pred_40_na) %>% as_tibble() %>% mutate(Percent = "40%")) %>% 
+  rbind(., (pca_pred_50_na) %>% as_tibble() %>% mutate(Percent = "50%")) %>%
+  mutate(id = rep(1:100, 6)) %>% 
+  pivot_longer(cols = V1:V10,
+               names_to = "Variable",
+               values_to = "Predicted") %>% 
+  left_join(., pred_sim_pca, by = c("id", "Variable")) %>% 
+  left_join(., add_lods_pca, by = c("Percent", "Variable")) %>% 
+  mutate(LOD = ifelse(is.na(LOD), min(Simulated), LOD)) %>% 
+  # replace_na(list(LOD = 0)) %>%
+  mutate(Value = ifelse(Simulated < LOD, "< LOD", "> LOD"),
+         Method = "PCA w/ NA")
+```
+
+## Metrics
+
+```{r, pred_all}
+all_pred <- rbind(pca_pred, pca_pred_na)
+```
+
+### X - L - S
+
+* X = simulated dataset
+* L = low rank solution matrix
+* S = sparse solution matrix
+
+```{r}
+all_pred %>%
+  mutate(l2 = (Simulated - Predicted)^2,
+         l1 = abs(Simulated - Predicted)) %>%
+  group_by(Percent, Method) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Simulated^2)),
+                     l1 = sqrt(sum(l1))/sqrt(sum(Simulated)),
+                     linf = max(l1)/max(Simulated)) %>% 
+  ggplot(aes(x = Percent, y = Fro, group = Method, color = Method)) + 
+  geom_point() + geom_path() + theme_bw() +
+  labs(x = "Percent Below LOD", y = "norm(X-L-S) / norm(X)",
+       title = "Relative Prediction Error")
+
+all_pred %>%
+  mutate(l2 = (Simulated - Predicted)^2) %>%
+  group_by(Percent, Method) %>% 
+           summarise(l2 = mean(l2)) %>% 
+  ggplot(aes(x = Percent, y = l2, group = Method, color = Method)) + 
+  geom_point() + geom_path() + theme_bw() +
+  labs(x = "Percent Below LOD", y = "mean((X-L-S)^2)",
+       title = "MSE")
+```
+
+### Values \<LOD vs \>LOD
+
+* Values \> and \< LOD stratified
+* Sum of low rank and sparse solution matrices (L \+ S) compared to simulated data (X)
+
+```{r}
+all_pred %>% 
+  mutate(l2 = (Simulated - Predicted)^2) %>% 
+  group_by(Percent, Method, Value) %>% 
+           summarise(Fro = sqrt(sum(l2))/sqrt(sum(Simulated^2))) %>%
+  ggplot(aes(x = Percent, y = Fro, group = interaction(Method, Value), color = Method)) + 
+  geom_point() + geom_path(aes(linetype = Value)) + theme_bw() +
+  labs(x = "Percent Below LOD", 
+       y = "norm(X-L-S) / norm(X)",
+       title = "Relative Error in Values < LOD & > LOD")
+```
+
+
+
