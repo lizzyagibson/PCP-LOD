@@ -40,3 +40,7 @@
 # Ignore subfolders
 Resources
 Ignore
+
+# HPC loop
+HPC_PCP/*.mat
+Below LOD/MATLAB/*.mat
