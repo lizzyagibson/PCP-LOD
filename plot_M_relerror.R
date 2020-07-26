@@ -2,8 +2,10 @@
 # Across rank, sigma, mu, and LOD
 library(tidyverse)
 library(R.matlab)
+library(RColorBrewer)
+display.brewer.all(colorblindFriendly = T)
 
-rank = c(1, 2, 3, 4, 5)
+rank = c(1, 2)
 sigma = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "1.0")
 delta = c(0.05,0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
 
@@ -13,12 +15,13 @@ delta = c(0.05,0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
 
 pcp_out <- tibble()
 
+for (r in rank) {
 for (d in delta) {
 for (s in sigma) {
 #for (r in rank) {
   # Mu without sigma
   
-  read <- readMat(here::here(paste0("HPC_PCP/data_lod_", d, "_rank_", r, 
+  read <- readMat(here::here(paste0("HPC_PCP/Var/data_lod_", d, "_rank_", r, 
                                     "_sigma_", s, ".mat")))
   
   relerror <- read[[1]] %>% 
@@ -44,7 +47,7 @@ for (s in sigma) {
   pcp_out <- rbind(pcp_out, out_mu) %>% drop_na(.)
   }
 }
-#}
+}
 
 pcp_plot <- pcp_out %>% 
   pivot_longer(grep("relerror", colnames(.)),
@@ -61,16 +64,25 @@ pcp_plot <- pcp_out %>%
 
 names(pcp_plot)
 
+options(
+  ggplot2.continuous.colour = "dark2",
+  ggplot2.continuous.fill = "dark2"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
 # rank increase -- PCP_LOD does better
 pcp_plot %>% 
+  filter(rank == "1") %>% 
   filter(model != "PCA") %>% 
   #filter(type != "overall") %>% 
   #filter(type != "belowlod") %>% 
-  filter(sigma == "1.0") %>% 
-  ggplot(aes(x = delta, y = rel_error, color = model, linetype = sigma)) +
+  filter(sigma == "0.1") %>% 
+  ggplot(aes(x = delta, y = rel_error, color = model)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  facet_grid(~type) + #lims(y = c(0, 3)) +
-  theme_bw() +
+  facet_grid(~type) + scale_y_log10() +
+  theme_bw() + scale_colour_discrete("paired") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom")
 
