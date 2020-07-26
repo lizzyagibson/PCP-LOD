@@ -10,8 +10,7 @@ p = 20;
 Sigma_prop = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];         % Gaussian noise std
 Delta_prop = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];    % LOD threshold, shared for all columns of the data
 
-for delta_prop = Delta_prop
-    disp(delta_prop)
+
 for sigma_prop = Sigma_prop
     disp(sigma_prop)
     
