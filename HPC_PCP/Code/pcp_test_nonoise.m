@@ -6,7 +6,7 @@ p = 20;
 
 % Loop these:
 % Rank of the matrix
-Delta_prop = [0,0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]; 
+Delta_prop = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]; 
 % LOD threshold, shared for all columns of the data
 
 numTrials = 100;
