@@ -3,7 +3,8 @@
 library(tidyverse)
 library(R.matlab)
 library(RColorBrewer)
-display.brewer.all(colorblindFriendly = T)
+library(wesanderson)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 rank = c(1, 2)
 sigma = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "1.0")
@@ -82,7 +83,7 @@ pcp_plot %>%
   ggplot(aes(x = delta, y = rel_error, color = model)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA) +
   facet_grid(~type) + scale_y_log10() +
-  theme_bw() + scale_colour_discrete("paired") +
+  theme_bw() + scale_color_manual(values=wes_palette(n=3, name="FantasticFox1"))
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom")
 
