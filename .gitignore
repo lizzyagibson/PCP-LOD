@@ -42,7 +42,6 @@ Resources
 Ignore
 
 # HPC loop
-HPC_PCP/Var/*.mat
-HPC_PCP/SD/*.mat
 HPC_PCP/*.mat
+HPC_PCP/*/*.mat
 Below LOD/MATLAB/*.mat
