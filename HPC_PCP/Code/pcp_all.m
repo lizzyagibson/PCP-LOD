@@ -5,11 +5,11 @@ jobid = str2num(getenv('SGE_TASK_ID'))
 n = 1000;
 p = 20;
 
-sigma = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-delta = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-rank = [1, 2, 3, 4, 5];
+sigma_vec = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+delta_vec = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+rank_vec = [1, 2, 3, 4, 5];
 
-grid = combvec(sigma, delta, rank)';
+grid = combvec(sigma_vec, delta_vec, rank_vec)';
 
 sigma_prop = grid(jobid, 1)
 delta_prop = grid(jobid, 2)
@@ -103,4 +103,4 @@ r = grid(jobid, 3)
     end
 
    %% Save data (if necessary)  
-   save(['data_lod_',num2str(delta_prop),'_rank_', num2str(r), '_sigma_', num2str(sigma_prop), '.mat'], 'rel_err','rel_err_belowlod', 'rel_err_scores', 'rel_err_patterns')
+   save(['pcp_all_lod_',num2str(delta_prop),'_rank_', num2str(r), '_sigma_', num2str(sigma_prop), '.mat'], 'rel_err','rel_err_belowlod', 'rel_err_scores', 'rel_err_patterns')
