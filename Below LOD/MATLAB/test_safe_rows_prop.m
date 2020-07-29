@@ -1,7 +1,8 @@
 %% Data generation
+r = str2num(getenv('SGE_TASK_ID'))
+
 n = 1000;
 p = 20;
-r = 3;
 
 DeltaVec  = 0:.05:1;
 numTrials = 50;
@@ -25,8 +26,6 @@ for i = 1:numTrials
         Z = randn(n,p) * sigma;  % Gaussian noise part
 
         S = zeros(n,p);
-        %S = -(L+Z).*(L+Z<0) + (rand(n,p)<0.05).*rand(n,p)*0.5;  % Sparse noise part
-        % S = zeros(n,p);
 
         D = L + S + Z;
         

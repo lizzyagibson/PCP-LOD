@@ -37,7 +37,7 @@ delta = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
         V = rand(r,p);
         L = U*V;                    % Low-rank part
         
-        sigma = sigma_prop * var(L(:));
+        sigma = sigma_prop * std(L(:));
         
         Z = normrnd(0,sigma,n,p);   % Gaussian noise part
         X = L + Z;                  % Noise added
