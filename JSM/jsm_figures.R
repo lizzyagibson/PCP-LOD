@@ -60,3 +60,33 @@ dev.off()
 pdf("/Users/lizzy/Summer 2020/JSM PCP-LOD/figures/jsm_corr.pdf")
 sim_corr
 dev.off()
+
+#########################################
+
+sigma = 0.6 * sd(L)
+
+Z <- mvtnorm::rmvnorm(n, mean = rep(0, 20), sigma = diag(0.1, 20, 20))
+X = L + Z
+
+D = pmax(L, 0)
+
+Delta = quantile(D, 0.1)
+
+D_minus1 = (D>=Delta)*D + (D<Delta)*(-1)
+#D_minus1[D_minus1 == -1] = NA
+head(D_minus1)
+summary(D_minus1)
+
+#library(pcpr)
+#install.packages("formattable")
+#library(formattable)
+
+Dout <- pcp_lod(D_minus1, lambda = 1/sqrt(nrow(D)), mu = 38, LOD = Delta)
+
+round(D[2:4, 2:4], 3)
+
+round(D_minus1[2:4, 2:4], 3)
+
+round(Dout$L[2:4, 2:4], 3)
+
+
