@@ -45,3 +45,6 @@ Ignore
 HPC_PCP/*.mat
 HPC_PCP/*/*.mat
 Below LOD/MATLAB/*.mat
+
+# Sim data
+**.RDA
