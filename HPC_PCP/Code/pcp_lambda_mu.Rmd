@@ -17,37 +17,21 @@ library(tidyverse)
 library(janitor)
 library(reshape2)
 library(matconv)
-library(ggcorrplot)
-library(ggfortify)  
-library(gridExtra)
-library(factoextra)
 library(Matrix)
-library(rlist)
-library(ggrepel)
-library(broom)
 library(R.matlab)
 library(pcpr)
 ```
 
 # Boston data
 
-## Read from HPC
-```{r read}
+```{r read, cache=TRUE}
 boston_out <- tibble()
+xx <- 1
 
-for (i in 1:223) {
+for (i in c(1:223, 225:360, 362:420)) {
   load(here::here(paste0("/HPC_PCP/R_out/boston_param/boston_param_out_", i, ".RDA")))
-  boston_out[i,1:8] <- all_out
-}
-
-for (i in 225:360) {
-  load(here::here(paste0("/HPC_PCP/R_out/boston_param/boston_param_out_", i, ".RDA")))
-  boston_out[i-1,1:8] <- all_out
-}
-
-for (i in 362:420) {
-  load(here::here(paste0("/HPC_PCP/R_out/boston_param/boston_param_out_", i, ".RDA")))
-  boston_out[i-2,1:8] <- all_out
+  boston_out[xx,1:8] <- all_out
+  xx <- xx + 1
 }
 
 boston_out <- boston_out %>% 
@@ -57,7 +41,7 @@ boston_out <- boston_out %>%
 # load("boston_param_out_all.RDA")
 ```
 
-```{r}
+```{r, cache=TRUE}
 # Read air pollution data
 mixture <- readMat(here::here("Data/mixtures_data.mat"))
 
@@ -109,7 +93,7 @@ boston_out %>%
 Examine how sparsity of sparse matrix changes with varying $\lambda$ and $\mu$.
 
 Density:
-```{r plot_sparse}
+```{r sparse}
 boston_out %>% pull(density_S) %>% summary()
 
 boston_out %>%
@@ -119,7 +103,7 @@ boston_out %>%
               data = default) +
   scale_fill_gradientn(colours = rainbow(10), 
                       na.value = "transparent") +
-  theme_bw() + labs(fill = "Density", 
+  theme_classic() + labs(fill = "Density", 
                     y = expression(lambda),
                     x = expression(mu),
                     title = "Sparse matrix density") +
@@ -132,7 +116,7 @@ boston_out %>%
 Don't know the *true L* here, so compare L + S to original data.
 
 Relative error:
-```{r plot_err}
+```{r err}
 boston_out %>% pull(total_rel_error) %>% summary()
 
 boston_out %>% 
@@ -142,7 +126,7 @@ boston_out %>%
               data = default) +
   scale_fill_gradientn(colours = rainbow(10), 
                       na.value = "transparent") +
-  theme_classic() + labs(fill = "RMSE", 
+  theme_classic() + labs(fill = "Relative Error", 
                     y = expression(lambda),
                     x = expression(mu),
                     title = "Relative error") +
@@ -154,6 +138,7 @@ boston_out %>%
 
 ```{r, include=FALSE, cache=TRUE}
 mixture <- pcp_lod(mix, lam_mix, mu_mix, 0)
+# "747 Obj: 71.8344318920235"
 ```
 
 ```{r}
@@ -178,3 +163,119 @@ as_tibble(S) %>%
     pull(density)
 ```
 
+
+# Simulated data
+
+```{r read2, cache=TRUE}
+sim_all <- tibble()
+
+for (i in 1:1000) {
+  load(here::here(paste0("/HPC_PCP/R_out/bundle/param_out_", i, "_comb.RDA")))
+  sim_all <- rbind(sim_all, sim_out)
+  }
+
+# save(sim_all, file = "param_out_all.RDA")
+# load("param_out_all.RDA")
+  
+sim_ave <- sim_all %>%
+  group_by(lam_values, mu_values) %>% 
+  summarize(rank_L = mean(rank_L),
+            density_S = mean(density_S),
+            L_rekl_error = mean(L_rel_error))
+
+sim_min <- 
+  sim_all %>%
+  group_by(lam_values, mu_values) %>% 
+  filter(min(L_rel_error) == L_rel_error)
+
+sim_max <- 
+  sim_all %>%
+  group_by(lam_values, mu_values) %>% 
+  filter(max(L_rel_error) == L_rel_error)
+
+sim_med <- 
+  sim_all %>%
+  group_by(lam_values, mu_values) %>% 
+  mutate(diff = abs(median(L_rel_error) - L_rel_error)) %>% 
+  filter(min(diff) == diff) %>% 
+  summarize(rank_L = median(rank_L),
+            density_S = median(density_S),
+            L_rel_error = median(L_rel_error))
+```
+
+```{r}
+n <- 2500 # num. rows
+m <- 20 # num. cols
+
+# 1/sqrt(n)
+# sqrt(m/(2*log(n*m)))
+
+default_sim <- sim_ave %>%
+  filter(lam_values == 0.02 & mu_values == 0.96)
+```
+
+## Low Rank Matrix
+
+Examine how rank of low rank matrix changes with varying $\lambda$ and $\mu$.
+
+All ranks:
+```{r rank_l}
+sim_med %>% 
+  ggplot(aes(x = mu_values, y = lam_values)) +
+  geom_tile(aes(fill = rank_L), color = "white") +
+    geom_tile(aes(fill = rank_L), color = "black", size = 0.75,
+              data = sim_med %>%
+  filter(lam_values == 0.02 & mu_values == 0.96)) +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent") +
+  theme_classic() + labs(fill = "Rank", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = "Low rank matrix rank") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+## Sparse Matrix
+
+Examine how sparsity of sparse matrix changes with varying $\lambda$ and $\mu$.
+
+Density:
+```{r plot_sparse}
+sim_med %>%
+  ggplot(aes(y = lam_values, x = mu_values)) + 
+  geom_tile(aes(fill = density_S), color = "white") +
+      geom_tile(aes(fill = density_S), color = "black", size = 0.75,
+              data = sim_med %>%
+  filter(lam_values == 0.02 & mu_values == 0.96)) +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent") +
+  theme_classic() + labs(fill = "Density", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = "Sparse matrix density") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+## Error
+
+Here we know the *true L*, so compare solution L to truth.
+
+Relative error:
+```{r plot_err}
+sim_med %>% 
+  ggplot(aes(x = mu_values, y = lam_values)) +
+  geom_tile(aes(fill = L_rel_error), color = "white") +
+        geom_tile(aes(fill = L_rel_error), color = "black", size = 0.75,
+              data = sim_med %>%
+  filter(lam_values == 0.02 & mu_values == 0.96)) +
+  scale_fill_gradientn(colours = rainbow(10), 
+                      na.value = "transparent") +
+  theme_classic() + labs(fill = "Relative Error", 
+                    y = expression(lambda),
+                    x = expression(mu),
+                    title = "Relative error") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 70, hjust = 1))
+```
