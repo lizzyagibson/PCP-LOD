@@ -22,10 +22,11 @@ function [L, S, loss] = pcp_lod (D, lambda, mu, Delta)
 
 [m,n] = size(D);
 rho = 1; % Augmented Lagrangian coefficient
+%rho = 0.025;
 
 [L1,L2,L3,S1,S2,Z1,Z2,Z3] = deal(zeros(m,n));
 
-MAX_ITER = 5000;
+MAX_ITER = 10000;
 LOSS_THRESH = 1e-5;
 SAME_THRESH = 1e-4;
 loss = zeros(MAX_ITER, 1);
@@ -78,12 +79,18 @@ for i = 1:MAX_ITER
 %         + sum(sum(Z1.*(L1-L2))) + sum(sum(Z2.*(L1-L3))) + sum(sum(Z3.*(S1-S2))) ...
 %         + rho/2 * ( sum(sum((L1-L2).^2)) + sum(sum((L1-L3).^2)) + sum(sum((S1-S2).^2)) );
     
+        %disp(['Iter Number: ' num2str(i) '. Iter Score: ' num2str(loss(i))]); 
+        
     if i ~= 1 && abs(loss(i-1)-loss(i)) < LOSS_THRESH ...
             && is_same(SAME_THRESH, L1,L2,L3) && is_same(SAME_THRESH, S1,S2)
         break
+    
     end
-end
 
+end
+    disp(['Iter Number: ' num2str(i) '. Iter Score: ' num2str(loss(i))]);
+    % Display final iteration
+    
 L = L3; % (L1+L2+L3) / 3;
 S = S1; % (S1+S2) / 2;
 

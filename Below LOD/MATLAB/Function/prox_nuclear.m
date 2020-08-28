@@ -1,6 +1,6 @@
 function [X, nuclearX] =  prox_nuclear(Y,c)
 
-[U,S,V] = svd(Y);
+[U,S,V] = svd(Y,0);
 
 S_new = sign(S) .* max(abs(S)-c, 0);
 X = U * S_new * V';
