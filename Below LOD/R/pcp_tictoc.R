@@ -24,14 +24,13 @@ n = ncol(X)
 lambda = 1/sqrt(m)
 mu = sqrt(n/(2*log(m*n)))
 
-#####
-##### Rho = 1
-#####
 system.time(svd(X))
 system.time(propack.svd(X))
 system.time(fast.svd(X))
 
-
+#####
+##### Rho = 1
+#####
 # Run model reg
 system.time(pcp_lod(X, lambda, mu, 0))
 # % Elapsed time is 42.797 seconds.
@@ -59,4 +58,18 @@ system.time(pcp_lod(X, lambda, mu, 0))
 system.time(pcp_lod(X_std, lambda, mu, 0))
 # % Elapsed time is 482.900 seconds.
 # % DOES NOT CONVERGE in 10,000
+
+#####
+##### Rho changes each iter
+#####
+
+# % % Run model reg
+system.time(pcp_lod(X, lambda, mu, 0))
+# % Elapsed time is 2.582 seconds.
+# % Converges in 66
+
+# % % Run model standardized
+system.time(pcp_lod(X_std, lambda, mu, 0))
+# % Elapsed time is 6.522 seconds.
+# % Converges in 185
 
