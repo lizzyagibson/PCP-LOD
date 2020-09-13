@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd -S /bin/bash
-#$ -l mem=2G
-#$ -l time=:1000:
+#$ -l mem=10G
+#$ -l time=:10000:
 #$ -M eag2186@cumc.columbia.edu
 
 $MODULESHOME/init/bash
