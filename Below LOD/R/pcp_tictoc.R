@@ -73,3 +73,16 @@ system.time(pcp_lod(X_std, lambda, mu, 0))
 # % Elapsed time is 6.522 seconds.
 # % Converges in 185
 
+#####
+##### Rho changes each iter + slow SVD
+#####
+
+# % % Run model reg
+system.time(pcp_lod(X, lambda, mu, 0))
+# % Elapsed time is 2.578 seconds.
+# % Converges in 66
+
+# % % Run model standardized
+system.time(pcp_lod(X_std, lambda, mu, 0))
+# % Elapsed time is 6.789 seconds.
+# % Converges in 185
