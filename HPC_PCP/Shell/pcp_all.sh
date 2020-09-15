@@ -9,6 +9,6 @@ module load matlab/2018a
 
 clear
 
-matlab -nojvm -nodisplay -nosplash  -singleCompThread -nodesktop  -logfile "/ifs/scratch/msph/ehs/eag2186/log-all{$SGE_TASK_ID}"  -r "run /ifs/scratch/msph/ehs/eag2186/pcp_all.m"
+matlab -nojvm -nodisplay -nosplash  -singleCompThread -nodesktop  -logfile "/ifs/scratch/msph/ehs/eag2186/pcp/log-all{$SGE_TASK_ID}"  -r "run /ifs/scratch/msph/ehs/eag2186/pcp/pcp_all.m"
 
 
