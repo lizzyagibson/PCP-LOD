@@ -1,27 +1,42 @@
+#####
+#####
 # Plot PCP-LOD, LOD/sqrt(2), PCA resulting error
 # Across rank, sigma, mu, and LOD
+# 9/16/2020
+# PCP-LOD with adaptive rho
+#####
+#####
+
+## Load libraries
 library(tidyverse)
 library(R.matlab)
 library(RColorBrewer)
-library(wesanderson)
-theme_set(theme_bw(base_size = 20) + theme(legend.position = "bottom",
-                             strip.background =element_rect(fill="white")))
+library(ggsci)
+
+## Set plot theme
+theme_set(theme_bw(base_size = 20) + 
+            theme(legend.position = "bottom",
+                             strip.background =element_rect(fill="white"),
+              legend.title = element_blank()))
+
+## Loop these
 rank = c(1, 2, 3, 4, 5)
 sigma = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "1")
 delta = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "1")
 
+## Array length for HPC
 length(rank)*length(sigma)*length(delta)
 
 out_mu <- tibble()
 pcp_out <- tibble()
 
-##### Read loop
+## Read loop
 for (r in rank) {
 for (d in delta) {
 for (s in sigma) {
   
-  if (file.exists(paste0("HPC_PCP/mat_out/pcp_all_lod_", d, "_rank_", r, 
-                                    "_sigma_", s, ".mat"))) {
+  if (file.exists((here::here(paste0("HPC_PCP/mat_out/pcp_all_lod_", d, "_rank_", r, 
+                                    "_sigma_", s, ".mat"))))) {
   read <- readMat(here::here(paste0("HPC_PCP/mat_out/pcp_all_lod_", d, "_rank_", r, 
                                     "_sigma_", s, ".mat")))}
   
@@ -41,47 +56,33 @@ for (s in sigma) {
   }
 }
 }
-#####
 
+pcp_out
+
+## Arrange data for ggplot
 pcp_plot <- pcp_out %>%
-  select(rank, sigma, delta, iter, belowlod_relerror_PCA:belowlod_relerror_PCP_LOD, 
-         relerror_PCA:relerror_PCP_LOD) %>% 
   pivot_longer(grep("relerror", colnames(.)),
                values_to = "rel_error") %>% 
-  mutate(type = ifelse(grepl("belowlod", name), "belowlod", 
-                       ifelse(grepl("score", name), "score",
-                       ifelse(grepl("pattern", name), "pattern", "overall"))),
-         model = ifelse(grepl("PCA", name), "PCA",
-                        ifelse(grepl("sqrt2", name), "PCP_sqrt2", "PCP_LOD")),
-         rank = as.factor(rank),
-         sigma = as.factor(sigma),
-         delta = as.factor(delta)) %>% 
+  mutate(type = ifelse(grepl("belowlod", name), "< LOD", "Overall"),
+         model = case_when(grepl("PCA", name) ~ "PCA",
+                           grepl("sqrt2", name) ~ "PCP_sqrt2", 
+                           TRUE ~ "PCP_LOD")) %>% 
+  mutate_at(vars(1:3), as.factor) %>% 
   select(-name) %>% 
-  mutate(type = case_when(type == "belowlod" ~ "< LOD",
-                          type == "overall" ~ "Overall"),
-         type = fct_relevel(type, "Overall", "< LOD")) %>% 
-  mutate(model = case_when(model == "PCA" ~ "PCA",
-                           model == "PCP_LOD" ~ "PCP-LOD",
-                           model == "PCP_sqrt2" ~ #paste0("PCP w/ LOD/", intToUtf8(8730),2))) %>% 
-                             "PCP"))
+  mutate(type = fct_relevel(type, "Overall", "< LOD"))
+
 pcp_plot
 
 pcp_plot %>% 
-  filter(delta != "1") %>% 
-  filter(sigma == "0") %>% 
-  filter(rank == "1") %>%
+  filter(!(delta %in% c("0.7", "0.8", "0.9", "1"))) %>% # dont really care
+  filter(sigma == "0") %>% # Change
+  filter(rank == "1") %>% # Change
   ggplot(aes(x = delta, y = rel_error, color = model)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25) +
   facet_grid(~type) + scale_y_log10() +
-  scale_color_manual(values = c("#E58601", # PCA
-                                "#B40F20",  # PCP SQRT2
-                                "#2196F3" # PCP LOD
-  )) +
-  #scale_color_manual(values = wes_palette(n=3, name="Darjeeling1")) +
+  scale_color_nejm() +
   labs(x = "Values < LOD (proportion)",
-       y = "Relative Prediction Error") +
-  theme(
-    legend.title = element_blank())
+       y = "Relative Prediction Error")
 
 
 
