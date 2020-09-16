@@ -48,3 +48,6 @@ Below LOD/MATLAB/*.mat
 
 # Sim data
 **.RDA
+
+# experiments repo
+experiments/
