@@ -51,3 +51,6 @@ Below LOD/MATLAB/*.mat
 
 # experiments repo
 experiments/
+
+# data
+Data/
