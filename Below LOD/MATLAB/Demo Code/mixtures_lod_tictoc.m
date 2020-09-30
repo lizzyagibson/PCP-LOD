@@ -18,40 +18,16 @@ lambda = 1/sqrt(m);
 %weight parameter for pcp, 1 / sqrt(number of rows)
 mu = sqrt(n/(2*log(m*n)));
 
-%% Rho = 1
-% % Run model reg
-tic()
-[L, S, loss] = pcp_lod(X, lambda, mu, 0); 
-toc()
-% Elapsed time is 2.768229 seconds.
-% Converges in 747
-
-% % Run model standardized
-% tic()
-% [Lstd, Sstd, lossstd] = pcp_lod(X_std, lambda, mu, 0); 
-% toc()
-% Elapsed time is 5.318982 seconds.
-% Converges in 1905
-
-%% Rho = 0.025
 % % Run model reg
 % tic()
 % [L, S, loss] = pcp_lod(X, lambda, mu, 0); 
 % toc()
-% Elapsed time is 1.191224 seconds.
-% Converges in 383
+% Elapsed time is 2.768229 seconds.
+% Converges in 747
 
 % % Run model standardized
-% tic()
-% [Lstd, Sstd, lossstd] = pcp_lod(X_std, lambda, mu, 0); 
-% toc()
-% Elapsed time is 31.245698 seconds.
-% DOES NOT CONVERGE in 10,000
-
 tic()
-svd(X,0)
-svd(X,0)
-svd(X,0)
-svd(X,0)
-svd(X,0)
+[Lstd, Sstd, lossstd] = pcp_lod(X_std, lambda, mu, 0); 
 toc()
+% Elapsed time is 5.318982 seconds.
+% Converges in 1905

@@ -21,7 +21,7 @@ end
 
 [L1,L2,L3,S1,S2,Z1,Z2,Z3] = deal(zeros(n,p));
 
-MAX_ITER = 1000;
+MAX_ITER = 10000;
 % LOSS_THRESH = 1e-5;
 % SAME_THRESH = 1e-4;
 
