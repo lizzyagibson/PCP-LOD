@@ -14,7 +14,7 @@ X[1:5, 1:5]
 m <- nrow(X)
 n <- ncol(X)
 
-root_out = root_pcp(X, 1/sqrt(m), 10)
+root_out = root_pcp_nonnegL(X, 1/sqrt(m), 10)
 
 norm(root_out[[1]], "F")
 norm(root_out[[2]], "F")
