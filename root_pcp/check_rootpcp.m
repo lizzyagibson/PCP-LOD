@@ -2,8 +2,6 @@
 clear;
 
 addpath('/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit');
-addpath('/Users/lizzy/OneDrive - cumc.columbia.edu/Principle.Component.Pursuit/root_pcp');
-%addpath('/Users/lizzy/OneDrive - cumc.columbia.edu/Principle.Component.Pursuit/Original/MATLAB');
 load('./Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
