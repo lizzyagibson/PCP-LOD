@@ -25,5 +25,4 @@ X = X(goodRows,:);
 lambda = 1/sqrt(m); 
 %weight parameter for pcp, 1 / sqrt(number of rows)
 
-[L,S] = root_pcp_nonnegL(X, 1/sqrt(m), 10); 
-[L2,S2] = root_pcp_lod(X, 1/sqrt(m), 10, 0); 
+[L,S] = stable_pcp_alternating(X, 1/sqrt(m), 10);

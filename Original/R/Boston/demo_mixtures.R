@@ -1,5 +1,6 @@
 library(R.matlab)
 library(tidyverse)
+library(pcpr)
 source("./Original/R Code/stable_pcp_alternating.R")
 
 mixture <- readMat("./Data/mixtures_data.mat")
@@ -21,7 +22,8 @@ n <- ncol(X)
 
 lambda = 1/sqrt(m)
 
-mixture_out <- stable_pcp_alternating(X, 4/sqrt(m), 10)
+#mixture_out <- stable_pcp_alternating(X, 4/sqrt(m), 10)
+mixture_out <- stable_pcp(X, 4/sqrt(m), 10)
 
 mixture_S <- mixture_out$S
 mixture_L <- mixture_out$L

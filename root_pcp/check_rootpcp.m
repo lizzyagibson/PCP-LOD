@@ -2,7 +2,7 @@
 clear;
 
 addpath('/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit');
-load('./Data/mixtures_data.mat');
+load('/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit/Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
 X = [Al As Ba bc Br Ca Cl Cr Cu Fe K  Mn  Ni  Pb  S  Se  Si Ti  V Zn];
@@ -21,7 +21,27 @@ X = X(goodRows,:);
 % m and n become the number of rows and columns
 
 lambda = 1/sqrt(m); 
-%weight parameter for pcp, 1 / sqrt(number of rows)
+mu = 10;
 
-[L,S] = root_pcp_nonnegL(X, 1/sqrt(m), 10); 
-[L2,S2] = root_pcp_lod(X, 1/sqrt(m), 10, 0); 
+%% Run 3 models
+% [Llod, Slod, losslod] = pcp_lod(X, lambda, mu, 0); 
+% %Converged in 28 iterations.
+% norm(Llod, "Fro")
+% norm(Slod, "Fro")
+
+% [Lroot,Sroot] = root_pcp(X, lambda, mu); 
+% %Converged in 837 iterations.
+% norm(Lroot, "Fro")
+% norm(Sroot, "Fro")
+
+% [L,S] = root_pcp_nonnegL(X, lambda, mu);
+% %Converged in 646 iterations.
+% norm(L, "Fro")
+% norm(S, "Fro")
+
+Xmissing = X;
+Xmissing(1:1000,1:5) = NaN;
+[Lnan,Snan] = root_pcp_with_nan(Xmissing, lambda, mu);
+%Converged in 646 iterations.
+norm(Lnan, "Fro")
+norm(Snan, "Fro")
