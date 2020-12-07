@@ -100,7 +100,7 @@ for i = 1:MAX_ITER
 end
 
 L = L3; % (L1+L2+L3) / 3;
-S = S1 % (S1+S2) / 2;
+S = S1; % (S1+S2) / 2;
 
 %%%%% BEGIN NEW %%%%%
 if flag_converge == 0
