@@ -20,16 +20,28 @@ X = X(goodRows,:);
 [m,n] = size(X);
 % m and n become the number of rows and columns
 
-lambda = 1/sqrt(m); 
-mu = 10;
+Xmissing = X;
+Xmissing(1:1000,1:5) = NaN;
 
-%% Run 3 models
+lambda = 1/sqrt(m); 
+mu = 1;
+
+%% Run models
+% [L,S] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
+% norm(L, "Fro")
+% norm(S, "Fro")
+
+[L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
+norm(L, "Fro")
+norm(S, "Fro")
+
+
 % [Llod, Slod, losslod] = pcp_lod(X, lambda, mu, 0); 
 % %Converged in 28 iterations.
 % norm(Llod, "Fro")
 % norm(Slod, "Fro")
 
-% [Lroot,Sroot] = root_pcp(X, lambda, mu); 
+% [Lroot,Sroot] = root_pcp_rank_r_nonnegL(X, lambda, 1, 5); 
 % %Converged in 837 iterations.
 % norm(Lroot, "Fro")
 % norm(Sroot, "Fro")
@@ -39,9 +51,18 @@ mu = 10;
 % norm(L, "Fro")
 % norm(S, "Fro")
 
-Xmissing = X;
-Xmissing(1:1000,1:5) = NaN;
-[Lnan,Snan] = root_pcp_with_nan(Xmissing, lambda, mu);
-%Converged in 646 iterations.
-norm(Lnan, "Fro")
-norm(Snan, "Fro")
+% [Lnan,Snan] = root_pcp_with_nan(Xmissing, lambda, mu);
+% % %Converged in 915 iterations.
+% norm(Lnan, "Fro")
+% norm(Snan, "Fro")
+
+% [Lnan_nn,Snan_nn] = root_pcp_with_nan_nonnegL(Xmissing, lambda, mu);
+% %Converged in 646 iterations.
+% norm(Lnan_nn, "Fro")
+% norm(Snan_nn, "Fro")
+
+% [Lnan_nn_lod,Snan_nn_lod] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0);
+% %Converged in 632 iterations.
+% norm(Lnan_nn_lod, "Fro")
+% norm(Snan_nn_lod, "Fro")
+
