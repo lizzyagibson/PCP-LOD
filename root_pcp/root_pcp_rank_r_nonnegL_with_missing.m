@@ -38,6 +38,7 @@ for i = 1:MAX_ITER
 
     % Store previous values of L2,S2
     L2_old = L2;
+    L3_old = L3;
     S2_old = S2;
 
     % Update 1st primal variable (L1,S1,Z)
@@ -67,7 +68,7 @@ for i = 1:MAX_ITER
 % % % % %     
     res_primal = sqrt( norm(L1-L2,'fro')^2 + norm(S1-S2,'fro')^2 + ...
                        norm(Z-mask.*(D-L2-S2),'fro')^2 + norm(L1-L3,'fro')^2);
-    res_dual = rho * sqrt( norm(L2-L2_old,'fro')^2 + norm(S2-S2_old,'fro')^2 + ...
+    res_dual = rho * sqrt( norm(L2+L3-L2_old-L3_old,'fro')^2 + norm(S2-S2_old,'fro')^2 + ...
                            norm(mask.*(L2-L2_old+S2-S2_old),'fro')^2 );
     if res_primal > 10 * res_dual
         rho = rho * 2;
@@ -90,8 +91,8 @@ for i = 1:MAX_ITER
                          sqrt( norm(L2,'fro')^2 + norm(S2,'fro')^2 + norm(mask.*(L2+S2),'fro')^2 +norm(L3,'fro')^2), ...
                          norm(D,'fro')
                         ]);
-    thresh_dual = EPS_ABS * sqrt(4*n*p) + EPS_REL * ...
-                    sqrt( norm(Y1,'fro')^2 + norm(Y2,'fro')^2 + norm(Y3,'fro')^2 +norm(Y4,'fro')^2 );
+    thresh_dual = EPS_ABS * sqrt(3*n*p) + EPS_REL * ...
+                    sqrt( norm(Y1+Y4,'fro')^2 + norm(Y2,'fro')^2 + norm(Y3,'fro')^2 );
     if res_primal < thresh_primal && res_dual < thresh_dual
         flag_converge = 1;
         disp(['Converged in ',num2str(i),' iterations.']);

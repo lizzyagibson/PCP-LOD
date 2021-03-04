@@ -23,6 +23,33 @@ Xmissing = X
 Xmissing[1:1000,1:5] = NA
 
 ## Run all model versions
+
+# Does not converge...
+root_out = root_pcp_noncvx_nonnegL_na(Xmissing, lambda, mu, 5, verbose = TRUE)
+# converged in 287
+norm(root_out[[1]], "F")
+norm(root_out[[2]], "F")
+
+# SAME
+root_out2 = root_pcp_noncvx_na(Xmissing, lambda, mu, 5, verbose = TRUE)
+# converged in 4103
+norm(root_out2[[1]], "F")
+norm(root_out2[[2]], "F")
+
+# SAME
+root_nn = root_pcp_noncvx_nonneg(X, lambda, mu, 5, verbose = TRUE)
+#"Converged in 235 iterations."
+norm(root_nn[[1]], "F")
+norm(root_nn[[2]], "F")
+
+# SAME
+root_out3 = root_pcp_noncvx(X, lambda, mu, 5, verbose = TRUE)
+#"Converged in 145 iterations."
+norm(root_out3[[1]], "F")
+norm(root_out3[[2]], "F")
+
+## OLDER
+
 #tic()
 # lod_out = pcp_lod(X, lambda, mu, 0)
 # #"Converged in 69 iterations."
@@ -30,36 +57,6 @@ Xmissing[1:1000,1:5] = NA
 # norm(lod_out[[1]], "F")
 # norm(lod_out[[2]], "F")
 
-# tic()
-# root_out = root_pcp_noncvx_na(Xmissing, lambda, mu, 5, verbose = TRUE)
-# toc()
-# # converged in 145
-# norm(root_out[[1]], "F")
-# norm(root_out[[2]], "F")
-
-tic()
-root_out = root_pcp_noncvx_nonnegL_na(Xmissing, lambda, mu, 5, verbose = TRUE)
-toc()
-# converged in 287
-# 3.7 sec elapsed
-norm(root_out[[1]], "F")
-norm(root_out[[2]], "F")
-
-# tic()
-# root_out = root_pcp_noncvx(X, lambda, mu, 5)
-# #"Converged in 837 iterations."
-# toc()
-# # 14.049 sec elapsed
-# norm(root_out[[1]], "F")
-# norm(root_out[[2]], "F")
-
-# #tic()
-# root_nn = root_pcp_nonnegL(X, lambda, mu)
-# #"Converged in 646 iterations."
-# #toc()
-# norm(root_nn[[1]], "F")
-# norm(root_nn[[2]], "F")
-# 
 # tic()
 # nan_out = root_pcp_with_nan(X, lambda, mu)
 # #"Converged in 837 iterations."

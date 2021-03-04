@@ -26,25 +26,35 @@ Xmissing(1:1000,1:5) = NaN;
 lambda = 1/sqrt(m); 
 mu = 1;
 
-%% Run models
-% [L,S] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
-% norm(L, "Fro")
-% norm(S, "Fro")
+% Run models
 
+disp("Nonconvex, nonnegative, NA")
 [L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
 norm(L, "Fro")
 norm(S, "Fro")
 
+disp("Nonconvex, NA")
+[Lroot,Sroot] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
+%Converged in 837 iterations.
+norm(Lroot, "Fro")
+norm(Sroot, "Fro")
 
+disp("Nonconvex, nonnegative")
+[L1,S1] = root_pcp_rank_r_nonnegL(X, lambda, mu, 5); 
+norm(L1, "Fro")
+norm(S1, "Fro")
+
+disp("Nonconvex")
+[L2,S2] = root_pcp_rank_r(X, lambda, mu, 5); 
+norm(L2, "Fro")
+norm(S2, "Fro")
+
+
+%% Older functions
 % [Llod, Slod, losslod] = pcp_lod(X, lambda, mu, 0); 
 % %Converged in 28 iterations.
 % norm(Llod, "Fro")
 % norm(Slod, "Fro")
-
-% [Lroot,Sroot] = root_pcp_rank_r_nonnegL(X, lambda, 1, 5); 
-% %Converged in 837 iterations.
-% norm(Lroot, "Fro")
-% norm(Sroot, "Fro")
 
 % [L,S] = root_pcp_nonnegL(X, lambda, mu);
 % %Converged in 646 iterations.
