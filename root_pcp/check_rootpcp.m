@@ -26,53 +26,51 @@ Xmissing(1:1000,1:5) = NaN;
 lambda = 1/sqrt(m); 
 mu = 1;
 
-% Run models
+%% Run models
 
 disp("Nonconvex, nonnegative, NA")
 [L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
 norm(L, "Fro")
 norm(S, "Fro")
 
-disp("Nonconvex, NA")
-[Lroot,Sroot] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
-%Converged in 837 iterations.
-norm(Lroot, "Fro")
-norm(Sroot, "Fro")
+% disp("Nonconvex, NA")
+% [Lroot,Sroot] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
+% norm(Lroot, "Fro")
+% norm(Sroot, "Fro")
 
-disp("Nonconvex, nonnegative")
-[L1,S1] = root_pcp_rank_r_nonnegL(X, lambda, mu, 5); 
-norm(L1, "Fro")
-norm(S1, "Fro")
+% disp("Nonconvex, nonnegative")
+% [L1,S1] = root_pcp_rank_r_nonnegL(X, lambda, mu, 5); 
+% norm(L1, "Fro")
+% norm(S1, "Fro")
 
-disp("Nonconvex")
-[L2,S2] = root_pcp_rank_r(X, lambda, mu, 5); 
-norm(L2, "Fro")
-norm(S2, "Fro")
+% disp("Nonconvex")
+% [L2,S2] = root_pcp_rank_r(X, lambda, mu, 5); 
+% norm(L2, "Fro")
+% norm(S2, "Fro")
 
-
-%% Older functions
-% [Llod, Slod, losslod] = pcp_lod(X, lambda, mu, 0); 
-% %Converged in 28 iterations.
-% norm(Llod, "Fro")
-% norm(Slod, "Fro")
-
-% [L,S] = root_pcp_nonnegL(X, lambda, mu);
-% %Converged in 646 iterations.
-% norm(L, "Fro")
-% norm(S, "Fro")
-
-% [Lnan,Snan] = root_pcp_with_nan(Xmissing, lambda, mu);
-% % %Converged in 915 iterations.
-% norm(Lnan, "Fro")
-% norm(Snan, "Fro")
-
+% disp("Nonnegative, NA")
 % [Lnan_nn,Snan_nn] = root_pcp_with_nan_nonnegL(Xmissing, lambda, mu);
-% %Converged in 646 iterations.
 % norm(Lnan_nn, "Fro")
 % norm(Snan_nn, "Fro")
 
+% disp("Nonnegative, NA, LOD")
 % [Lnan_nn_lod,Snan_nn_lod] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0);
-% %Converged in 632 iterations.
 % norm(Lnan_nn_lod, "Fro")
 % norm(Snan_nn_lod, "Fro")
+
+% disp("Nonnegative")
+% [L,S] = root_pcp_nonnegL(X, lambda, mu);
+% norm(L, "Fro")
+% norm(S, "Fro")
+
+% disp("NA")
+% [Lnan,Snan] = root_pcp_with_nan(Xmissing, lambda, mu);
+% norm(Lnan, "Fro")
+% norm(Snan, "Fro")
+
+% disp("rootPCP")
+% [L1,S1] = root_pcp(X, lambda, mu);
+% norm(L1, "Fro")
+% norm(S1, "Fro")
+
 

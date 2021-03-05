@@ -1,23 +1,22 @@
-function [L, S] = root_pcp_rank_r_nonnegL_with_missing (D, lambda, mu, r)
-% [L, S] = root_pcp_rank_r_nonnegL_with_missing (D, lambda, mu, r)
-%
+function [L, S] = root_pcp_with_nan_nonnegL (D, lambda, mu)
+% [L, S] = root_pcp_with_nan_nonnegL( D, lambda, mu )
+% use NaN for missing entries in D, assume that the true L>=0
+% 
 % Solve the following problem:
 % min_{L,S}
-%         ||L||_* + lambda * ||S||_1 + mu * ||P_(obs)[L+S-D]||_F
-% s.t. L >= 0.
-%
+%         ||L||_* + lambda * ||S||_1 + mu * || P_(obs)[L+S-D] ||_F +
+%         I{L>=0}
 % This is first transformed to the problem
 % min_{L1,L2,L3,S1,S2,Z}
-%      ||L1||_* + lambda * ||S1||_1 + mu * ||Z||_F + I(L3>=0)
+%      ||L1||_* + lambda * ||S1||_1 + mu * ||Z||_F + I{L3>=0}
 % s.t. L1 = L2
 %      S1 = S2
 %      Z = P_obs[ D - L2 - S2]
 %      L1 = L3
-% The algorithm conducts ADMM splitting as (L1,S1,Z,L3),(L2,S2).
-% use nan for missing entries in the observation
+% The algorithm conducts ADMM splitting as (L1,S1,Z),(L2,L3,S2).
 
 [n,p] = size(D);
-rho = 0.3; % Augmented Lagrangian parameter
+rho = 0.1; % Augmented Lagrangian parameter
 
 [L1,L2,L3,S1,S2,Z,Y1,Y2,Y3,Y4] = deal(zeros(n,p));
 
@@ -42,7 +41,7 @@ for i = 1:MAX_ITER
     S2_old = S2;
 
     % Update 1st primal variable (L1,S1,Z)
-    L1 = proj_rank_r( (L2+L3-Y1/rho-Y4/rho)/2,r );
+    [L1, ~] = prox_nuclear( (L2+L3-Y1/rho-Y4/rho)/2, 1/rho/2 );
     S1 = prox_l1( S2-Y2/rho, lambda/rho );
 % % % % %     Z = prox_fro( D-L2-S2-Y3/rho, mu/rho );
     Z = prox_fro( mask.*(D-L2-S2)-Y3/rho, mu/rho );
@@ -92,7 +91,7 @@ for i = 1:MAX_ITER
                          norm(D,'fro')
                         ]);
     thresh_dual = EPS_ABS * sqrt(3*n*p) + EPS_REL * ...
-                    sqrt( norm(Y1+Y4,'fro')^2 + norm(Y2,'fro')^2 + norm(Y3,'fro')^2 );
+                    sqrt( norm(Y1+Y4,'fro')^2 + norm(Y2,'fro')^2 + norm(Y3,'fro')^2  );
     if res_primal < thresh_primal && res_dual < thresh_dual
         flag_converge = 1;
         disp(['Converged in ',num2str(i),' iterations.']);
