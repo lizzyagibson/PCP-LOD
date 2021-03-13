@@ -53,8 +53,9 @@ for i = 1:MAX_ITER
     Z_unobs = (1-mask_obs).*temp;
     Z_obs_below_LOD1 = (mask_below_lod & (temp>=0) & (temp<=Delta)).*temp;
     
-    temp2 = mask_obs.*(1-(mask_below_lod & (temp>=0) & (temp<=Delta))).*temp - mask_above_lod.*D - Delta*mask_below_lod.*(temp>=Delta);
-    Z = prox_fro( temp2, mu/rho )+mask_above_lod.*D +Delta*mask_below_lod.*(temp>=Delta)+Z_unobs+Z_obs_below_LOD1;
+    temp2 = mask_obs.*(1-(mask_below_lod & (temp>=0) & (temp<=Delta))).*temp - mask_above_lod.*D - Delta.*mask_below_lod.*(temp>=Delta);
+    Z = prox_fro( temp2, mu/rho )+mask_above_lod.*D +Delta.*mask_below_lod.*(temp>=Delta)+Z_unobs+Z_obs_below_LOD1;
+    % two matrix multiplies to element-wise
     
     L3 = max(L1+Y4/rho,0);
 % % % % %     % Update 2nd primal variable (L2,S2)

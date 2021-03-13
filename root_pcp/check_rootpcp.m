@@ -1,8 +1,8 @@
 % demo_mixtures
 clear;
 
-addpath('/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit');
-load('/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit/Data/mixtures_data.mat');
+addpath('/Users/lizzy/Principal.Component.Pursuit');
+load('/Users/lizzy/Principal.Component.Pursuit/Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
 X = [Al As Ba bc Br Ca Cl Cr Cu Fe K  Mn  Ni  Pb  S  Se  Si Ti  V Zn];
@@ -17,21 +17,48 @@ goodRows = find( numMissingPerRow == 0 );
 X = X(goodRows,:); 
 %semicolon means it doesnt output the results
 
-[m,n] = size(X);
+[m,p] = size(X);
 % m and n become the number of rows and columns
 
 Xmissing = X;
-Xmissing(1:1000,1:5) = NaN;
+Xmissing(1:10,1:5) = NaN;
+
+Xlod = X;
+Xlod(1:10,1:5) = -1;
+
+Xmissinglod = X;
+Xmissinglod(1:10,1:5) = NaN;
+Xmissinglod(1:10,1:5) = -1;
 
 lambda = 1/sqrt(m); 
-mu = 1;
+mu = sqrt(p/(2*log(m*p)));
 
 %% Run models
 
-disp("Nonconvex, nonnegative, NA")
-[L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
+disp("Nonnegative, NA, LOD, no missing or <LOD")
+[L,S] = root_pcp_with_nan_nonnegL_LOD(X, lambda, 1, 0); 
 norm(L, "Fro")
 norm(S, "Fro")
+
+disp("Nonnegative, NA, LOD, with missing")
+[L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, 1, 0); 
+norm(L, "Fro")
+norm(S, "Fro")
+
+disp("Nonnegative, NA, LOD, with <LOD")
+[L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, 1, 0); 
+norm(L, "Fro")
+norm(S, "Fro")
+
+disp("Nonnegative, NA, LOD, with missing & <LOD")
+[L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, 1, 0); 
+norm(L, "Fro")
+norm(S, "Fro")
+
+% disp("Nonconvex, nonnegative, NA")
+% [L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
+% norm(L, "Fro")
+% norm(S, "Fro")
 
 % disp("Nonconvex, NA")
 % [Lroot,Sroot] = root_pcp_rank_r_with_missing(Xmissing, lambda, 1, 5); 
