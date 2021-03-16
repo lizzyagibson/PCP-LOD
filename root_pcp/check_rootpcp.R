@@ -3,7 +3,7 @@ library(tidyverse)
 library(pcpr)
 library(tictoc)
 
-mixture <- readMat("/Users/lizzy/OneDrive - cumc.columbia.edu/Principal.Component.Pursuit/Data/mixtures_data.mat")
+mixture <- readMat("./Data/mixtures_data.mat")
 
 mixture_data <- as.data.frame(mixture) %>% 
   as_tibble() %>% dplyr::select(Al, As, Ba, bc, Br, Ca, Cl,
@@ -11,12 +11,11 @@ mixture_data <- as.data.frame(mixture) %>%
                          Ti,  V, Zn) %>% as.matrix()
 
 X <- mixture_data[complete.cases(mixture_data),]
-# X[1:5, 1:5]
 
 m <- nrow(X)
-n <- ncol(X)
+p <- ncol(X)
 lambda <- 1/sqrt(m)
-mu <- 1
+mu <- sqrt(p/2)
 
 ## With missing values!
 Xmissing = X
@@ -61,7 +60,8 @@ norm(nan_nn_out[[2]], "F")
 
 # 4
 # SAME
-nan_nn_lod_out = root_pcp_na_nonnegL_lod(Xmissing, lambda, mu, 0, verbose = TRUE)
+nan_nn_lod_out = root_pcp_na_nonnegL_lod(X, lambda, mu, matrix(0, nrow = nrow(X), ncol = ncol(X))
+                                         , verbose = TRUE)
 norm(nan_nn_lod_out[[1]], "F")
 norm(nan_nn_lod_out[[2]], "F")
 

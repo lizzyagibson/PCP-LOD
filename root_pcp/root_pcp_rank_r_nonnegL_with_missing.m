@@ -13,11 +13,11 @@ function [L, S] = root_pcp_rank_r_nonnegL_with_missing (D, lambda, mu, r)
 %      S1 = S2
 %      Z = P_obs[ D - L2 - S2]
 %      L1 = L3
-% The algorithm conducts ADMM splitting as (L1,S1,Z,L3),(L2,S2).
+% The algorithm conducts ADMM splitting as (L1,S1,Z),(L2,S2,L3).
 % use nan for missing entries in the observation
 
 [n,p] = size(D);
-rho = 0.3; % Augmented Lagrangian parameter
+rho = 0.1; % Augmented Lagrangian parameter
 
 [L1,L2,L3,S1,S2,Z,Y1,Y2,Y3,Y4] = deal(zeros(n,p));
 

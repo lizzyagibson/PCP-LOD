@@ -33,6 +33,6 @@ clear opts
 lambda = 1/sqrt(m); 
 mu = sqrt(p/(2*log(m*p)));
 
-[L,S] = root_pcp_with_nan_nonnegL_LOD(nhanes50, lambda, mu, 0); 
+[L,S] = root_pcp_with_nan_nonnegL_LOD(nhanes50, lambda, mu, nhanes50_lod); 
 norm(L, "Fro")
 norm(S, "Fro")

@@ -60,7 +60,7 @@ for i = 1:MAX_ITER
     Y1 = Y1 + rho*(L1-L2);
     Y2 = Y2 + rho*(S1-S2);
 % % % % %     
-    Y3 = Y3 + rho*(Z-mask.*(D-L2-S2));
+    Y3 = Y3 + rho*(Z-mask.*(D-L2-S2)); % Z = P_obs[D - L2 - S2]
     Y4 = Y4 + rho*(L1-L3);
     
     %  Calculate primal & dual residuals; Update rho

@@ -1,8 +1,8 @@
 % demo_mixtures
 clear;
 
-%addpath('/Users/lizzy/Principal.Component.Pursuit');
-%load('/Users/lizzy/Principal.Component.Pursuit/Data/mixtures_data.mat');
+addpath('/Users/lizzy/Principal.Component.Pursuit');
+load('/Users/lizzy/Principal.Component.Pursuit/Data/mixtures_data.mat');
 
 %X = [pm25 pm1 Al As Ba bc Br Ca Cl Cr Cu Fe K Mn Ni Pb S Se Si Ti V Zn];
 X = [Al As Ba bc Br Ca Cl Cr Cu Fe K  Mn  Ni  Pb  S  Se  Si Ti  V Zn];
@@ -21,7 +21,7 @@ X = X(goodRows,:);
 % m and n become the number of rows and columns
 
 Xmissing = X;
-Xmissing(1:10,1:5) = NaN;
+Xmissing(1,1) = NaN;
 
 Xlod = X;
 Xlod(10:20,5:10) = -1;
@@ -41,9 +41,9 @@ norm(L1, "Fro")
 norm(S1, "Fro")
 
 disp("Nonnegative, NA, LOD, with missing")
-[L2,S2] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0); 
-norm(L2, "Fro")
-norm(S2, "Fro")
+[Ly,Sy] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0); 
+norm(Ly, "Fro")
+norm(Sy, "Fro")
 
 disp("Nonnegative, NA, LOD, with <LOD")
 [L3,S3] = root_pcp_with_nan_nonnegL_LOD(Xlod, lambda, mu, 0); 
