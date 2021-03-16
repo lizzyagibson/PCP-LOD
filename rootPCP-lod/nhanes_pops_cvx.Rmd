@@ -83,64 +83,115 @@ nhanes <- read_sas(here("./Data/studypop_lod.sas7bdat")) %>%
 ```
 
 ```{r, functions, include=FALSE}
-pop_label_groups <- function(names) {
- case_when(grepl("(^D|d$|TCDD)", names) ~ "Dioxins", 
-           grepl("(^F|f$)", names) ~ "Furans",
-           grepl("(126|169|hxc|pcb|HXC|PCBPCB)", names) ~ "Non-Ortho PCBs",
-           grepl("(105|118|156|157|167|198)", names) ~ "Mono-Ortho PCBs",
-           TRUE ~ "Non-Dioxin-like PCBs")
-}
-
-pop_rename = function(name) {
+pop_rename_lc = function(name) {
   name = str_to_upper(name)
-  name = case_when(grepl('074', name) ~ 'PCB 74',
-                   grepl('099', name) ~ 'PCB 99',
-                   grepl('118', name) ~ 'PCB 118',
-                   grepl('138', name) ~ 'PCB 138',
-                   grepl('153', name) ~ 'PCB 153',
-                   grepl('170', name) ~ 'PCB 170',
-                   grepl('180', name) ~ 'PCB 180',
-                   grepl('187', name) ~ 'PCB 187',
-                   grepl('194', name) ~ 'PCB 194',
-                   grepl('D03', name) ~   '1,2,3,6,7,8-hxcdd',
-                   grepl('D05', name) ~ '1,2,3,4,6,7,8-hpcdd',
-                   grepl('D07', name) ~'1,2,3,4,6,7,8,9-ocdd',
-                   grepl('F03', name) ~     '2,3,4,7,8-pncdf',
-                   grepl('F04', name) ~   '1,2,3,4,7,8-hxcdf',
-                   grepl('F05', name) ~   '1,2,3,6,7,8-hxcdf',
-                   grepl('F08', name) ~ '1,2,3,4,6,7,8-hxcdf',
-                   grepl('(hxc|HXC)', name) ~ 'PCB 169',
-                   grepl('(LBDPCBLC|PCBPCB|LBXPCBLA)', name) ~ 'PCB 126', 
-                   grepl("105", name) ~ "PCB 105",    
-                   grepl("156", name) ~ "PCB 156", 
-                   grepl("157", name) ~ "PCB 157", 
-                   grepl("167", name) ~ "PCB 167",
-                   grepl("D01", name) ~ "Dioxin 1",  
-                   grepl("D04", name) ~ "Dioxin 4",   
-                   grepl("F01", name) ~  "Furan 1",
-                   grepl("F02", name) ~  "Furan 2",  
-                   grepl("F04", name) ~  "Furan 4",  
-                   grepl("F06", name) ~  "Furan 6", 
-                   grepl("F07", name) ~  "Furan 7",   
-                   grepl("TCD", name) ~     "TCDD",
-                   grepl("189", name) ~  "PCB 189",  
-                   grepl("196", name) ~  "PCB 196", 
-                   grepl("199", name) ~  "PCB 199", 
-                   grepl("D02", name) ~ "Dioxin 2", 
-                   grepl("F09", name) ~  "Furan 9"  )
+         name = fct_recode(name,'PCB 74' = 'LBD074LC', 'PCB 99' = 'LBD099LC', 'PCB 118' = 'LBD118LC', 
+                           'PCB 138' = 'LBD138LC', 'PCB 153' = 'LBD153LC', 'PCB 170' = 'LBD170LC', 
+                           'PCB 180' = 'LBD180LC', 'PCB 187' = 'LBD187LC', 'PCB 194' = 'LBD194LC',
+                           '1,2,3,6,7,8-hxcdd' = 'LBDD03LC', '1,2,3,4,6,7,8-hpcdd' = 'LBDD05LC',
+                           '1,2,3,4,6,7,8,9-ocdd' = 'LBDD07LC', '2,3,4,7,8-pncdf' = 'LBDF03LC',
+                           '1,2,3,4,7,8-hxcdf' = 'LBDF04LC', '1,2,3,6,7,8-hxcdf' = 'LBDF05LC',
+                           '1,2,3,4,6,7,8-hxcdf' = 'LBDF08LC', 'PCB 169' = 'LBDHXCLC', 
+                           'PCB 126' = 'LBDPCBLC', "PCB 105" = "LBD105LC",     "PCB 156" = "LBD156LC", 
+                           "PCB 157" = "LBD157LC",  "PCB 167" = "LBD167LC", "Dioxin 1" = "LBDD01LC",  
+                           "Dioxin 4" = "LBDD04LC",    "Furan 1" = "LBDF01LC", "Furan 2" = "LBDF02LC",  
+                           "Furan 4" = "LBDF04LC",   "Furan 6" = "LBDF06LC",  "Furan 7" = "LBDF07LC",   
+                           "TCDD" = "LBDTCDLC", "PCB 189" = "LBD189LC",   "PCB 196" = "LBD196LC",  
+                           "PCB 199" = "LBD199LC",  "Dioxin 2" = "LBDD02LC",  "Furan 9" = "LBDF09LC")
          name
 }
 
-col_rename = function(pops) {
-      colnames(pops) <- str_sub(colnames(pops), 1, 6)
-      colnames(pops) <- str_replace(colnames(pops), "lbxd", "D")
-      colnames(pops) <- str_replace(colnames(pops), "lbxf", "F")
-      colnames(pops) <- str_replace(colnames(pops), "lbxtcd", "TCDD")
-      colnames(pops) <- str_replace(colnames(pops), "lbx", "PCB")
+pop_rename_la = function(name) {
+  name = str_to_upper(name)
+         name = fct_recode(name,'PCB 74' = 'LBX074LA',
+                                'PCB 99' = 'LBX099LA',
+                                'PCB 118' = 'LBX118LA',
+                                'PCB 138' = 'LBX138LA',
+                                'PCB 153' = 'LBX153LA',
+                                'PCB 170' = 'LBX170LA',
+                                'PCB 180' = 'LBX180LA',
+                                'PCB 187' = 'LBX187LA',
+                                'PCB 194' = 'LBX194LA',
+                                '1,2,3,6,7,8-hxcdd' = 'LBXD03LA',
+                                '1,2,3,4,6,7,8-hpcdd' = 'LBXD05LA',
+                                '1,2,3,4,6,7,8,9-ocdd' = 'LBXD07LA',
+                                '2,3,4,7,8-pncdf' = 'LBXF03LA',
+                                '1,2,3,4,7,8-hxcdf' = 'LBXF04LA',
+                                '1,2,3,6,7,8-hxcdf' = 'LBXF05LA',
+                                '1,2,3,4,6,7,8-hxcdf' = 'LBXF08LA',
+                                'PCB 169' = 'LBXHXCLA',
+                                'PCB 126' = 'LBXPCBLA',
+                                "PCB 105" = "LBX105LA",    
+                                "PCB 156" = "LBX156LA", 
+                                "PCB 157" = "LBX157LA", 
+                                "PCB 167" = "LBX167LA",
+                                "Dioxin 1" = "LBXD01LA",  
+                                "Dioxin 4" = "LBXD04LA",   
+                                "Furan 1" = "LBXF01LA",
+                                "Furan 2" = "LBXF02LA",  
+                                "Furan 4" = "LBXF04LA",  
+                                "Furan 6" = "LBXF06LA", 
+                                "Furan 7" = "LBXF07LA",   
+                                "TCDD" = "LBXTCDLA",
+                                "PCB 189" = "LBX189LA",  
+                                "PCB 196" = "LBX196LA", 
+                                "PCB 199" = "LBX199LA", 
+                                "Dioxin 2" = "LBXD02LA", 
+                                "Furan 9" = "LBXF09LA")
+         name
+}
+
+pop_rename_col = function(name) {
+  name = str_to_upper(name)
+         name = fct_recode(name,'PCB 74' = 'PCB074',
+                                'PCB 99' = 'PCB099',
+                                'PCB 118' = 'PCB118',
+                                'PCB 138' = 'PCB138',
+                                'PCB 153' = 'PCB153',
+                                'PCB 170' = 'PCB170',
+                                'PCB 180' = 'PCB180',
+                                'PCB 187' = 'PCB187',
+                                'PCB 194' = 'PCB194',
+                                '1,2,3,6,7,8-hxcdd' = 'D03',
+                                '1,2,3,4,6,7,8-hpcdd' = 'D05',
+                                '1,2,3,4,6,7,8,9-ocdd' = 'D07',
+                                '2,3,4,7,8-pncdf' = 'F03',
+                                '1,2,3,4,7,8-hxcdf' = 'F04',
+                                '1,2,3,6,7,8-hxcdf' = 'F05',
+                                '1,2,3,4,6,7,8-hxcdf' = 'F08',
+                                'PCB 169' = 'PCBHXC',
+                                'PCB 126' = 'PCBPCB',
+                                "PCB 105" = "PCB105",    
+                                "PCB 156" = "PCB156", 
+                                "PCB 157" = "PCB157", 
+                                "PCB 167" = "PCB167",
+                                "Dioxin 1" = "D01",  
+                                "Dioxin 4" = "D04",   
+                                "Furan 1" = "F01",
+                                "Furan 2" = "F02",  
+                                "Furan 4" = "F04",  
+                                "Furan 6" = "F06", 
+                                "Furan 7" = "F07",   
+                                "TCDD" = "TCD",
+                                "PCB 189" = "189",  
+                                "PCB 196" = "196", 
+                                "PCB 199" = "199", 
+                                "Dioxin 2" = "D02", 
+                                "Furan 9" = "F09")
+         name
+}
+
+re_name = function(pops) {
+      names(pops) <- str_sub(names(pops), 1, 6)
+      names(pops) <- str_replace(names(pops), "lbxd", "D")
+      names(pops) <- str_replace(names(pops), "lbxf", "F")
+      names(pops) <- str_replace(names(pops), "lbxtcd", "TCDD")
+      names(pops) <- str_replace(names(pops), "lbx", "PCB")
       if ("pops$PCBpcb" %in% colnames(pops)) {
       pops = pops %>% rename(PCB169 = PCBhxc, PCB126 = PCBpcb)}
       return(pops)
       }
+
 
 # this takes proportion detected (1 - proportion nondetect)
 prop <- function (x) {1 - (sum(x, na.rm = TRUE)/length(x[!is.na(x)]))}
@@ -151,7 +202,7 @@ nhanes %>% dplyr::select(grep("lc", names(.))) %>%
             summarize_all(prop) %>% 
   pivot_longer(lbd074lc:lbdf09lc) %>%
   mutate(name = str_to_upper(name),
-         name = pop_rename(name),
+         name = pop_rename_lc(name),
          name = fct_reorder(name, value)) %>% 
   ggplot(aes(x = name, y = value)) +
   geom_segment( aes(x=name, xend=name, y=0, yend=value), color="grey") +
@@ -162,13 +213,6 @@ nhanes %>% dplyr::select(grep("lc", names(.))) %>%
        axis.ticks.x = element_blank(),
        axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(y = "% > LOD", n = "")
-
-detected = nhanes %>% dplyr::select(grep("lc", names(.))) %>% 
-            summarize_all(prop) %>% 
-  pivot_longer(lbd074lc:lbdf09lc) %>%
-  mutate(name = str_to_upper(name),
-         name = pop_rename(name),
-         name = fct_reorder(name, value)) %>% rename(Chemicals = name, detected = value)
 ```
 
 ```{r, process, include=FALSE}
@@ -184,7 +228,7 @@ process_pops = function(x) {
             names() %>% str_sub(., 4, 6) %>% str_c("lbx", ., "la") %>% as.vector()  
 
   pops <- nhanes %>% dplyr::select(all_of(names)) %>% na.omit(.)
-  pops = col_rename(pops)
+  pops = re_name(pops)
   
   # Matrix of 0/1
   lod_names <- nhanes %>% 
@@ -195,29 +239,30 @@ process_pops = function(x) {
   clean_names() %>% 
   select(lod_names) %>% 
   na.omit()
-  
+
   # Matrix of all values (with CDC imputed values)
   imputed <- read_sas(here::here("./Data/studypop_lod.sas7bdat")) %>% 
   clean_names() %>% 
   select(all_of(names)) %>% 
   na.omit() %>% as.matrix()
-  imputed = col_rename(imputed)
-  
+
   # Element-wise multiplication by 1/0
   # Keep values <LOD
   # Values >LOD == 0
   # Multiply by sqrt(2) to get back LOD
   lod_matrix <- (lods * imputed) * sqrt(2)
   lod_matrix <- as.matrix(lod_matrix)
-  lod_matrix <- col_rename(lod_matrix)
   #summary(lod_matrix)
 
   # Need to scale POPs because they have super different ranges. 
   # Need to get rid of values less than LOD to scale and then add them back.
-  
+
+  #summary(pops)
+
   # make <LOD NA so they dont affect the scaling
   pops[pops < 0] <- NA
 
+  # Scale bc way different ranges
   # Get stand dev of values > LDO
   denoms = apply(pops, 2, function(a) sd(a, na.rm = T))
   pops_scaled = apply(pops, 2, function(a) a/sd(a, na.rm = T))
@@ -242,6 +287,7 @@ fifty_percent = process_pops(.5)
 data_50  = as.matrix(fifty_percent$scaled_data)
 delta_50 = fifty_percent$lods
 imputed_50 = fifty_percent$sqrt2_data
+colnames(data_50)
 
 #write_csv(as.data.frame(data_50), "./experiments/law_experiments/PCPhelpers/Data/nhanes_50.csv")
 #write_csv(as.data.frame(delta_50), "./experiments/law_experiments/PCPhelpers/Data/nhanes_50_lods.csv")
@@ -259,28 +305,18 @@ m = sqrt(p/2)
 lam = 1/n
 
 mu <- c(seq(m, 20, length.out = 20))
-lambda <- c(seq(0, lam, length.out = 10)[-c(1,10)], seq(lam, 1, length.out = 5))
+lambda <- c(seq(lam, 10, length.out = 10))
 rank <- 1:10
 
-grid.pop <- expand.grid(lambda = lambda, r = rank)
+grid.pop <- expand.grid(lambda = lambda, mu = mu)
 nrow(grid.pop)
 evals = ceiling(.07*nrow(grid.pop))
 
 noncvx_search <- bayes_search_cv(mat = data_50, 
-                                 pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+                                 pcp_func = root_pcp_na_nonnegL_lod, 
                                  grid_df = grid.pop,
                                  init_evals = evals, bayes_evals = evals, 
-                                 cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
-to_save = noncvx_search$formatted
-save(to_save, file = "./rootPCP-lod/nhanes_cv.rda")
-
-# we can even continue the search by passing bayes the formatted results from the last one:
-noncvx_search2 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                  grid_df = noncvx_search$formatted,
-                                  init_evals = evals, bayes_evals = evals, 
-                                  cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
-to_save = noncvx_search2$formatted
-save(to_save, file = "./rootPCP-lod/nhanes_cv2.rda")
+                                 cores = 2, runs = 5, LOD = delta_50)
 ```
 
 ```{r}
@@ -291,11 +327,8 @@ noncvx_search$formatted %>%
   drop_na()
 
 noncvx_search$formatted %>%
-  mutate(lambda = as_factor(round(lambda, 4)),
-         r = as_factor(r)) %>% 
-  ggplot(aes(y = lambda, x = r)) +
+  ggplot(aes(y = lambda, x = mu)) +
   geom_tile(aes(fill = value)) +
-  scale_fill_viridis_c() +
   theme_bw()
 ```
 
@@ -305,13 +338,16 @@ optimal.lambda <- noncvx_search$formatted$lambda[best.idx]
 optimal.mu <- noncvx_search$formatted$mu[best.idx]
 optimal.r <- noncvx_search$formatted$r[best.idx]
 
-pcp_out <- root_pcp_noncvx_nonnegL_na_lod(D = data_50, 
-                                   lambda = optimal.lambda, mu = m, 
-                                   r = optimal.r, LOD = delta_50,
+pcp_out <- root_pcp_na_nonnegL_lod(D = data_50, 
+                                   lambda = optimal.lambda, mu = optimal.mu, 
+                                   LOD = delta_50,
                                            verbose = TRUE)
 
-L = pcp_out$L
-S = pcp_out$S
+# low rank matrix
+L <- pcp_out[[1]]
+
+#sparse matrix
+S <- pcp_out[[2]]
 ```
 
 ### Sparse Matrix
@@ -319,20 +355,21 @@ S = pcp_out$S
 ```{r}
 sum(S == 0)/(nrow(S)*ncol(S))
 sum(S < 0)/(nrow(S)*ncol(S))
-sum(S < 0.001)/(nrow(S)*ncol(S))
+sum(S < 0.00001)/(nrow(S)*ncol(S))
 colnames(S)
 
 plot_sparse <- S %>% as_tibble() %>% 
   mutate(id = 1:nrow(.)) %>% 
   select(id, everything()) %>% 
   gather(key = exposure, value = value, -id) %>%
-  mutate(exposure = pop_rename(exposure),
+  mutate(exposure = pop_rename_col(exposure),
           binary = ifelse(value < 0.00001, 0, 1)) 
 # sparse event (0) vs non-sparse event (not zero)
 # this treats negative as sparse      event, too
 ```
 
 ```{r fig.width = 10}
+## Plot heatmap 
 plot_sparse %>%
 ggplot(aes(x = exposure, y = id)) +
   geom_tile(aes(fill = as.factor(binary))) +
@@ -347,9 +384,14 @@ ggplot(aes(x = exposure, y = id)) +
 ### Patterns
 
 ```{r}
+rankMatrix(L)
+```
+
+```{r}
 ggcorr(L, method = c("everything", "spearman"), limits = FALSE,
        label = TRUE, label_size = 3, label_alpha = TRUE,
-       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Low Rank Matrix from LOD PCP")
+       hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + 
+        ggtitle("Low Rank Matrix from LOD PCP")
 ```
 
 #### PCA of low rank matrix
@@ -368,22 +410,26 @@ pcp_plot = pcp_pca$rotation %>%
   mutate(Chemicals = colnames(data_50)) %>% 
   select(Chemicals, PC1:PC3) %>% 
   gather(key = Component, value = Loadings, -Chemicals) %>%
-  mutate(Group = pop_label_groups(Chemicals)) %>%
-  mutate(Chemicals = pop_rename(Chemicals)) %>% 
+  mutate(Group = ifelse(grepl("(D|TCDD)", Chemicals), "Dioxins",
+                  ifelse(grepl("F", Chemicals), "Furans",
+                    ifelse(grepl("(126|169|pcb|hxc)", Chemicals), "Non-Ortho PCBs",
+                     ifelse(grepl("(105|118|156|157|167|198)", Chemicals), "Mono-Ortho PCBs", "Non-Dioxin-like PCBs"))))) %>%
+  mutate(Chemicals = pop_rename_col(Chemicals),
+         Chemicals = fct_inorder(Chemicals)) %>% 
   ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
   geom_segment(aes(yend=0, xend = Chemicals)) +
   facet_wrap(.~Component) + theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom",
-        strip.background = element_blank()) + labs(title = "PCA on PCP L matrix")
+        strip.background = element_blank())
 pcp_plot
 ```
 
 ## PCA
 
 ```{r}
-# data already scaled
-pca_50 <- prcomp(imputed_50, center = TRUE, scale = TRUE)
+dim(imputed_50)
+pca_50 <- prcomp(imputed_50)
 ```
 
 ```{r}
@@ -398,26 +444,30 @@ pca_50$sdev^2/sum(pca_50$sdev^2)
 fviz_eig(pca_50, main = "PCA on Original Matrix",
          xlab = "Principal components") 
 
-pca_plot = 
-  pca_50$rotation %>% 
+pca_plot = pca_50$rotation %>% 
   as_tibble() %>% 
   mutate(Chemicals = colnames(fifty_percent$sqrt2_data)) %>% 
   select(Chemicals, PC1:PC3) %>% 
   gather(key = Component, value = Loadings, -Chemicals) %>%
-  mutate(Group = pop_label_groups(Chemicals),
-        Chemicals = pop_rename(Chemicals)) %>% 
+  mutate(Chemicals = pop_rename_la(Chemicals),
+         Group = ifelse(grepl("(d$|TCDD)", Chemicals), "Dioxins", 
+                  ifelse(grepl("(^F|f$)", Chemicals), "Furans",
+                    ifelse(grepl("(126|169)", Chemicals), "Non-Ortho PCBs",
+                     ifelse(grepl("(105|118|156|157|167|198)", Chemicals), "Mono-Ortho PCBs", "Non-Dioxin-like PCBs"))))) %>%
+  mutate(Chemicals = fct_inorder(Chemicals)) %>% 
   ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
   geom_segment(aes(yend=0, xend = Chemicals)) +
   facet_wrap(.~Component) + theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom",
-        strip.background = element_blank()) + labs(title = "PCA on original data (LOD/sqrt2)")
+        strip.background = element_blank())
+pca_plot
 ```
 
-## PCP & PCA
+## PCP v PCA
 
 ```{r}
-(pcp_plot + theme(axis.text.x = element_blank())) / (pca_plot + theme(legend.position = "none"))
+pcp_plot / pca_plot
 ```
 
 ```{r}
@@ -429,6 +479,10 @@ round(cbind(Component = 1:21, PCP_PCA, just_PCA), 4) %>% kable()
 ## Relative error
 
 ```{r}
+data_50
+delta_50
+imputed_50
+
 mask = data_50 != -1
 data_above = data_50 * mask
 
@@ -437,56 +491,10 @@ S_above = S*mask
 
 norm(data_above-L_above, "F")/norm(data_above, "F")
 
-pca_pred = pca_50$x %*% t(pca_50$rotation) #+ kronecker(matrix(1, nrow(imputed_50), 1), t(apply(imputed_50, 2, mean)))
-pca_pred_above = pca_pred*mask
+pca_pred = pca_50$x %*% t(pca_50$rotation) +
+        matrix(rep(apply(imputed_50, 2, mean), each= nrow(pca_50$x)), nrow = nrow(pca_50$x))
 
-imputed_50_sc = scale(imputed_50)
-norm(imputed_50_sc - pca_pred, "F")/norm(imputed_50_sc, "F")
-
-data_above_sc = scale(data_above)
-norm(data_above_sc - pca_pred, "F")/norm(data_above_sc, "F") # all 21 PC
-
-pca_pred_3 = scale(pca_50$x[,1:3] %*% t(pca_50$rotation)[1:3,])
-norm(data_above_sc - pca_pred_3, "F")/norm(data_above_sc, "F") # first 3 PC
+norm(imputed_50-pca_pred, "F")/norm(imputed_50, "F")
+norm(data_above-pca_pred, "F")/norm(imputed_50, "F")
 ```
 
-### NMF
-
-```{r}
-L[L < 0] = 0
-any(is.null(L))
-any(is.na(L))
-
-summary(L)
-L[220:221,] # one row ALL zero
-
-L_less = L[-221,]
-
-L_nmf = nmf(L_less, 3, method = "lee", nrun = 100)
-```
-
-```{r}
-nmf_plot = coef(L_nmf) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  rownames_to_column(var = "Chemicals") %>% 
-  pivot_longer(V1:V3) %>% 
-  mutate(Chemicals = pop_rename(Chemicals),
-         Group = pop_label_groups(Chemicals)) %>%
-  mutate(Chemicals = fct_inorder(Chemicals)) %>% 
-  ggplot(aes(x = Chemicals, y = value, color = Group)) + geom_point() +
-  geom_segment(aes(yend=0, xend = Chemicals)) +
-  facet_wrap(.~name) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
-        strip.background = element_blank()) +
-  labs(y = "Loadings", title = "NMF on PCP L matrix")
-```
-
-## Viz
-
-```{r}
-(nmf_plot + theme(axis.text.x = element_blank(), legend.position = "none")) /
-  (pcp_plot + theme(axis.text.x = element_blank(), legend.position = "none")) / 
-  (pca_plot)
-```

@@ -97,12 +97,32 @@ lambdas_search$constants # Now this will be a list containing mu = 3, reminding 
 # so we need to supply the LOD argument that non-convex PCP will use, but hold it constant, like we did mu 
 # in the example above. We also need to supply mat.min1, instead of mat, which has LOD information encoded
 # as -1 values.
-noncvx_search <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, grid_df = grid.lmr,
-                                 init_evals = 10, bayes_evals = 6, 
-                                 cores = 4, runs = 5, LOD = delta) # <- here we hold LOD constant
+n = nrow(data_50)
+p = ncol(data_50)
+
+mu = sqrt(p/2)
+lam = 1/n
+
+lambda <- c(seq(0, lam, length.out = 10)[-c(1,10)], seq(lam, 1, length.out = 5))
+rank <- 1:10
+
+grid.pop <- expand.grid(lambda = lambda, mu = mu, r = rank)
+
+nrow(grid.pop)
+evals = ceiling(.07*nrow(grid.pop))
+evals = ceiling(.07*nrow(grid.lmr))
+
+dim(grid.pop)
+dim(grid.lmr)
+
+noncvx_search <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+                                 grid_df = grid.lmr,
+                                 init_evals = evals, bayes_evals = evals, 
+                                 cores = 2, runs = 5, LOD = delta_50) # <- here we hold LOD constant
 
 # we can even continue the search by passing bayes the formatted results from the last one:
-noncvx_search2 <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, grid_df = noncvx_search$formatted,
+noncvx_search2 <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+                                  grid_df = noncvx_search$formatted,
                                  init_evals = 10, bayes_evals = 6, 
                                  cores = 4, runs = 5, LOD = delta)
 
