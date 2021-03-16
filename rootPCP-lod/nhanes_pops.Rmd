@@ -271,26 +271,26 @@ noncvx_search <- bayes_search_cv(mat = data_50,
                                  grid_df = grid.pop,
                                  init_evals = evals, bayes_evals = evals, 
                                  cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
-to_save = noncvx_search$formatted
-save(to_save, file = "./rootPCP-lod/nhanes_cv.rda")
+# to_save = noncvx_search$formatted
+# save(to_save, file = "./rootPCP-lod/nhanes_cv.rda")
 
 # we can even continue the search by passing bayes the formatted results from the last one:
-noncvx_search2 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                  grid_df = noncvx_search$formatted,
+noncvx_search3 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+                                  grid_df = to_save,
                                   init_evals = evals, bayes_evals = evals, 
                                   cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
-to_save = noncvx_search2$formatted
-save(to_save, file = "./rootPCP-lod/nhanes_cv2.rda")
+save2 = noncvx_search3$formatted
+save(save2, file = "./rootPCP-lod/nhanes_cv.rda")
 ```
 
 ```{r}
-print_gs(noncvx_search$formatted)
+print_gs(noncvx_search3$formatted)
 
-noncvx_search$formatted %>%
+noncvx_search3$formatted %>%
   arrange(desc(value)) %>% 
   drop_na()
 
-noncvx_search$formatted %>%
+noncvx_search3$formatted %>%
   mutate(lambda = as_factor(round(lambda, 4)),
          r = as_factor(r)) %>% 
   ggplot(aes(y = lambda, x = r)) +
@@ -309,6 +309,9 @@ pcp_out <- root_pcp_noncvx_nonnegL_na_lod(D = data_50,
                                    lambda = optimal.lambda, mu = m, 
                                    r = optimal.r, LOD = delta_50,
                                            verbose = TRUE)
+#save(pcp_out, file = "./rootPCP-lod/nhanes_pcp_out.rda")
+#load("./rootPCP-lod/nhanes_pcp_out.rda")
+# "Converged in 10795 iterations."
 
 L = pcp_out$L
 S = pcp_out$S
@@ -327,7 +330,7 @@ plot_sparse <- S %>% as_tibble() %>%
   select(id, everything()) %>% 
   gather(key = exposure, value = value, -id) %>%
   mutate(exposure = pop_rename(exposure),
-          binary = ifelse(value < 0.00001, 0, 1)) 
+          binary = ifelse(value < 0.001, 0, 1)) 
 # sparse event (0) vs non-sparse event (not zero)
 # this treats negative as sparse      event, too
 ```
@@ -369,7 +372,8 @@ pcp_plot = pcp_pca$rotation %>%
   select(Chemicals, PC1:PC3) %>% 
   gather(key = Component, value = Loadings, -Chemicals) %>%
   mutate(Group = pop_label_groups(Chemicals)) %>%
-  mutate(Chemicals = pop_rename(Chemicals)) %>% 
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_reorder(Chemicals, Group)) %>% 
   ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
   geom_segment(aes(yend=0, xend = Chemicals)) +
   facet_wrap(.~Component) + theme_bw() +
@@ -405,7 +409,8 @@ pca_plot =
   select(Chemicals, PC1:PC3) %>% 
   gather(key = Component, value = Loadings, -Chemicals) %>%
   mutate(Group = pop_label_groups(Chemicals),
-        Chemicals = pop_rename(Chemicals)) %>% 
+        Chemicals = pop_rename(Chemicals),
+        Chemicals = fct_reorder(Chemicals, Group)) %>% 
   ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
   geom_segment(aes(yend=0, xend = Chemicals)) +
   facet_wrap(.~Component) + theme_bw() +
@@ -473,7 +478,7 @@ nmf_plot = coef(L_nmf) %>%
   pivot_longer(V1:V3) %>% 
   mutate(Chemicals = pop_rename(Chemicals),
          Group = pop_label_groups(Chemicals)) %>%
-  mutate(Chemicals = fct_inorder(Chemicals)) %>% 
+  mutate(Chemicals = fct_reorder(Chemicals, Group)) %>% 
   ggplot(aes(x = Chemicals, y = value, color = Group)) + geom_point() +
   geom_segment(aes(yend=0, xend = Chemicals)) +
   facet_wrap(.~name) + theme_bw() +

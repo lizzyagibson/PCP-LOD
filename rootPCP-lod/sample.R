@@ -57,26 +57,6 @@ print_gs(vanilla_search$formatted) # viewing the main results
 View(vanilla_search$raw) # notice that the raw data frame also has information on the rank of L and sparsity of S for each run
 vanilla_search$constants # this will be an empty list, since we didn't supply any constant parameters for PCP.
 
-print_gs <- function(df, dlambda = -1, dmu = -1, title="Lambda and Mu Grid Search") {
-    lambdas <- sort(unique(df$lambda))
-    mus <- sort(unique(df$mu))
-    
-    df.mat <- matrix(df$value, nrow = length(lambdas), ncol = length(mus))
-    rownames(df.mat) <- lambdas
-    colnames(df.mat) <- mus
-    
-    dl <- match(dlambda, rownames(df.mat))
-    dm <- match(dmu, colnames(df.mat))
-    
-    min_val <- which.min(df.mat)
-    cn <- matrix("", nrow = nrow(df.mat), ncol = ncol(df.mat))
-    cn[min_val] <- "optimal"
-    cn[dl, dm] <- paste(cn[dl, dm], "default")
-    
-    heatmaply::heatmaply(df.mat, cellnote = cn, 
-                         Colv = F, Rowv = F, showticklabels = c(T, T), cellnote_textposition="middle center",
-                         label_names = c("lambda", "mu", "rel err"), xlab = "mu", ylab = "lambda", main = title)
-  }
 #### 3b. A SEARCH OF JUST LAMBDAS ####
 
 # this example is identical to the one above, except: 
@@ -97,35 +77,16 @@ lambdas_search$constants # Now this will be a list containing mu = 3, reminding 
 # so we need to supply the LOD argument that non-convex PCP will use, but hold it constant, like we did mu 
 # in the example above. We also need to supply mat.min1, instead of mat, which has LOD information encoded
 # as -1 values.
-n = nrow(data_50)
-p = ncol(data_50)
-
-mu = sqrt(p/2)
-lam = 1/n
-
-lambda <- c(seq(0, lam, length.out = 10)[-c(1,10)], seq(lam, 1, length.out = 5))
-rank <- 1:10
-
-grid.pop <- expand.grid(lambda = lambda, mu = mu, r = rank)
-
-nrow(grid.pop)
-evals = ceiling(.07*nrow(grid.pop))
-evals = ceiling(.07*nrow(grid.lmr))
-
-dim(grid.pop)
-dim(grid.lmr)
-
-noncvx_search <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                 grid_df = grid.lmr,
-                                 init_evals = evals, bayes_evals = evals, 
-                                 cores = 2, runs = 5, LOD = delta_50) # <- here we hold LOD constant
+sample_search <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, grid_df = grid.lmr,
+                                 init_evals = 10, bayes_evals = 6, 
+                                 cores = 4, runs = 5, LOD = delta) # <- here we hold LOD constant
 
 # we can even continue the search by passing bayes the formatted results from the last one:
-noncvx_search2 <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                  grid_df = noncvx_search$formatted,
-                                 init_evals = 10, bayes_evals = 6, 
+noncvx_search2 <- bayes_search_cv(mat = mat.min1, pcp_func = root_pcp_noncvx_nonnegL_na_lod, grid_df = sample_search$formatted,
+                                 init_evals = 10, bayes_evals = 1, 
                                  cores = 4, runs = 5, LOD = delta)
-
+print_gs(noncvx_search2$formatted) # viewing the main results
+class(noncvx_search2$formatted)
 #### 3d. A RANDOM SEARCH WITH NON-CONVEX PCP ####
 
 # We can hold multiple PCP parameters constant by just passing them to our search_cv 
