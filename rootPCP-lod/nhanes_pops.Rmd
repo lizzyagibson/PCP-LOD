@@ -230,6 +230,9 @@ process_pops = function(x) {
   # Scale lod matrix by stand dev of measurements
   lod_matrix <- lod_matrix/denoms
 
+  # and scale imputed
+  imputed = apply(imputed, 2, function(a) a/sd(a, na.rm = T))
+  
   return(list(scaled_data = pops_scaled, lods = lod_matrix, sqrt2_data = imputed))
 }
 ```
@@ -247,63 +250,64 @@ imputed_50 = fifty_percent$sqrt2_data
 #write_csv(as.data.frame(delta_50), "./experiments/law_experiments/PCPhelpers/Data/nhanes_50_lods.csv")
 ```
 
-## PCP
-
-### CV
+## CV
 
 ```{r}
 n = nrow(data_50)
 p = ncol(data_50)
 
 m = sqrt(p/2)
-lam = 1/n
+lam = 1/sqrt(n)
 
-mu <- c(seq(m, 20, length.out = 20))
 lambda <- c(seq(0, lam, length.out = 10)[-c(1,10)], seq(lam, 1, length.out = 5))
 rank <- 1:10
 
 grid.pop <- expand.grid(lambda = lambda, r = rank)
-nrow(grid.pop)
 evals = ceiling(.07*nrow(grid.pop))
 
-noncvx_search <- bayes_search_cv(mat = data_50, 
-                                 pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                 grid_df = grid.pop,
-                                 init_evals = evals, bayes_evals = evals, 
-                                 cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
+# noncvx_search <- bayes_search_cv(mat = data_50, 
+#                                  pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+#                                  grid_df = grid.pop,
+#                                  init_evals = evals, bayes_evals = evals, 
+#                                  cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
 # to_save = noncvx_search$formatted
 # save(to_save, file = "./rootPCP-lod/nhanes_cv.rda")
 
 # we can even continue the search by passing bayes the formatted results from the last one:
-noncvx_search3 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
-                                  grid_df = to_save,
-                                  init_evals = evals, bayes_evals = evals, 
+noncvx_search4 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
+                                  grid_df = new.grid,
+                                  init_evals = evals, bayes_evals = 100, 
                                   cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
-save2 = noncvx_search3$formatted
+save2 = noncvx_search4$formatted
 save(save2, file = "./rootPCP-lod/nhanes_cv.rda")
 ```
 
 ```{r}
+new.grid = noncvx_search3$formatted %>% distinct()
+
 print_gs(noncvx_search3$formatted)
 
 noncvx_search3$formatted %>%
   arrange(desc(value)) %>% 
-  drop_na()
+  drop_na() %>% 
+  filter(r == 2) %>% arrange(lambda) %>% distinct()
 
-noncvx_search3$formatted %>%
+new.grid %>%
   mutate(lambda = as_factor(round(lambda, 4)),
          r = as_factor(r)) %>% 
   ggplot(aes(y = lambda, x = r)) +
   geom_tile(aes(fill = value)) +
   scale_fill_viridis_c() +
-  theme_bw()
+  theme_test()
 ```
 
+## PCP
+
 ```{r}
-best.idx <- which.min(noncvx_search$formatted$value)
-optimal.lambda <- noncvx_search$formatted$lambda[best.idx]
-optimal.mu <- noncvx_search$formatted$mu[best.idx]
-optimal.r <- noncvx_search$formatted$r[best.idx]
+best.idx <- which.min(noncvx_search3$formatted$value)
+optimal.lambda <- noncvx_search3$formatted$lambda[best.idx]
+optimal.mu <- noncvx_search3$formatted$mu[best.idx]
+optimal.r <- noncvx_search3$formatted$r[best.idx]
 
 pcp_out <- root_pcp_noncvx_nonnegL_na_lod(D = data_50, 
                                    lambda = optimal.lambda, mu = m, 
@@ -355,7 +359,7 @@ ggcorr(L, method = c("everything", "spearman"), limits = FALSE,
        hjust = 0.85, size = 3, color = "grey50", layout.exp = 1) + ggtitle("Low Rank Matrix from LOD PCP")
 ```
 
-#### PCA of low rank matrix
+### PCA of low rank matrix
 
 ```{r}
 # Default is scale = false but this is ok bc we scaled data to begin with
@@ -387,10 +391,8 @@ pcp_plot
 
 ```{r}
 # data already scaled
-pca_50 <- prcomp(imputed_50, center = TRUE, scale = TRUE)
-```
+pca_50 <- prcomp(imputed_50)
 
-```{r}
 pca_50$sdev
 
 summary(pca_50)
@@ -455,7 +457,9 @@ pca_pred_3 = scale(pca_50$x[,1:3] %*% t(pca_50$rotation)[1:3,])
 norm(data_above_sc - pca_pred_3, "F")/norm(data_above_sc, "F") # first 3 PC
 ```
 
-### NMF
+## NMF
+
+#### On L matrix
 
 ```{r}
 L[L < 0] = 0
@@ -488,10 +492,37 @@ nmf_plot = coef(L_nmf) %>%
   labs(y = "Loadings", title = "NMF on PCP L matrix")
 ```
 
+#### On original
+
+```{r}
+nmf_out = nmf(imputed_50, 3, method = "lee", nrun = 100)
+
+plot_nmf_total = coef(nmf_out) %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  rownames_to_column(var = "Chemicals") %>% 
+  pivot_longer(V1:V3) %>% 
+  mutate(name = case_when(name == "V1" ~ "V3",
+                          name == "V2" ~ "V1",
+                          name == "V3" ~ "V2"),
+         Chemicals = pop_rename(Chemicals),
+         Group = pop_label_groups(Chemicals)) %>%
+  mutate(Chemicals = fct_reorder(Chemicals, Group)) %>% 
+  ggplot(aes(x = Chemicals, y = value, color = Group)) + geom_point() +
+  geom_segment(aes(yend=0, xend = Chemicals)) +
+  facet_wrap(.~name) + theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        strip.background = element_blank()) +
+  labs(y = "Loadings", title = "NMF on original data (LOD/sqrt2)")
+```
+
 ## Viz
 
 ```{r}
 (nmf_plot + theme(axis.text.x = element_blank(), legend.position = "none")) /
   (pcp_plot + theme(axis.text.x = element_blank(), legend.position = "none")) / 
   (pca_plot)
+
+(nmf_plot + theme(axis.text.x = element_blank(), legend.position = "none")) / plot_nmf_total
 ```
