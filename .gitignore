@@ -42,15 +42,14 @@ Resources
 Ignore
 
 # HPC loop
-HPC_PCP/*.mat
-HPC_PCP/*/*.mat
-Below LOD/MATLAB/*.mat
+*.mat
 
 # Sim data
-**.RDA
+*.RDA
 
 # experiments repo
 experiments/
 
 # data
 Data/
+*.csv
