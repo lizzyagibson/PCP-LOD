@@ -276,7 +276,7 @@ evals = ceiling(.07*nrow(grid.pop))
 # we can even continue the search by passing bayes the formatted results from the last one:
 noncvx_search4 <- bayes_search_cv(mat = data_50, pcp_func = root_pcp_noncvx_nonnegL_na_lod, 
                                   grid_df = new.grid,
-                                  init_evals = evals, bayes_evals = 100, 
+                                  init_evals = evals, bayes_evals = 10, 
                                   cores = 2, runs = 5, LOD = delta_50, mu = sqrt(p/2))
 save2 = noncvx_search4$formatted
 save(save2, file = "./rootPCP-lod/nhanes_cv.rda")
@@ -290,13 +290,15 @@ print_gs(noncvx_search3$formatted)
 noncvx_search3$formatted %>%
   arrange(desc(value)) %>% 
   drop_na() %>% 
-  filter(r == 2) %>% arrange(lambda) %>% distinct()
+  arrange(desc(value)) %>% distinct()
 
 new.grid %>%
+  mutate(opt = ifelse(value == min(value, na.rm = T), "X", "")) %>%
   mutate(lambda = as_factor(round(lambda, 4)),
          r = as_factor(r)) %>% 
   ggplot(aes(y = lambda, x = r)) +
   geom_tile(aes(fill = value)) +
+  geom_text(aes(label=opt), color = "white") +
   scale_fill_viridis_c() +
   theme_test()
 ```
@@ -424,7 +426,9 @@ pca_plot =
 ## PCP & PCA
 
 ```{r}
+#pdf("./Figures/pcp_pca.pdf", width = 12)
 (pcp_plot + theme(axis.text.x = element_blank())) / (pca_plot + theme(legend.position = "none"))
+#dev.off()
 ```
 
 ```{r}
@@ -524,5 +528,7 @@ plot_nmf_total = coef(nmf_out) %>%
   (pcp_plot + theme(axis.text.x = element_blank(), legend.position = "none")) / 
   (pca_plot)
 
+pdf("./Figures/pcp_nmf.pdf", width = 12)
 (nmf_plot + theme(axis.text.x = element_blank(), legend.position = "none")) / plot_nmf_total
+dev.off()
 ```
