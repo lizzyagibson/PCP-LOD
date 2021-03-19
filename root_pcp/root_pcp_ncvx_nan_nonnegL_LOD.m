@@ -1,4 +1,4 @@
-function [L_final, S_final] = root_pcp_with_nan_nonnegL_LOD (D, lambda, mu, Delta)
+function [L_final, S_final] = root_pcp_ncvx_nan_nonnegL_LOD (D, lambda, mu, r, Delta)
 % [L_final, S_final] = root_pcp_with_nan_nonnegL_LOD( D, lambda, mu, Delta )
 % use NaN for missing entries in D, assume that the true L>=0, and the
 % observation D>=0 
@@ -34,7 +34,7 @@ mask_obs = ~isnan(D);
 D(~mask_obs) = -2;
 
 
-MAX_ITER = 10000;
+MAX_ITER = 20000;
 EPS_ABS = 1e-6;
 EPS_REL = 1e-6;
 
@@ -46,7 +46,7 @@ for i = 1:MAX_ITER
     S2_old = S2;
     L3_old = L3;
     
-    [L1, ~] = prox_nuclear( (L2+L3-Y1/rho-Y4/rho)/2, 1/rho/2 );
+    L1 = proj_rank_r( (L2+L3-Y1/rho-Y4/rho)/2,r );
     S1 = prox_l1( S2-Y2/rho, lambda/rho );
     
     temp = L2+S2-Y3/rho;
@@ -108,3 +108,4 @@ end
 
 
 return
+
