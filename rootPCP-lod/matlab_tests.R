@@ -61,6 +61,17 @@ lambda <- 0.122
 mu <- 17.6
 rank <- 6
 
+default = get_pcp_defaults(cor_mat$cor.mat)
+
+tic()
+default <- root_pcp_noncvx_nonnegL_na_lod(cor_mat$cor.mat, lambda = default$lambda, mu = default$mu, 
+                                          r = rank, LOD = 0, verbose = T)
+toc()
+
+norm((mat - default$L - default$S)*mask, "F") / norm(mat * mask, "F")
+Matrix::rankMatrix(default$L, tol = 1e-04)
+sparsity(default$S, tol = 1e-04)
+
 pcp_out_lod_good <- root_pcp_noncvx_nonnegL_na_lod(cor_mat$cor.mat, lambda = lambda, mu = mu, r = rank, LOD = 0, verbose = T)
 
 score <- norm((mat - pcp_out_lod_good$L - pcp_out_lod_good$S)*mask, "F") / norm(mat * mask, "F")
@@ -73,6 +84,8 @@ Snorm = norm(pcp_out_lod_good$S, "F")
 summary <- rbind(summary, data.frame(Algo = "NONCVX LOD - GOOD RUN", lambda = lambda, mu = mu, 
                                      rank = rank, Rel.Err = score, L.rank = L.rank, S.sparsity = S.sparsity,
                                      Lnorm = Lnorm, Snorm = Snorm))
+
+norm(pcp_out_lod_good$L, "F")
 
 ######## 4. NONCVX LOD - BAD RUN ######## 
 lambda <- 0.272
@@ -131,5 +144,6 @@ summary <- rbind(summary, data.frame(Algo = "REG NONCVX - BAD RUN", lambda = lam
 ######## 7. SUMMARY OF RESULTS ######## 
 # see output on console for convergence per run; should be [23 its, 31 its, 1222 its, Did not converge] in that order.
 summary %>% 
+  dplyr::select(1:7) %>% 
   kbl(caption = "Summary on the corrupted mat") %>% kable_classic(full_width = F, html_font = "Cambria", position = "center") %>% 
   kable_styling(bootstrap_options = c("hover", "condensed"), fixed_thead = T)
