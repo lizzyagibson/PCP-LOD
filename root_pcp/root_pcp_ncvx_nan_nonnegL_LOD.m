@@ -50,7 +50,7 @@ for i = 1:MAX_ITER
     S1 = prox_l1( S2-Y2/rho, lambda/rho );
     
     temp = L2+S2-Y3/rho;
-    temp_D = D.*mask_above_lod+temp.*(mask_below_lod & (temp>=0) & (temp<=Delta))+Delta*(mask_below_lod & (temp>Delta));
+    temp_D = D.*mask_above_lod+temp.*(mask_below_lod & (temp>=0) & (temp<=Delta))+Delta.*(mask_below_lod & (temp>Delta));
     Z = prox_fro( temp - temp_D, mu/rho )+temp_D;
 %     Z_unobs = 0;
 %     Z_obs_below_LOD1 = (mask_below_lod & (temp>=0) & (temp<=Delta)).*temp;
