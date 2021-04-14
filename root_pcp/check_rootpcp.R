@@ -3,7 +3,7 @@ library(tidyverse)
 library(pcpr)
 library(tictoc)
 
-mixture <- readMat("./Data/mixtures_data.mat")
+mixture <- readMat("/Users/lizzy/Principal.Component.Pursuit/Data/mixtures_data.mat")
 
 mixture_data <- as.data.frame(mixture) %>% 
   as_tibble() %>% dplyr::select(Al, As, Ba, bc, Br, Ca, Cl,
@@ -19,11 +19,16 @@ mu <- sqrt(p/2)
 
 ## With missing values!
 Xmissing = X
-Xmissing[1:1000,1:5] = NA
+Xmissing[1:10,1:5] = NA
 
 ## Run all model versions
 
-# 9 rootPCP functions, so far
+# 10 rootPCP functions, so far
+
+# 10
+rank_r_out = pcp_rank_r(Xmissing, mu, 4, verbose=TRUE)
+norm(rank_r_out[[1]], "F")
+norm(rank_r_out[[2]], "F")
 
 # 9
 # Does not converge...

@@ -34,26 +34,29 @@ lambda = 1/sqrt(m);
 mu = sqrt(p/2);
 
 %% Run models
-
-disp("Nonnegative, NA, LOD, no missing or <LOD")
-[L,S] = root_pcp_with_nan_nonnegL_LOD(X, lambda, mu, 0); 
+[L,S,iter] = pcp_rank_r(Xmissing,mu,4);
 norm(L, "Fro")
 norm(S, "Fro")
 
-disp("Nonnegative, NA, LOD, with missing")
-[L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0); 
-norm(L, "Fro")
-norm(S, "Fro")
-
-disp("Nonnegative, NA, LOD, with <LOD")
-[L,S] = root_pcp_with_nan_nonnegL_LOD(Xlod, lambda, mu, 0); 
-norm(L, "Fro")
-norm(S, "Fro")
-
-disp("Nonnegative, NA, LOD, with missing & <LOD")
-[L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissinglod, lambda, mu, 0); 
-norm(L, "Fro")
-norm(S, "Fro")
+% disp("Nonnegative, NA, LOD, no missing or <LOD")
+% [L,S] = root_pcp_with_nan_nonnegL_LOD(X, lambda, mu, 0); 
+% norm(L, "Fro")
+% norm(S, "Fro")
+% 
+% disp("Nonnegative, NA, LOD, with missing")
+% [L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissing, lambda, mu, 0); 
+% norm(L, "Fro")
+% norm(S, "Fro")
+% 
+% disp("Nonnegative, NA, LOD, with <LOD")
+% [L,S] = root_pcp_with_nan_nonnegL_LOD(Xlod, lambda, mu, 0); 
+% norm(L, "Fro")
+% norm(S, "Fro")
+% 
+% disp("Nonnegative, NA, LOD, with missing & <LOD")
+% [L,S] = root_pcp_with_nan_nonnegL_LOD(Xmissinglod, lambda, mu, 0); 
+% norm(L, "Fro")
+% norm(S, "Fro")
 
 % disp("Nonconvex, nonnegative, NA")
 % [L,S] = root_pcp_rank_r_nonnegL_with_missing(Xmissing, lambda, 1, 5); 
