@@ -6,6 +6,7 @@ library(PCPhelpers)
 library(pcpr)
 
 load("./sims/sim_lod.RDA")
+sim_lod
 
 get_pca <- function (sim) {
   # Run PCA centered, not scaled

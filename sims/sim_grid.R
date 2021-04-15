@@ -109,6 +109,9 @@ apply(corr, 2, max)
 heatmaply::heatmaply(cor(sim_iter$sim[[1]]))
 ggcorr(sim_iter$sim[[4]])
 
+
+S <- -D * ((D < 0) * 1) + (rand(nrow,ncol)<0.03) * rand(nrow,ncol)*1
+
 # Next, we subject simulated chemicals to an LOD:
 # Using corrupt_mat from pcphelpers
 lim_range = expand_grid(pattern_comb, lim = c(0.25,0.5,0.75))
@@ -121,7 +124,7 @@ sim_lod = sim_iter %>%
                                  corrupt_mat(x, cols = 1:ncol(x), limit=y, fill="-1")),
                  lod_sqrt2_mat = map2(sim, lim, function(x,y) 
                                corrupt_mat(x, cols = 1:ncol(x), limit=y, fill="sqrt2")))
-         
+
 # save nested dataframe 
 save(sim_lod, file = "./sims/sim_lod.RDA")
 
