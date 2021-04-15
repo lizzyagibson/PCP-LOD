@@ -12,6 +12,7 @@ library(patchwork)
 # 3 proportions <LOD, 25, 50, 75
 
 load("./sims/sim_lod.RDA")
+sim_lod
 
 # CV 1 example for each mixture size/<LOD combo
 
@@ -19,7 +20,7 @@ grid.rank <- tibble(r = 1:10)
 sim_cv = sim_lod %>% 
          filter(seed == 1) %>%
          mutate(n = map(sim, nrow),
-               p = map(sim, ncol)) %>% 
+                p = map(sim, ncol)) %>% 
          unnest(c(n,p)) %>% 
          mutate(mu = sqrt(p/2),
                lambda = 1/sqrt(n),
@@ -27,10 +28,11 @@ sim_cv = sim_lod %>%
                               grid_search_cv(mat = x,
                                              pcp_func = root_pcp_noncvx_nonnegL_na_lod,
                                              grid_df = grid.rank,
-                                             lambda = 1/sqrt(500),  mu = sqrt(ncol(x)/2), runs = 5,
+                                             lambda = 1/sqrt(500),  mu = sqrt(ncol(x)/2), runs = 100,
                                              cores = 2, LOD = y)))
 
 # save(sim_cv, file = "./sims/sim_cv.RDA")
+load("./sims/sim_cv.RDA")
 
 sim_cv$noncvx_search[[1]]$formatted %>% arrange(desc(value))
 sim_cv$noncvx_search[[2]]$formatted %>% arrange(desc(value))
@@ -38,6 +40,6 @@ sim_cv$noncvx_search[[3]]$formatted %>% arrange(desc(value))
 sim_cv$noncvx_search[[4]]$formatted %>% arrange(desc(value))
 sim_cv$noncvx_search[[5]]$formatted %>% arrange(desc(value))
 sim_cv$noncvx_search[[6]]$formatted %>% arrange(desc(value))
-
+# CV chose rank 4 for all simulations
 
 
