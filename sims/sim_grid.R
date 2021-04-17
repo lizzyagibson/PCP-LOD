@@ -208,7 +208,7 @@ corplot = cormat %>%
   mutate(outline = ifelse(is.na(value), FALSE, TRUE))
 corplot$outline[!corplot$outline] <- NA
 
-pdf("./sims/sim_corr.pdf")
+# pdf("./sims/sim_corr.pdf")
 corplot %>% 
   ggplot(aes(x = Chem, y = name, fill = value)) + 
   geom_tile() +
@@ -230,17 +230,6 @@ corplot %>%
                        na.value = 'white')+
   #scale_color_manual(values = c("black", "white")) +
   guides(color = FALSE)
-dev.off()
+# dev.off()
 
-  set.seed(42L)
-  data <- data.frame(x = rep(letters[1:3], each = 3L), 
-                     y = rep(letters[1:3], 3L), 
-                     fill = rnorm(9L))
-  
-  data$diag <- data$x == data$y
-  data$diag[!data$diag] <- NA
-
-    ggplot(data, aes(x = x, y = y, fill = fill)) + geom_tile() +
-    geom_tile(data = data[!is.na(data$diag), ], aes(color = diag), size = 2) +
-    scale_color_manual(guide = FALSE, values = c(`TRUE` = "black"))
   

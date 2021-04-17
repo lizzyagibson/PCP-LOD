@@ -6,6 +6,7 @@ library(PCPhelpers)
 library(pcpr)
 library(patchwork)
 library(factoextra)
+library(CVXR)
 
 theme_set(theme_bw(base_size = 20) + theme(legend.position = "bottom",
                                            strip.background =element_rect(fill="white")))
@@ -34,6 +35,24 @@ sim_lod
 #        print(i)
 # }
 load("./sims/pcp_out_all.rda")
+
+# SVD ####
+svd_out = pcp_out %>% 
+  mutate(svd_chem = map(chem, svd),
+         svd_pca  = map(lod_sqrt2_mat, svd),
+         L = map(pcp_out, function(x) x$L),
+         svd_pcp  = map(L, svd),
+         svd_chem_left  = map(svd_chem, function(x) x$u),
+         svd_chem_right = map(svd_chem, function(x) x$v),
+         svd_pca_left  = map(svd_pca, function(x) x$u),
+         svd_pca_right = map(svd_pca, function(x) x$v),
+         svd_pcp_left  = map(svd_pcp, function(x) x$u),
+         svd_pcp_right = map(svd_pcp, function(x) x$v),
+         svd_pca_left  = map2(svd_chem_left, svd_pca_left, factor_correspondence),
+         svd_pca_right = map2(svd_chem_right, svd_pca_right, factor_correspondence),
+         svd_pcp_left  = map2(svd_chem_left, svd_pcp_left, factor_correspondence),
+         svd_pcp_right = map2(svd_chem_right, svd_pcp_right, factor_correspondence))
+save(svd_out, file = "./sims/svd_out.rda")  
 
 # Get metrics ####
 pcp_metrics = pcp_out %>% 

@@ -38,6 +38,8 @@ get_pca <- function (sim) {
   return(list(rotations = rotations, scores = scores, pred = pred, rank = rank))
 }
 
+# rotations are right singular vectors
+
 # Run PCA ####
 sim_pca = sim_lod %>% 
           mutate(lod_sqrt2_mat = map(lod_sqrt2_mat, function(x) apply(x, 2, function(y) y/sd(y))),
