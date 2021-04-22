@@ -22,7 +22,7 @@ get_relerror <- function(x,y) {
 # WITH error handling
 # if matrices are not same size, NA
 # If nn is false, we allow *signed permutations*
-factor_correspondence <- function (A, B, nn = TRUE) {
+factor_correspondence <- function (A, B, nn = FALSE) {
   # This is all from the CVXR package, which is kind of its own language
   # for convex optimization
   G <- t(B) %*% A
@@ -56,10 +56,26 @@ factor_correspondence <- function (A, B, nn = TRUE) {
   problem <- Problem(objective, constraints = constX)
   
   # Step 4. Solve it!
-  result <- solve(problem)
+  result <- tryCatch({
+    solve(problem)
+  }, warning = function(warning_condition) {
+    message('Caught a warning!')
+  }, error = function(error_condition) {
+    message('Caught an error!')
+  })
   
   # Step 5. Extract solution and objective value
-  perm <- round(result$getValue(Pi), 0)
+  perm = tryCatch({
+    round(result$getValue(Pi), 0)
+  }, warning = function(warning_condition) {
+    message('Caught a warning!')
+    diag(ncol(B))
+  }, error = function(error_condition) {
+    message('Caught an error!')
+    diag(ncol(B))
+  }, finally={
+    diag(ncol(B))
+  })
   
   e <- norm(B,'f')^2 + norm(A,'f')^2 - 2 * base::sum(perm * G)
   # e -- the sum of squared errors under the best calibration \Pi
