@@ -10,7 +10,9 @@ load("./sims/sim_lod.RDA")
 sim_lod
 
 get_pca <- function (sim) {
-  # Run PCA centered, not scaled
+  # Run PCA centered and scaled
+  #sim_std = sweep(sim, 2, apply(sim, 2, sd), FUN = '/')
+  #pca_out <- prcomp(sim, scale = TRUE)
   pca_out <- prcomp(sim)
   #loadings
   rot <- pca_out$rotation
@@ -19,13 +21,9 @@ get_pca <- function (sim) {
   # singular values
   sv <- pca_out$sdev
 
-  rank = 4
+  #  rank = 4
   # Cut scores and patterns to rank
-  rotations <- as_tibble(rot[, 1:rank])
-  scores <- if (rank == 1) {matrix(ex[, 1:rank], nrow = nrow(sim))} else {ex[, 1:rank]}
-  # Predicted values
-  pred <- scores %*% t(rotations) + kronecker(matrix(1, 500, 1), t(apply(sim, 2, mean)))
-
+  
   # Explain >=80% of var
   pve <- sv^2/sum(sv^2)
   rank <- 0
@@ -35,29 +33,46 @@ get_pca <- function (sim) {
       break
     }}
   
+  #rank = ncol(sim)
+  rotations <- as_tibble(rot[, 1:rank])
+  scores <- if (rank == 1) {matrix(ex[, 1:rank], nrow = nrow(sim))} else {ex[, 1:rank]}
+  # Predicted values
+  pred <- scores %*% t(rotations) + kronecker(matrix(1, 500, 1), t(apply(sim, 2, mean))) # sim_std
+  # this adds back the mean
+  #pred = sweep(pred_sd, 2, apply(sim, 2, sd), FUN = '*')
+  
   return(list(rotations = rotations, scores = scores, pred = pred, rank = rank))
 }
 
-# rotations are right singular vectors
-
 # Run PCA ####
 sim_pca = sim_lod %>% 
-          mutate(lod_sqrt2_mat = map(lod_sqrt2_mat, function(x) apply(x, 2, function(y) y/sd(y))),
-                 pca_out      = map(lod_sqrt2_mat, get_pca),
+          mutate(pca_out      = map(lod_sqrt2_mat, get_pca),
                  pca_loadings = map(pca_out, function(x) x[[1]]),
                  pca_scores   = map(pca_out, function(x) x[[2]]),
                  pca_pred     = map(pca_out, function(x) x[[3]]),
                  pca_rank     = map(pca_out, function(x) x[[4]]),
+                 #chem_std     = map(chem, function(x) sweep(x, 2, apply(x, 2, sd), FUN = '/')),
                  pca_error    = map2(chem, pca_pred, function(x,y)
                                                       norm(x-y,"F")/norm(x,"F"))) %>% 
   unnest(c(pca_rank, pca_error))
+
+chem = sim_pca$chem[[1]]
+chem_std = sweep(chem, 2, apply(chem, 2, sd), FUN = '/')
+apply(chem_std, 2, sd)
+
+pr_chem = prcomp(chem, scale = TRUE)
+
+pred = pr_chem$x %*% t(pr_chem$rotation) + kronecker(matrix(1, 500, 1), t(apply(chem, 2, mean)))
+pred_2 = sweep(pred, 2, apply(chem, 2, sd), FUN = '/')
+
+norm(chem-pred_2,"F")/norm(chem, "F")
+
+norm(chem_std-pred_2,"F")/norm(chem_std, "F")
 
 # Quick summary ####
 summary(sim_pca$pca_error)
 summary(sim_pca$pca_rank)
 sum(sim_pca$pca_rank == 4)/600
-
-fviz_eig(prcomp(sim_lod$lod_sqrt2_mat[[3]])) 
 
 # Get metrics ####
 pca_metrics = sim_pca %>% 
