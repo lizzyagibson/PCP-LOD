@@ -45,47 +45,47 @@ create_4patterns <- function (seed, chemicals) {
   return(patterns)
 }
 
-p = as_tibble(patterns)
-colnames(p) = 1:ncol(p)
-pdf("./sims/loadings_plot.pdf", width = 15, height = 12)
-p %>% 
-  mutate(Pattern = 1:nrow(.),
-         Pattern = str_c("Pattern ", Pattern)) %>% 
-  pivot_longer(1:16) %>% 
-  mutate(name = fct_inorder(name)) %>% 
-  ggplot(aes(x = name, y = value)) +
-  geom_col(fill = "orange", color = "black") +
-  facet_wrap(.~Pattern) +
-  labs(y = "Simulated Loadings", x = "Simulated Chemicals") +
-  theme_light(base_size = 45) +
-  theme(panel.grid.major.x = element_blank(),
-        panel.border = element_blank(),
-        axis.text.x = element_text(size = 20),
-        #axis.ticks.x = element_blank(),
-        strip.background =element_rect(fill="white"),
-        strip.text = element_text(size = 45, colour = 'black'))
-dev.off()
+# p = as_tibble(patterns)
+# colnames(p) = 1:ncol(p)
+# pdf("./sims/loadings_plot.pdf", width = 15, height = 12)
+# p %>% 
+#   mutate(Pattern = 1:nrow(.),
+#          Pattern = str_c("Pattern ", Pattern)) %>% 
+#   pivot_longer(1:16) %>% 
+#   mutate(name = fct_inorder(name)) %>% 
+#   ggplot(aes(x = name, y = value)) +
+#   geom_col(fill = "orange", color = "black") +
+#   facet_wrap(.~Pattern) +
+#   labs(y = "Simulated Loadings", x = "Simulated Chemicals") +
+#   theme_light(base_size = 45) +
+#   theme(panel.grid.major.x = element_blank(),
+#         panel.border = element_blank(),
+#         axis.text.x = element_text(size = 20),
+#         #axis.ticks.x = element_blank(),
+#         strip.background =element_rect(fill="white"),
+#         strip.text = element_text(size = 45, colour = 'black'))
+# dev.off()
 
-brewer.pal(8, "Spectral")
-display.brewer.pal(8, "Spectral")
+# brewer.pal(8, "Spectral")
+# display.brewer.pal(8, "Spectral")
 
-p %>% 
-  mutate(Pattern = 1:nrow(.),
-         Pattern = str_c("Pattern ", Pattern)) %>% 
-  pivot_longer(1:16) %>% 
-  mutate(name = fct_inorder(name)) %>% 
-  ggplot(aes(x = name, y = value, fill = Pattern)) +
-  geom_col() +
-  labs(y = "Simulated Loadings", x = "Simulated Chemicals", fill = "") +
-  scale_fill_manual(values = c("#F46D43", "#ABDDA4", "#FDAE61", "#2B83BA")) + 
-  theme_light(base_size = 20) +
-  theme(panel.grid = element_blank(),
-        panel.border = element_blank(),
-        axis.text.x = element_text(size = 10),
-        legend.position = "bottom",
-        #axis.ticks.x = element_blank(),
-        strip.background =element_rect(fill="white"),
-        strip.text = element_text(size = 45, colour = 'black'))
+# p %>% 
+#   mutate(Pattern = 1:nrow(.),
+#          Pattern = str_c("Pattern ", Pattern)) %>% 
+#   pivot_longer(1:16) %>% 
+#   mutate(name = fct_inorder(name)) %>% 
+#   ggplot(aes(x = name, y = value, fill = Pattern)) +
+#   geom_col() +
+#   labs(y = "Simulated Loadings", x = "Simulated Chemicals", fill = "") +
+#   scale_fill_manual(values = c("#F46D43", "#ABDDA4", "#FDAE61", "#2B83BA")) + 
+#   theme_light(base_size = 20) +
+#   theme(panel.grid = element_blank(),
+#         panel.border = element_blank(),
+#         axis.text.x = element_text(size = 10),
+#         legend.position = "bottom",
+#         #axis.ticks.x = element_blank(),
+#         strip.background =element_rect(fill="white"),
+#         strip.text = element_text(size = 45, colour = 'black'))
 
 # 100 random samples from each data generating process
 seed = 1:100
@@ -119,7 +119,7 @@ sim_iter <- scores_iter %>%
   mutate(chem = map2(true_scores, true_patterns, `%*%`))
 
 # Simulate Noise
-add_noise <- function (seed, chem) {
+add_noise <- function (seed, chem, sd) {
   n = nrow(chem)
   p = ncol(chem)
   noise <- matrix(NA, nrow = n, ncol = p)
@@ -129,50 +129,59 @@ add_noise <- function (seed, chem) {
 
   # add noise from normal dist, mean = 0
   for (i in 1:p) {
-    noise[,i] <- (rnorm(n, mean = 0, sd = 4))
+    noise[,i] <- (rnorm(n, sd = sd)) # was 4 before
   }
   
   # if negative, push to zero
   sim = pmax(chem + noise, 0)
-  
   colnames(sim) = str_c("chem_", str_pad(1:ncol(sim), 2, pad = "0"))
-  
   sim
 }
 
 # add noise
 sim_iter <- sim_iter %>% 
-  mutate(sim = pmap(list(seed, chem), add_noise))
+  mutate(sim_5 = pmap(list(seed, chem), function(x,y) add_noise(x,y,5)),
+         sim_1 = pmap(list(seed, chem), function(x,y) add_noise(x,y,1)))
 
-sort(4/apply(sim_iter$chem[[1]], 2, sd))
-heatmaply::heatmaply(cor(sim_iter$sim[[1]]))
+sum(sim_iter$sim_5[[1]] == 0)/(500*16)
 
-# add_sparse <- function (seed, sim) {
+# sort(1/apply(sim_iter$chem[[1]], 2, sd))
+# heatmaply::heatmaply(cor(sim_iter$sim[[1]]))
+
+add_sparse <- function (seed, sim) {
   n = nrow(sim)
   p = ncol(sim)
-  
+
   seed = 19888891 + seed
   set.seed(seed)
-  
-  S <- (rand(n,p)<0.05) * rand(n,p)*(max(sim)/2)
+
+  S <- (rand(n,p)<0.05) * (rand(n,p)*(max(sim)/4))
   # adds some sparse noise to random entries
-  # approx 7% sparse events
-  
+  # approx 5% sparse events
+
   simS = sim + S
-  
-  simS
+
+  list(simS = simS, S = S)
 }
 
+# apply(sim,2,max)
+# apply(simS,2,max)
+
 # add sparse
-# sim_iter <- sim_iter %>% 
-#  mutate(simS = pmap(list(seed, sim), add_sparse))
+sim_iter <- sim_iter %>%
+ mutate(sparse_out = map2(seed, sim_1, add_sparse),
+        sim_sparse = map(sparse_out, function(x) x$simS),
+        sparsity = map(sparse_out, function(x) x$S))
 
 # Next, we subject simulated chemicals to an LOD:
 # Using corrupt_mat from pcphelpers
 lim_range = expand_grid(pattern_comb, lim = c(0.25,0.5,0.75))
 
 sim_lod = sim_iter %>% 
-          left_join(., lim_range) %>% 
+        dplyr::select(-sparse_out) %>% 
+        pivot_longer(sim_5:sim_sparse,
+                     values_to = "sim") %>% 
+        left_join(., lim_range) %>% 
           mutate(lod = map2(sim, lim, function(x,y)
                             as.vector(apply(x, 2, quantile, probs = y))),
                  lod_neg1_mat = map2(sim, lim, function(x,y) 
@@ -182,19 +191,13 @@ sim_lod = sim_iter %>%
 
 # save nested dataframe 
 # save(sim_lod, file = "./sims/sim_lod.RDA")
+
 get_lower_tri <-function(x){
   x[upper.tri(x)] <- NA
-  
-  #for (i in 1:nrow(x)) {
-  #  for (j in 1:ncol(x)) {
-  #    if (j == i) {x[i,j] <- NA}
-  #  }
-  #}
-  
   return(x)
 }
 
-cormat <- as.data.frame(get_lower_tri(cor(sim_iter$sim[[1]])[c(5,6,3,7:10,12,11,13:15,4,16,1,2),
+cormat <- as.data.frame(get_lower_tri(cor(sim_lod$sim[[1]])[c(5,6,3,7:10,12,11,13:15,4,16,1,2),
                                                                     c(5,6,3,7:10,12,11,13:15,4,16,1,2)])) %>% 
   rownames_to_column(var = "Chem") %>% 
   as_tibble() %>% 
