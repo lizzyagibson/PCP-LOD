@@ -144,6 +144,24 @@ pcp_metrics %>%
   theme(legend.title = element_blank())
 #dev.off()
 
+# table
+table_err = pcp_metrics %>% 
+  dplyr::select(seed, which = name, method, lim, error, relerr_above, relerr_below) %>% 
+  mutate(lim = str_c(lim, "lim")) %>% 
+  group_by(which, lim, method) %>% 
+  summarize(qerr = quantile(error), 
+            qabove = quantile(relerr_above),
+            qbelow = quantile(relerr_below),
+            props = seq(0,1,.25)) %>%
+  filter(props != 0 & props != 1) %>% 
+  pivot_longer(qerr:qbelow) %>% 
+  arrange(name) %>% 
+  pivot_wider(names_from = c(lim, props),
+              values_from = value)
+table_err
+
+xtable::xtable(table_err)
+
 # SVD right and left
 # pdf("./sims/figures/svd_boxplots_left.pdf", height = 10)
 pcp_metrics %>% 

@@ -75,7 +75,7 @@ summary(sim_pca$pca_rank)
 sum(sim_pca$pca_rank == 4)/600
 
 # Get metrics ####
-pca_metrics = sim_pca %>% 
+pca_metrics = pcp_out_re %>% 
   mutate(method = "PCA") %>% 
   arrange(seed, chem) %>% 
   mutate(all_relerr   = map2(chem, pca_pred, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
