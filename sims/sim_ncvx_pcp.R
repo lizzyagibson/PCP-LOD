@@ -96,8 +96,9 @@ pcp_metrics %>%
 
 # PLOT ####
 # Overall error figure
-#pdf("./sims/sim_boxplots.pdf")
+pdf("./sims/sim_boxplots_16.pdf")
 pcp_metrics %>%
+  filter(chemicals == 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
@@ -116,11 +117,35 @@ pcp_metrics %>%
   scale_fill_manual(values = c("#E58601",
                                "#2196F3")) +
   theme(legend.title = element_blank())
-#dev.off()
+dev.off()
+
+pdf("./sims/sim_boxplots_48.pdf")
+pcp_metrics %>%
+  filter(chemicals != 16) %>% 
+  mutate(lim = case_when(lim == 0.25 ~ "25%",
+                         lim == 0.5 ~ "50%",
+                         lim == 0.75 ~ "75%"),
+         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
+         name = case_when(name == "sim_1" ~ "N(0, 1)",
+                          name == "sim_5" ~ "N(0, 5)",
+                          name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+  ggplot(aes(x = lim, y = error, color = method, fill = method)) +
+  geom_boxplot(outlier.size = 0.25, alpha = 0.4) +
+  scale_y_log10() +
+  facet_grid(.~name) +
+  labs(x = "Percentage of values < LOD",
+       y = "Relative Prediction Error") + 
+  scale_color_manual(values = c("#E58601",
+                                "#2196F3")) +
+  scale_fill_manual(values = c("#E58601",
+                               "#2196F3")) +
+  theme(legend.title = element_blank())
+dev.off()
 
 # error above and below lod
-#pdf("./sims/lod_boxplots.pdf", height = 10)
+pdf("./sims/lod_boxplots_16.pdf", height = 10)
 pcp_metrics %>% 
+  filter(chemicals == 16) %>% 
   pivot_longer(relerr_above:relerr_below,
                names_to = "which") %>%
   mutate(which = fct_inorder(ifelse(which == "relerr_above", "Above LOD", "Below LOD")),
@@ -142,7 +167,33 @@ pcp_metrics %>%
   labs(x = "Percentage of values < LOD",
        y = "Relative Prediction Error") +
   theme(legend.title = element_blank())
-#dev.off()
+dev.off()
+
+pdf("./sims/lod_boxplots_48.pdf", height = 10)
+pcp_metrics %>% 
+  filter(chemicals == 48) %>% 
+  pivot_longer(relerr_above:relerr_below,
+               names_to = "which") %>%
+  mutate(which = fct_inorder(ifelse(which == "relerr_above", "Above LOD", "Below LOD")),
+         lim = case_when(lim == 0.25 ~ "25%",
+                         lim == 0.5 ~ "50%",
+                         lim == 0.75 ~ "75%"),
+         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
+         name = case_when(name == "sim_1" ~ "N(0, 1)",
+                          name == "sim_5" ~ "N(0, 5)",
+                          name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+  ggplot(aes(x = lim, y = value, color = method, fill = method)) +
+  geom_boxplot(outlier.size = 0.25, alpha = 0.4) +
+  scale_y_log10() +
+  facet_grid(which~name) + 
+  scale_color_manual(values = c("#E58601", # PCA
+                                "#2196F3")) +
+  scale_fill_manual(values = c("#E58601", # PCA
+                               "#2196F3")) +
+  labs(x = "Percentage of values < LOD",
+       y = "Relative Prediction Error") +
+  theme(legend.title = element_blank())
+dev.off()
 
 # table
 table_err = pcp_metrics %>% 
