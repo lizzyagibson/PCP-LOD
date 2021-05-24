@@ -8,6 +8,7 @@ library(pcpr)
 library(pracma)
 library(grid)
 library(factoextra)
+library(RColorBrewer)
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48
@@ -45,47 +46,47 @@ create_4patterns <- function (seed, chemicals) {
   return(patterns)
 }
 
-# p = as_tibble(patterns)
-# colnames(p) = 1:ncol(p)
-# pdf("./sims/loadings_plot.pdf", width = 15, height = 12)
-# p %>% 
-#   mutate(Pattern = 1:nrow(.),
-#          Pattern = str_c("Pattern ", Pattern)) %>% 
-#   pivot_longer(1:16) %>% 
-#   mutate(name = fct_inorder(name)) %>% 
-#   ggplot(aes(x = name, y = value)) +
-#   geom_col(fill = "orange", color = "black") +
-#   facet_wrap(.~Pattern) +
-#   labs(y = "Simulated Loadings", x = "Simulated Chemicals") +
-#   theme_light(base_size = 45) +
-#   theme(panel.grid.major.x = element_blank(),
-#         panel.border = element_blank(),
-#         axis.text.x = element_text(size = 20),
-#         #axis.ticks.x = element_blank(),
-#         strip.background =element_rect(fill="white"),
-#         strip.text = element_text(size = 45, colour = 'black'))
-# dev.off()
+p = as_tibble(patterns)
+colnames(p) = 1:ncol(p)
+# pdf("./sims/loadings_plot.pdf", width = 15, height = 15)
+p %>%
+  mutate(Pattern = 1:nrow(.),
+         Pattern = str_c("Pattern ", Pattern)) %>%
+  pivot_longer(1:16) %>%
+  mutate(name = fct_inorder(str_remove(name, "V"))) %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_col(fill = "orange", color = "black") +
+  facet_wrap(.~Pattern) +
+  labs(y = "Simulated Loadings", x = "Simulated Chemicals") +
+  theme_light(base_size = 45) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(size = 20),
+        #axis.ticks.x = element_blank(),
+        strip.background =element_rect(fill="white"),
+        strip.text = element_text(size = 45, colour = 'black'))
+dev.off()
 
-# brewer.pal(8, "Spectral")
-# display.brewer.pal(8, "Spectral")
+brewer.pal(8, "Spectral")
+display.brewer.pal(8, "Spectral")
 
-# p %>% 
-#   mutate(Pattern = 1:nrow(.),
-#          Pattern = str_c("Pattern ", Pattern)) %>% 
-#   pivot_longer(1:16) %>% 
-#   mutate(name = fct_inorder(name)) %>% 
-#   ggplot(aes(x = name, y = value, fill = Pattern)) +
-#   geom_col() +
-#   labs(y = "Simulated Loadings", x = "Simulated Chemicals", fill = "") +
-#   scale_fill_manual(values = c("#F46D43", "#ABDDA4", "#FDAE61", "#2B83BA")) + 
-#   theme_light(base_size = 20) +
-#   theme(panel.grid = element_blank(),
-#         panel.border = element_blank(),
-#         axis.text.x = element_text(size = 10),
-#         legend.position = "bottom",
-#         #axis.ticks.x = element_blank(),
-#         strip.background =element_rect(fill="white"),
-#         strip.text = element_text(size = 45, colour = 'black'))
+p %>%
+  mutate(Pattern = 1:nrow(.),
+         Pattern = str_c("Pattern ", Pattern)) %>%
+  pivot_longer(1:16) %>%
+  mutate(name = fct_inorder(str_remove(name, "V"))) %>%
+  ggplot(aes(x = name, y = value, fill = Pattern)) +
+  geom_col() +
+  labs(y = "Simulated Loadings", x = "Simulated Chemicals", fill = "") +
+  scale_fill_manual(values = c("#F46D43", "#66C2A5", "#FDAE61", "#2B83BA")) +
+  theme_light(base_size = 20) +
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(size = 10),
+        legend.position = "bottom",
+        #axis.ticks.x = element_blank(),
+        strip.background =element_rect(fill="white"),
+        strip.text = element_text(size = 45, colour = 'black'))
 
 # 100 random samples from each data generating process
 seed = 1:100
@@ -109,6 +110,23 @@ create_scores <- function (seed) {
   scores <- matrix(exp(rnorm(n*r, mean = 1)), nrow = n, ncol = r)
   return(as.matrix(scores))
 }
+
+pdf("./sims/figures/scores_plot.pdf")
+scores %>%
+  as_tibble() %>% 
+  mutate(Pattern = 1:nrow(.),
+         Pattern = str_c("Pattern ", Pattern)) %>%
+  pivot_longer(1:4) %>%
+  mutate(name = fct_inorder(str_remove(name, "V"))) %>%
+  ggplot(aes(x = value, y = ..density..)) +
+  geom_histogram(fill = "orange", color = "black") +
+  labs(y = "Density", x = "Simulated Scores") +
+  theme_light(base_size = 45) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.title = element_text(size = 30),
+        axis.text.x = element_text(size = 20))
+dev.off()
 
 scores_iter <- patterns_iter %>% 
   mutate(true_scores = map(seed, create_scores))
@@ -211,7 +229,7 @@ corplot = cormat %>%
   mutate(outline = ifelse(is.na(value), FALSE, TRUE))
 corplot$outline[!corplot$outline] <- NA
 
-# pdf("./sims/sim_corr.pdf")
+#pdf("./sims/sim_corr.pdf")
 corplot %>% 
   ggplot(aes(x = Chem, y = name, fill = value)) + 
   geom_tile() +
@@ -223,8 +241,9 @@ corplot %>%
         panel.background = element_blank(),
         panel.border = element_blank(),
         axis.ticks = element_blank(),
-        legend.position = c(0.075,0.9),
-        legend.text = element_text(size = 12),
+        legend.position = c(0.075,0.85),
+        legend.text = element_text(size = 15),
+        legend.key.size = unit(1, 'cm'),
         axis.text.y = element_blank(),
         strip.background =element_rect(fill="white"),
         strip.text = element_text(size = 25, colour = 'black')) +
@@ -233,6 +252,6 @@ corplot %>%
                        na.value = 'white')+
   #scale_color_manual(values = c("black", "white")) +
   guides(color = FALSE)
-# dev.off()
+#dev.off()
 
   

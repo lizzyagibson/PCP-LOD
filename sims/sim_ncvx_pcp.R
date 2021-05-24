@@ -39,6 +39,7 @@ load("./sims/pcp_out_re.rda")
 table(unlist(pcp_out_re$pca_rank))
 summary(unlist(pcp_out_re$pca_rank))
 sum(unlist(pcp_out_re$pca_rank) == 4)/1800
+pcp_out_re
 
 # Get metrics ####
 pcp_long = pcp_out_re %>% 
@@ -56,6 +57,7 @@ pcp_long = pcp_out_re %>%
                names_sep = "_") %>% 
   pivot_wider(names_from = which,
               values_from = value)
+pcp_long
 
 pcp_metrics = pcp_long %>% 
   mutate(mask = map(lod_neg1_mat, function(x) x != -1),
@@ -63,10 +65,10 @@ pcp_metrics = pcp_long %>%
                                function(mask, x,y) norm(mask*x-mask*y,"F")/norm(mask*x,"F")),
          relerr_below= pmap(list(mask, chem, pred), 
                                function(mask, x,y) norm((!mask)*x-(!mask)*y,"F")/norm((!mask)*x,"F")),
-         error_right = map2(svd_chemright, svdright, 
-                             function(x,y) norm(x-y,"F")/norm(x,"F")),
-         error_left = map2(svd_chemleft, svdleft,
-                            function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
+         error_right = pmap(list(svd_chemright, svdright, rank),
+                             function(x,y,z) norm(x[,1:z]-y[,1:z],"F")/norm(x[,1:z],"F")),
+         error_left = pmap(list(svd_chemleft, svdleft, rank),
+                            function(x,y,z) norm(x[,1:z]-y[,1:z],"F")/norm(x[,1:z],"F"))) %>% 
   unnest(c(error, relerr_above, relerr_below, error_right, error_left)) 
 
 summary(unlist(pcp_metrics$relerr_above))
@@ -96,7 +98,7 @@ pcp_metrics %>%
 
 # PLOT ####
 # Overall error figure
-pdf("./sims/sim_boxplots_16.pdf")
+#pdf("./sims/sim_boxplots_16.pdf")
 pcp_metrics %>%
   filter(chemicals == 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
@@ -117,9 +119,9 @@ pcp_metrics %>%
   scale_fill_manual(values = c("#E58601",
                                "#2196F3")) +
   theme(legend.title = element_blank())
-dev.off()
+#dev.off()
 
-pdf("./sims/sim_boxplots_48.pdf")
+#pdf("./sims/sim_boxplots_48.pdf")
 pcp_metrics %>%
   filter(chemicals != 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
@@ -140,10 +142,10 @@ pcp_metrics %>%
   scale_fill_manual(values = c("#E58601",
                                "#2196F3")) +
   theme(legend.title = element_blank())
-dev.off()
+#dev.off()
 
 # error above and below lod
-pdf("./sims/lod_boxplots_16.pdf", height = 10)
+#pdf("./sims/lod_boxplots_16.pdf", height = 10)
 pcp_metrics %>% 
   filter(chemicals == 16) %>% 
   pivot_longer(relerr_above:relerr_below,
@@ -167,9 +169,9 @@ pcp_metrics %>%
   labs(x = "Percentage of values < LOD",
        y = "Relative Prediction Error") +
   theme(legend.title = element_blank())
-dev.off()
+#dev.off()
 
-pdf("./sims/lod_boxplots_48.pdf", height = 10)
+#pdf("./sims/lod_boxplots_48.pdf", height = 10)
 pcp_metrics %>% 
   filter(chemicals == 48) %>% 
   pivot_longer(relerr_above:relerr_below,
@@ -193,7 +195,7 @@ pcp_metrics %>%
   labs(x = "Percentage of values < LOD",
        y = "Relative Prediction Error") +
   theme(legend.title = element_blank())
-dev.off()
+#dev.off()
 
 # table
 table_err = pcp_metrics %>% 
@@ -267,6 +269,36 @@ pcp_metrics %>%
        y = "Relative Prediction Error") +
   theme(legend.title = element_blank())
 # dev.off()
+
+#pdf("./sims/figures/svd_boxplots_16.pdf", height = 10)
+pcp_metrics %>% 
+  pivot_longer(error_left:error_right,
+               names_to = "which") %>%
+  mutate(which = fct_inorder(ifelse(which == "error_left", "Individual scores", "Chemical loadings")),
+         lim = case_when(lim == 0.25 ~ "25%",
+                         lim == 0.5 ~ "50%",
+                         lim == 0.75 ~ "75%"),
+         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
+         name = case_when(name == "sim_1" ~ "N(0, 1)",
+                          name == "sim_5" ~ "N(0, 5)",
+                          name == "sim_sparse" ~ "N(0, 1) + sparse"),
+         chemicals = str_c(chemicals, " chemicals")) %>%
+  #filter(grepl("Right", which)) %>% 
+  filter(chemicals == "16 chemicals") %>% group_by(lim, method, which, name) %>% 
+  summarise(m=median(value)) %>% print(n=36)
+  
+  ggplot(aes(x = lim, y = value, color = method, fill = method)) +
+  geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
+  scale_y_log10() +
+  facet_grid(which~name, scales = "free_y") + 
+  scale_color_manual(values = c("#E58601", # PCA
+                                "#2196F3")) +
+  scale_fill_manual(values = c("#E58601", # PCA
+                               "#2196F3")) +
+  labs(x = "Percentage of values < LOD",
+       y = "Relative Prediction Error") +
+  theme(legend.title = element_blank())
+dev.off()
 
 # Sparsity ####
 all_sparse = pcp_out_re %>% 
