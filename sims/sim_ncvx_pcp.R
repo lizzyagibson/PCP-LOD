@@ -10,7 +10,6 @@ library(CVXR)
 
 theme_set(theme_bw(base_size = 20) + theme(legend.position = "bottom",
                                            strip.background =element_rect(fill="white")))
-
 # 4 patterns
 # 2 mixture sizes, 16 & 48
 # 1 sample size = 500
@@ -105,9 +104,10 @@ pcp_metrics %>%
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
          method = ifelse(method == "pca", "PCA", "PCP-LOD"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+         name = case_when(name == "sim_1" ~ "Low Noise",
+                          name == "sim_5" ~ "High Noise",
+                          name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   ggplot(aes(x = lim, y = error, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -155,9 +155,10 @@ pcp_metrics %>%
                                 lim == 0.5 ~ "50%",
                                 lim == 0.75 ~ "75%"),
                 method = ifelse(method == "pca", "PCA", "PCP-LOD"),
-                name = case_when(name == "sim_1" ~ "N(0, 1)",
-                                 name == "sim_5" ~ "N(0, 5)",
-                                 name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+                name = case_when(name == "sim_1" ~ "Low Noise",
+                                 name == "sim_5" ~ "High Noise",
+                                 name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +

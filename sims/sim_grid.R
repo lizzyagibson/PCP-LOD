@@ -9,6 +9,7 @@ library(pracma)
 library(grid)
 library(factoextra)
 library(RColorBrewer)
+library(textshape)
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48
@@ -111,7 +112,7 @@ create_scores <- function (seed) {
   return(as.matrix(scores))
 }
 
-pdf("./sims/figures/scores_plot.pdf")
+#pdf("./sims/figures/scores_plot.pdf")
 scores %>%
   as_tibble() %>% 
   mutate(Pattern = 1:nrow(.),
@@ -126,7 +127,7 @@ scores %>%
         panel.border = element_blank(),
         axis.title = element_text(size = 30),
         axis.text.x = element_text(size = 20))
-dev.off()
+#dev.off()
 
 scores_iter <- patterns_iter %>% 
   mutate(true_scores = map(seed, create_scores))
@@ -215,21 +216,24 @@ get_lower_tri <-function(x){
   return(x)
 }
 
-cormat <- as.data.frame(get_lower_tri(cor(sim_lod$sim[[1]])[c(5,6,3,7:10,12,11,13:15,4,16,1,2),
-                                                                    c(5,6,3,7:10,12,11,13:15,4,16,1,2)])) %>% 
+corr = cor(sim_lod$sim[[4]])
+corr_re = as.data.frame(get_lower_tri(cluster_matrix(corr)))
+
+cormat <- corr_re %>% 
   rownames_to_column(var = "Chem") %>% 
   as_tibble() %>% 
   mutate(Chem = fct_inorder(Chem),
          Chem = as_factor(1:nrow(.))) %>% 
-  pivot_longer(chem_05:chem_02) %>% 
+  pivot_longer(2:17) %>% 
   mutate(name = fct_inorder(name),
          name = as_factor(rep(1:16,16)))
 
 corplot = cormat %>%
   mutate(outline = ifelse(is.na(value), FALSE, TRUE))
 corplot$outline[!corplot$outline] <- NA
+min(corplot$value, na.rm = T)
 
-#pdf("./sims/sim_corr.pdf")
+#pdf("./sims/sim_corr_pcp.pdf")
 corplot %>% 
   ggplot(aes(x = Chem, y = name, fill = value)) + 
   geom_tile() +
@@ -247,8 +251,8 @@ corplot %>%
         axis.text.y = element_blank(),
         strip.background =element_rect(fill="white"),
         strip.text = element_text(size = 25, colour = 'black')) +
-  scale_fill_distiller(palette="Spectral",
-                       limits=c(-1,1),
+  scale_fill_distiller(palette="YlOrRd", direction = 1,
+                       #limits=c(,1),
                        na.value = 'white')+
   #scale_color_manual(values = c("black", "white")) +
   guides(color = FALSE)
