@@ -1,19 +1,17 @@
 # PCA on simulated datasets
 
-library(tidyverse)
-library(GGally)
-library(PCPhelpers)
-library(pcpr)
-library(factoextra)
+# Load functions
+source("Sims/functions.R")
 
+# Load data
 load("./sims/sim_lod.RDA")
 sim_lod
 
+# Run this function on all simulations
 get_pca <- function (sim) {
-  # Run PCA centered and scaled
-  #sim_std = sweep(sim, 2, apply(sim, 2, sd), FUN = '/')
-  #pca_out <- prcomp(sim, scale = TRUE)
+  # Run PCA 
   pca_out <- prcomp(sim)
+  
   #loadings
   rot <- pca_out$rotation
   # scores
@@ -21,9 +19,7 @@ get_pca <- function (sim) {
   # singular values
   sv <- pca_out$sdev
 
-  #  rank = 4
-  # Cut scores and patterns to rank
-  
+  # Cut scores and patterns to this rank
   # Explain >=80% of var
   pve <- sv^2/sum(sv^2)
   rank <- 0
@@ -33,13 +29,11 @@ get_pca <- function (sim) {
       break
     }}
   
-  #rank = ncol(sim)
   rotations <- as_tibble(rot[, 1:rank])
   scores <- if (rank == 1) {matrix(ex[, 1:rank], nrow = nrow(sim))} else {ex[, 1:rank]}
   # Predicted values
-  pred <- scores %*% t(rotations) + kronecker(matrix(1, 500, 1), t(apply(sim, 2, mean))) # sim_std
+  pred <- scores %*% t(rotations) + kronecker(matrix(1, 500, 1), t(apply(sim, 2, mean)))
   # this adds back the mean
-  #pred = sweep(pred_sd, 2, apply(sim, 2, sd), FUN = '*')
   
   return(list(rotations = rotations, scores = scores, pred = pred, rank = rank))
 }
@@ -51,28 +45,14 @@ sim_pca = sim_lod %>%
                  pca_scores   = map(pca_out, function(x) x[[2]]),
                  pca_pred     = map(pca_out, function(x) x[[3]]),
                  pca_rank     = map(pca_out, function(x) x[[4]]),
-                 #chem_std     = map(chem, function(x) sweep(x, 2, apply(x, 2, sd), FUN = '/')),
                  pca_error    = map2(chem, pca_pred, function(x,y)
                                                       norm(x-y,"F")/norm(x,"F"))) %>% 
   unnest(c(pca_rank, pca_error))
 
-chem = sim_pca$chem[[1]]
-chem_std = sweep(chem, 2, apply(chem, 2, sd), FUN = '/')
-apply(chem_std, 2, sd)
-
-pr_chem = prcomp(chem, scale = TRUE)
-
-pred = pr_chem$x %*% t(pr_chem$rotation) + kronecker(matrix(1, 500, 1), t(apply(chem, 2, mean)))
-pred_2 = sweep(pred, 2, apply(chem, 2, sd), FUN = '/')
-
-norm(chem-pred_2,"F")/norm(chem, "F")
-
-norm(chem_std-pred_2,"F")/norm(chem_std, "F")
-
 # Quick summary ####
 summary(sim_pca$pca_error)
 summary(sim_pca$pca_rank)
-sum(sim_pca$pca_rank == 4)/600
+sum(sim_pca$pca_rank == 4)/1800
 
 # Get metrics ####
 pca_metrics = pcp_out_re %>% 

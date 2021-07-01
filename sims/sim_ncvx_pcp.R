@@ -1,38 +1,30 @@
 # CV
+# Load packages
+source("Sims/functions.R")
 
-library(tidyverse)
-library(GGally)
-library(PCPhelpers)
-library(pcpr)
-library(patchwork)
-library(factoextra)
-library(CVXR)
-
-theme_set(theme_bw(base_size = 20) + theme(legend.position = "bottom",
-                                           strip.background =element_rect(fill="white")))
 # 4 patterns
 # 2 mixture sizes, 16 & 48
 # 1 sample size = 500
 # 3 proportions <LOD, 25, 50, 75
 
+# Load data
 load("./sims/sim_lod.RDA")
 sim_lod
 
 # Run PCP-LOD ####
 # Run PCP-LOD on all sims!
-# sim_pcp_out = sim_lod %>% 
-#               mutate(pcp_out = map2(lod_neg1_mat, lod, function(x,y)
-#                         root_pcp_noncvx_nonnegL_na_lod(D = x, MAX_ITER = 20000,
-#                                                   lambda = 1/sqrt(nrow(x)), mu = sqrt(ncol(x)/2), 
-#                                                   r = 4, LOD = y,
-#                                                           verbose = TRUE)))
-# 
-# pcp_out = tibble()
-# for (i in 1:600) {
-#   load(paste0("/ifs/scratch/msph/ehs/eag2186/pcp/lod/sim_pcp_out_", i, ".rda"))
-#   pcp_out <- bind_rows(pcp_out, sim_pcp_out)
-#        print(i)
-# }
+sim_pcp_out = sim_lod %>%
+              mutate(pcp_out = map2(lod_neg1_mat, lod, function(x,y)
+                        root_pcp_noncvx_nonnegL_na_lod(D = x, MAX_ITER = 20000,
+                                                  lambda = 1/sqrt(nrow(x)), mu = sqrt(ncol(x)/2),
+                                                  r = 4, LOD = y,
+                                                          verbose = TRUE)))
+pcp_out = tibble()
+for (i in 1:600) {
+  load(paste0("/ifs/scratch/msph/ehs/eag2186/pcp/lod/sim_pcp_out_", i, ".rda"))
+  pcp_out <- bind_rows(pcp_out, sim_pcp_out)
+       print(i)
+}
 load("./sims/pcp_out_re.rda")
 
 table(unlist(pcp_out_re$pca_rank))

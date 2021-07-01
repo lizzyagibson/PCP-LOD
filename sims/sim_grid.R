@@ -1,15 +1,5 @@
 # Create simulated datasets
-
-library(tidyverse)
-library(LearnBayes) # this has Dirchlet dist
-library(GGally)
-library(PCPhelpers)
-library(pcpr)
-library(pracma)
-library(grid)
-library(factoextra)
-library(RColorBrewer)
-library(textshape)
+source("Sims/functions.R")
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48
@@ -47,9 +37,11 @@ create_4patterns <- function (seed, chemicals) {
   return(patterns)
 }
 
-p = as_tibble(patterns)
+p = as_tibble(create_4patterns(1, 16))
 colnames(p) = 1:ncol(p)
-# pdf("./sims/loadings_plot.pdf", width = 15, height = 15)
+
+# This is figure 1 (a)
+pdf("./Figures/loadings_plot.pdf", width = 15, height = 15)
 p %>%
   mutate(Pattern = 1:nrow(.),
          Pattern = str_c("Pattern ", Pattern)) %>%
@@ -67,27 +59,6 @@ p %>%
         strip.background =element_rect(fill="white"),
         strip.text = element_text(size = 45, colour = 'black'))
 dev.off()
-
-brewer.pal(8, "Spectral")
-display.brewer.pal(8, "Spectral")
-
-p %>%
-  mutate(Pattern = 1:nrow(.),
-         Pattern = str_c("Pattern ", Pattern)) %>%
-  pivot_longer(1:16) %>%
-  mutate(name = fct_inorder(str_remove(name, "V"))) %>%
-  ggplot(aes(x = name, y = value, fill = Pattern)) +
-  geom_col() +
-  labs(y = "Simulated Loadings", x = "Simulated Chemicals", fill = "") +
-  scale_fill_manual(values = c("#F46D43", "#66C2A5", "#FDAE61", "#2B83BA")) +
-  theme_light(base_size = 20) +
-  theme(panel.grid = element_blank(),
-        panel.border = element_blank(),
-        axis.text.x = element_text(size = 10),
-        legend.position = "bottom",
-        #axis.ticks.x = element_blank(),
-        strip.background =element_rect(fill="white"),
-        strip.text = element_text(size = 45, colour = 'black'))
 
 # 100 random samples from each data generating process
 seed = 1:100
@@ -111,23 +82,6 @@ create_scores <- function (seed) {
   scores <- matrix(exp(rnorm(n*r, mean = 1)), nrow = n, ncol = r)
   return(as.matrix(scores))
 }
-
-#pdf("./sims/figures/scores_plot.pdf")
-scores %>%
-  as_tibble() %>% 
-  mutate(Pattern = 1:nrow(.),
-         Pattern = str_c("Pattern ", Pattern)) %>%
-  pivot_longer(1:4) %>%
-  mutate(name = fct_inorder(str_remove(name, "V"))) %>%
-  ggplot(aes(x = value, y = ..density..)) +
-  geom_histogram(fill = "orange", color = "black") +
-  labs(y = "Density", x = "Simulated Scores") +
-  theme_light(base_size = 45) +
-  theme(panel.grid.major.x = element_blank(),
-        panel.border = element_blank(),
-        axis.title = element_text(size = 30),
-        axis.text.x = element_text(size = 20))
-#dev.off()
 
 scores_iter <- patterns_iter %>% 
   mutate(true_scores = map(seed, create_scores))
@@ -162,11 +116,7 @@ sim_iter <- sim_iter %>%
   mutate(sim_5 = pmap(list(seed, chem), function(x,y) add_noise(x,y,5)),
          sim_1 = pmap(list(seed, chem), function(x,y) add_noise(x,y,1)))
 
-sum(sim_iter$sim_5[[1]] == 0)/(500*16)
-
-# sort(1/apply(sim_iter$chem[[1]], 2, sd))
-# heatmaply::heatmaply(cor(sim_iter$sim[[1]]))
-
+# Add sparsity
 add_sparse <- function (seed, sim) {
   n = nrow(sim)
   p = ncol(sim)
@@ -183,10 +133,7 @@ add_sparse <- function (seed, sim) {
   list(simS = simS, S = S)
 }
 
-# apply(sim,2,max)
-# apply(simS,2,max)
-
-# add sparse
+# add sparse events
 sim_iter <- sim_iter %>%
  mutate(sparse_out = map2(seed, sim_1, add_sparse),
         sim_sparse = map(sparse_out, function(x) x$simS),
@@ -203,19 +150,15 @@ sim_lod = sim_iter %>%
         left_join(., lim_range) %>% 
           mutate(lod = map2(sim, lim, function(x,y)
                             as.vector(apply(x, 2, quantile, probs = y))),
-                 lod_neg1_mat = map2(sim, lim, function(x,y) 
+                 lod_neg1_mat = map2(sim, lim, function(x,y) # corrupt_mat is a function in PCPhelpers
                                  corrupt_mat(x, cols = 1:ncol(x), limit=y, fill="-1")),
                  lod_sqrt2_mat = map2(sim, lim, function(x,y) 
                                corrupt_mat(x, cols = 1:ncol(x), limit=y, fill="sqrt2")))
 
 # save nested dataframe 
-# save(sim_lod, file = "./sims/sim_lod.RDA")
+save(sim_lod, file = "./Sims/Sim Data/sim_lod.RDA")
 
-get_lower_tri <-function(x){
-  x[upper.tri(x)] <- NA
-  return(x)
-}
-
+# Create figure 1 (b)
 corr = cor(sim_lod$sim[[4]])
 corr_re = as.data.frame(get_lower_tri(cluster_matrix(corr)))
 
@@ -231,9 +174,8 @@ cormat <- corr_re %>%
 corplot = cormat %>%
   mutate(outline = ifelse(is.na(value), FALSE, TRUE))
 corplot$outline[!corplot$outline] <- NA
-min(corplot$value, na.rm = T)
 
-#pdf("./sims/sim_corr_pcp.pdf")
+pdf("./Figures/sim_corr_pcp.pdf")
 corplot %>% 
   ggplot(aes(x = Chem, y = name, fill = value)) + 
   geom_tile() +
@@ -252,10 +194,8 @@ corplot %>%
         strip.background =element_rect(fill="white"),
         strip.text = element_text(size = 25, colour = 'black')) +
   scale_fill_distiller(palette="YlOrRd", direction = 1,
-                       #limits=c(,1),
                        na.value = 'white')+
-  #scale_color_manual(values = c("black", "white")) +
   guides(color = FALSE)
-#dev.off()
+dev.off()
 
   
