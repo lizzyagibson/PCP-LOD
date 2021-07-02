@@ -1,10 +1,10 @@
 # Get SVD of PCP solution
 
 # Load functions
-source("Sims/functions.R")
+source("./functions.R")
 
 # Load PCP & PCA results
-load("./sims/pcp_out_all.rda")
+load("./Sims/Sim Data/pcp_out_all.rda")
 
 # SVD ####
 svd_out = pcp_out %>% 

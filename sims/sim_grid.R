@@ -1,5 +1,5 @@
 # Create simulated datasets
-source("Sims/functions.R")
+source("./functions.R")
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48
@@ -41,7 +41,7 @@ p = as_tibble(create_4patterns(1, 16))
 colnames(p) = 1:ncol(p)
 
 # This is figure 1 (a)
-pdf("./Figures/loadings_plot.pdf", width = 15, height = 15)
+# pdf("./Figures/loadings_plot.pdf", width = 15, height = 15)
 p %>%
   mutate(Pattern = 1:nrow(.),
          Pattern = str_c("Pattern ", Pattern)) %>%
@@ -58,7 +58,7 @@ p %>%
         #axis.ticks.x = element_blank(),
         strip.background =element_rect(fill="white"),
         strip.text = element_text(size = 45, colour = 'black'))
-dev.off()
+# dev.off()
 
 # 100 random samples from each data generating process
 seed = 1:100

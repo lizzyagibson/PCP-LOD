@@ -34,12 +34,12 @@ sim_cv = sim_lod %>%
 # save(sim_cv, file = "./sims/sim_cv.RDA")
 load("./Sims/Sim Data/sim_cv.RDA")
 
-sim_cv$noncvx_search[[1]]$formatted %>% arrange(desc(value))
-sim_cv$noncvx_search[[2]]$formatted %>% arrange(desc(value))
-sim_cv$noncvx_search[[3]]$formatted %>% arrange(desc(value))
-sim_cv$noncvx_search[[4]]$formatted %>% arrange(desc(value))
-sim_cv$noncvx_search[[5]]$formatted %>% arrange(desc(value))
-sim_cv$noncvx_search[[6]]$formatted %>% arrange(desc(value))
+which.min(sim_cv$noncvx_search[[1]]$formatted$value)
+which.min(sim_cv$noncvx_search[[2]]$formatted$value)
+which.min(sim_cv$noncvx_search[[3]]$formatted$value)
+which.min(sim_cv$noncvx_search[[4]]$formatted$value)
+which.min(sim_cv$noncvx_search[[5]]$formatted$value)
+which.min(sim_cv$noncvx_search[[6]]$formatted$value)
 # CV chose rank 4 for all simulations
 
 

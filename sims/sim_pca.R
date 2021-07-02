@@ -1,10 +1,10 @@
 # PCA on simulated datasets
 
 # Load functions
-source("Sims/functions.R")
+source("./functions.R")
 
 # Load data
-load("./sims/sim_lod.RDA")
+load("./Sims/Sim Data/sim_lod.RDA")
 sim_lod
 
 # Run this function on all simulations
@@ -54,28 +54,49 @@ summary(sim_pca$pca_error)
 summary(sim_pca$pca_rank)
 sum(sim_pca$pca_rank == 4)/1800
 
+# SVD ####
+# need to rerrange eigen vectors to best align with those of measured data
+pca_svd_out = sim_pca %>% 
+  mutate(svd_chem = map(chem, svd),
+         svd_pca  = map(lod_sqrt2_mat, svd),
+         svd_chem_left  = map(svd_chem, function(x) x$u),
+         svd_chem_right = map(svd_chem, function(x) x$v),
+         svd_pca_left  = map(svd_pca, function(x) x$u),
+         svd_pca_right = map(svd_pca, function(x) x$v))
+
+# Rearrange vectors to be closest to original SVD results
+pca_svd_re = pca_svd_out %>% 
+             mutate(svd_pca_left  = map2(svd_chem_left,  svd_pca_left,  factor_correspondence),
+                    svd_pca_right = map2(svd_chem_right, svd_pca_right, factor_correspondence))
+
+save(pca_svd_re, file = "./Sims/Sim Data/pca_svd_re.rda")  
+# load("./Sims/Sim Data/pca_svd_re.rda")  
+
 # Get metrics ####
-pca_metrics = pcp_out_re %>% 
+pca_svd_metrics = pca_svd_re %>% 
+  mutate(method = "PCA") %>% 
+  mutate(left   = map2(svd_chem_left, svd_pca_left, function(x,y) norm(x-y,"F")/norm(x,"F")),
+         right   = map2(svd_chem_right, svd_pca_right, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
+  select(-c(true_patterns,  true_scores,  chem,   sim, pca_loadings,  pca_scores,   pca_pred,
+            lod,   lod_neg1_mat, lod_sqrt2_mat, svd_chem, svd_pca, sparsity, pca_out,
+            svd_chem_left, svd_pca_left, svd_pca_right, svd_chem_right)) %>% 
+  unnest(c(left, right))
+
+pca_metrics = sim_pca %>% 
   mutate(method = "PCA") %>% 
   arrange(seed, chem) %>% 
   mutate(all_relerr   = map2(chem, pca_pred, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
   unnest(c(all_relerr)) %>% 
   mutate(mask = map(lod_neg1_mat, function(x) x != -1),
-         above_relerr = pmap(list(mask, chem, pca_pred), 
+         above = pmap(list(mask, chem, pca_pred), 
                                function(mask, x,y) norm(mask*x-mask*y,"F")/norm(mask*x,"F")),
-         below_relerr = pmap(list(mask, chem, pca_pred), 
+         below = pmap(list(mask, chem, pca_pred), 
                                function(mask, x,y) norm((!mask)*x-(!mask)*y,"F")/norm((!mask)*x,"F"))) %>% 
-  unnest(c(above_relerr, below_relerr)) 
+  select(-c(true_patterns, true_scores,  chem,   sim, sparsity,
+            pca_out, pca_loadings, pca_scores, pca_pred, pca_error, pca_rank,
+            lod, lod_neg1_mat, lod_sqrt2_mat, mask)) %>% 
+  unnest(c(above, below))
 
-all(pca_metrics$all_relerr == pca_metrics$pca_error)
-
-sim_pca %>% 
-  group_by(chemicals, lim) %>% 
-  summarize(qs = quantile(pca_error), prop = seq(0, 1, 0.25)) %>% 
-  pivot_wider(names_from = prop,
-              values_from = qs)
-
-pca_combine = pca_metrics %>% 
-  dplyr::select(seed, chemicals, lim, method, all_relerr, above_relerr, below_relerr) %>% 
-  mutate(LS = "PCA")
-
+# Save metrics
+save(pca_metrics, file = "./Sims/Sim Data/pca_metrics.rda")
+save(pca_svd_metrics, file = "./Sims/Sim Data/pca_svd_metrics.rda")
