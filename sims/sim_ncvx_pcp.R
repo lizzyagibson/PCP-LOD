@@ -38,15 +38,15 @@ pcp_svd_re = pcp_svd_out %>%
   mutate(svd_pcp_left  = map2(svd_chem_left,  svd_pcp_left,  factor_correspondence),
          svd_pcp_right = map2(svd_chem_right, svd_pcp_right, factor_correspondence))
 
-# save(pcp_svd_re, file = "./Sims/Sim Data/pcp_svd_re.rda")  
-load("./Sims/Sim Data/pcp_svd_re.rda")  
+save(pcp_svd_re, file = "./Sims/Sim Data/pcp_svd_re.rda")  
+# load("./Sims/Sim Data/pcp_svd_re.rda")  
 
 # Get metrics ####
 pcp_svd_metrics = pcp_svd_re %>% 
   mutate(method = "PCP-LOD") %>% 
   mutate(left   = map2(svd_chem_left, svd_pcp_left, function(x,y) norm(x-y,"F")/norm(x,"F")),
-         right   = map2(svd_chem_right, svd_pcp_right, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
-  select(-c(true_patterns, true_scores,  chem,   sim,   simS,
+         right  = map2(svd_chem_right, svd_pcp_right, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
+  select(-c(true_patterns, true_scores,  chem,   sim,
             lod, lod_neg1_mat, lod_sqrt2_mat, svd_chem, svd_pcp, pcp_out,
             L, svd_chem_left, svd_pcp_left, svd_pcp_right, svd_chem_right)) %>% 
   unnest(c(left, right))
@@ -54,8 +54,6 @@ pcp_svd_metrics = pcp_svd_re %>%
 # Get metrics ####
 pcp_metrics = sim_pcp_out %>% 
   mutate(method = "PCP-LOD") %>% 
-  mutate(S = map(pcp_out, function(x) x$S),
-         pcp_LS = map2(L, S, `+`)) %>% 
   arrange(seed, chem) %>% 
   mutate(all_relerr   = map2(chem, L, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
   unnest(c(all_relerr)) %>% 
@@ -64,7 +62,7 @@ pcp_metrics = sim_pcp_out %>%
                                function(mask, x,y) norm(mask*x-mask*y,"F")/norm(mask*x,"F")),
          below = pmap(list(mask, chem, L), 
                                function(mask, x,y) norm((!mask)*x-(!mask)*y,"F")/norm((!mask)*x,"F"))) %>% 
-  select(-c(true_patterns, true_scores,  chem,   sim, S, pcp_LS, mask,
+  select(-c(true_patterns, true_scores,  chem, sim, mask,
             lod, lod_neg1_mat, lod_sqrt2_mat, pcp_out, L)) %>% 
   unnest(c(all_relerr, above, below)) 
 
