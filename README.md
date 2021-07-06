@@ -14,14 +14,14 @@ This repo includes:
 
 1. `functions.R' loads packages and includes some functions that I wrote.
 2. `NHANES` folder
-    a. `nhanes_cleaning.R` includes a function to clean the NHANES data and makes a figure
-    b. `nhanes_pops_50.Rmd` includes analysis and makes some figures
+    * `nhanes_cleaning.R` includes a function to clean the NHANES data and makes a figure
+    * `nhanes_pops_50.Rmd` includes analysis and makes some figures
 3. Sims
-    a. `sim_grid.R` makes the simulated datasets
-    b. `sim_pca.R` runs PCA on all simulated datasets
-    c. `sim_ncvx_cv.R` cross-validated PCP-LOD on all simulated datasets
-    d. `sim_ncvx_pcp.R` runs PCP-LOD on all simulated datasets
-    e. `make_figures.R` makes figures for the manuscript
+    * `sim_grid.R` makes the simulated datasets
+    * `sim_pca.R` runs PCA on all simulated datasets
+    * `sim_ncvx_cv.R` cross-validated PCP-LOD on all simulated datasets
+    * `sim_ncvx_pcp.R` runs PCP-LOD on all simulated datasets
+    * `make_figures.R` makes figures for the manuscript
     
     
     
