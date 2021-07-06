@@ -65,6 +65,7 @@ pca_svd_out = sim_pca %>%
          svd_pca_right = map(svd_pca, function(x) x$v))
 
 # Rearrange vectors to be closest to original SVD results
+# This step takes a long time, I let it run overnight, you can just load the rda file below
 pca_svd_re = pca_svd_out %>% 
              mutate(svd_pca_left  = map2(svd_chem_left,  svd_pca_left,  factor_correspondence),
                     svd_pca_right = map2(svd_chem_right, svd_pca_right, factor_correspondence))

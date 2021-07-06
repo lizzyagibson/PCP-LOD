@@ -34,6 +34,7 @@ pcp_svd_out = sim_pcp_out %>%
          svd_pcp_right = map(svd_pcp, function(x) x$v))
 
 # Rearrange vectors to be closest to original SVD results
+# This step takes a long time, I let it run overnight, you can just load the rda file below
 pcp_svd_re = pcp_svd_out %>% 
   mutate(svd_pcp_left  = map2(svd_chem_left,  svd_pcp_left,  factor_correspondence),
          svd_pcp_right = map2(svd_chem_right, svd_pcp_right, factor_correspondence))
