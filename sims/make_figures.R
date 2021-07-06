@@ -133,7 +133,7 @@ table_err
 xtable::xtable(table_err)
 
 # SVD right and left
-# pdf("./sims/figures/svd_boxplots_left.pdf", height = 10)
+# pdf("./Figures/svd_boxplots_left.pdf", height = 10)
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%
@@ -141,7 +141,6 @@ svd_metrics %>%
          lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
          name = case_when(name == "sim_1" ~ "N(0, 1)",
                           name == "sim_5" ~ "N(0, 5)",
                           name == "sim_sparse" ~ "N(0, 1) + sparse"),
@@ -160,7 +159,7 @@ svd_metrics %>%
   theme(legend.title = element_blank())
 # dev.off()
 
-# pdf("./sims/figures/svd_boxplots_right.pdf", height = 10)
+# pdf("./Figures/svd_boxplots_right.pdf", height = 10)
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%
@@ -168,46 +167,15 @@ svd_metrics %>%
          lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
          name = case_when(name == "sim_1" ~ "N(0, 1)",
                           name == "sim_5" ~ "N(0, 5)",
                           name == "sim_sparse" ~ "N(0, 1) + sparse"),
          chemicals = str_c(chemicals, " chemicals")) %>%
   filter(grepl("Right", which)) %>% 
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
-  geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
+  geom_boxplot(notch = F, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
   facet_grid(chemicals~name, scales = "free_y") + 
-  scale_color_manual(values = c("#E58601", # PCA
-                                "#2196F3")) +
-  scale_fill_manual(values = c("#E58601", # PCA
-                               "#2196F3")) +
-  labs(x = "Percentage of values < LOD",
-       y = "Relative Prediction Error") +
-  theme(legend.title = element_blank())
-# dev.off()
-
-#pdf("./sims/figures/svd_boxplots_16.pdf", height = 10)
-svd_metrics %>% 
-  pivot_longer(error_left:error_right,
-               names_to = "which") %>%
-  mutate(which = fct_inorder(ifelse(which == "error_left", "Individual scores", "Chemical loadings")),
-         lim = case_when(lim == 0.25 ~ "25%",
-                         lim == 0.5 ~ "50%",
-                         lim == 0.75 ~ "75%"),
-         method = ifelse(method == "pca", "PCA", "PCP-LOD"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse"),
-         chemicals = str_c(chemicals, " chemicals")) %>%
-  #filter(grepl("Right", which)) %>% 
-  filter(chemicals == "16 chemicals") %>% group_by(lim, method, which, name) %>% 
-  summarise(m=median(value)) %>% print(n=36)
-
-ggplot(aes(x = lim, y = value, color = method, fill = method)) +
-  geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
-  scale_y_log10() +
-  facet_grid(which~name, scales = "free_y") + 
   scale_color_manual(values = c("#E58601", # PCA
                                 "#2196F3")) +
   scale_fill_manual(values = c("#E58601", # PCA

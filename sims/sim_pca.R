@@ -69,8 +69,8 @@ pca_svd_re = pca_svd_out %>%
              mutate(svd_pca_left  = map2(svd_chem_left,  svd_pca_left,  factor_correspondence),
                     svd_pca_right = map2(svd_chem_right, svd_pca_right, factor_correspondence))
 
-save(pca_svd_re, file = "./Sims/Sim Data/pca_svd_re.rda")  
-# load("./Sims/Sim Data/pca_svd_re.rda")  
+# save(pca_svd_re, file = "./Sims/Sim Data/pca_svd_re.rda")  
+load("./Sims/Sim Data/pca_svd_re.rda")  
 
 # Get metrics ####
 pca_svd_metrics = pca_svd_re %>% 
@@ -78,7 +78,7 @@ pca_svd_metrics = pca_svd_re %>%
   mutate(left   = map2(svd_chem_left, svd_pca_left, function(x,y) norm(x-y,"F")/norm(x,"F")),
          right   = map2(svd_chem_right, svd_pca_right, function(x,y) norm(x-y,"F")/norm(x,"F"))) %>% 
   select(-c(true_patterns,  true_scores,  chem,   sim, pca_loadings,  pca_scores,   pca_pred,
-            lod,   lod_neg1_mat, lod_sqrt2_mat, svd_chem, svd_pca, sparsity, pca_out,
+            lod,   lod_neg1_mat, lod_sqrt2_mat, svd_chem, svd_pca, sparsity, pca_out, pca_rank, pca_error,
             svd_chem_left, svd_pca_left, svd_pca_right, svd_chem_right)) %>% 
   unnest(c(left, right))
 
@@ -98,5 +98,5 @@ pca_metrics = sim_pca %>%
   unnest(c(above, below))
 
 # Save metrics
-save(pca_metrics, file = "./Sims/Sim Data/pca_metrics.rda")
-save(pca_svd_metrics, file = "./Sims/Sim Data/pca_svd_metrics.rda")
+# save(pca_metrics, file = "./Sims/Sim Data/pca_metrics.rda")
+# save(pca_svd_metrics, file = "./Sims/Sim Data/pca_svd_metrics.rda")
