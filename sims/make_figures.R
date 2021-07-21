@@ -26,6 +26,7 @@ metrics %>%
                           name == "sim_5" ~ "High Noise",
                           name == "sim_sparse" ~ "Sparse Events"),
          name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
+  # Jaime: in the manuscript facets are named differently, please make them coincide
   ggplot(aes(x = lim, y = all_relerr, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
