@@ -92,6 +92,7 @@ metrics %>%
 #dev.off()
 
 #pdf("./sims/lod_boxplots_48.pdf", height = 10)
+# Jaime: named as Figure S2 in manuscript
 metrics %>% 
   filter(chemicals == 48) %>% 
   pivot_longer(above:below,
@@ -133,10 +134,12 @@ table_err = metrics %>%
 
 table_err
 # Latex version
+# Jaime: named as Table S1 in manuscript
 xtable::xtable(table_err)
 
 # SVD right and left
 # pdf("./Figures/svd_boxplots_left.pdf", height = 10)
+# Jaime: named as Figure 4 in manuscript
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%
@@ -163,6 +166,7 @@ svd_metrics %>%
 # dev.off()
 
 # pdf("./Figures/svd_boxplots_right.pdf", height = 10)
+# Jaime: named as Figure S3 in manuscript
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%
