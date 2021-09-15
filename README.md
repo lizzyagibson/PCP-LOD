@@ -12,11 +12,12 @@ You will need two packages, `pcpr` and `PCPhelpers` from the Columbia Prime GitH
 
 This repo includes:
 
-1. `functions.R` loads packages and includes some functions that I wrote.
+1. `functions.R` loads packages and includes some functions that I wrote
 2. `NHANES` folder
     * `nhanes_cleaning.R` includes a function to clean the NHANES data and makes a figure
     * `nhanes_pops_50.Rmd` includes analysis and makes some figures
-3. Sims
+    * `Data` subfolder has original NHANES SAS file and R object with saved CV fits
+3. `Sims` folder
     * `sim_grid.R` makes the simulated datasets
     * `sim_pca.R` runs PCA on all simulated datasets
     * `sim_ncvx_cv.R` cross-validated PCP-LOD on all simulated datasets
