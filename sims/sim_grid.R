@@ -175,7 +175,7 @@ corplot = cormat %>%
   mutate(outline = ifelse(is.na(value), FALSE, TRUE))
 corplot$outline[!corplot$outline] <- NA
 
-pdf("./Figures/sim_corr_pcp.pdf")
+# pdf("./Figures/sim_corr_pcp.pdf")
 corplot %>% 
   ggplot(aes(x = Chem, y = name, fill = value)) + 
   geom_tile() +
@@ -198,6 +198,6 @@ corplot %>%
   # Jaime: this palette has a different color than the one in the manuscript. Is there a more updated code?
   # Lizzy: Thanks, I updated the manuscript to have this version
   guides(color = "none")
-dev.off()
+# dev.off()
 
   

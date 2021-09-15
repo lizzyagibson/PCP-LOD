@@ -33,6 +33,7 @@ sim_cv = sim_lod %>%
 
 # save(sim_cv, file = "./Sims/Sim Data/sim_cv.RDA")
 load("./Sims/Sim Data/sim_cv.RDA")
+# This loads the whole CV
 
 which.min(sim_cv$noncvx_search[[1]]$formatted$value)
 which.min(sim_cv$noncvx_search[[2]]$formatted$value)

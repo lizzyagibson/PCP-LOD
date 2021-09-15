@@ -9,7 +9,7 @@ load("./Sims/Sim Data/pcp_svd_metrics.rda")
 source("./functions.R")
 
 # Combine
-metrics = full_join(pcp_metrics, pca_metrics)
+metrics     = full_join(pcp_metrics, pca_metrics)
 svd_metrics = full_join(pcp_svd_metrics, pca_svd_metrics)
 
 # PLOT ####

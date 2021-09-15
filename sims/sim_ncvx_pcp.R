@@ -21,8 +21,8 @@ sim_pcp_out = sim_lod %>%
                       L = map(pcp_out, function(x) x$L))
 # Jaime: running lines 16 to 21 I get the following error, Error: Problem with `mutate() x object 'L' not found
 
-# save(sim_pcp_out, file = "./Sims/Sim Data/sim_pcp_out.rda")
-load("./Sims/Sim Data/sim_pcp_out.rda")
+save(sim_pcp_out, file = "./Sims/Sim Data/sim_pcp_out.rda")
+# load("./Sims/Sim Data/sim_pcp_out.rda")
 sim_pcp_out
 
 # SVD ####
