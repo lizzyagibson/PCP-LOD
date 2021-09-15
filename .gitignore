@@ -45,11 +45,11 @@ Ignore
 *.mat
 
 # Sim data
-*.RDA
+Sims/Sim Data/*.RDA
 
 # experiments repo
 experiments/
 
 # data
-Data/
-*.csv
+# Data/
+# *.csv
