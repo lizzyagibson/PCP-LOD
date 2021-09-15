@@ -1,7 +1,9 @@
 # packages used
-packages <- c( "haven", "tidyverse", "RColorBrewer", "LearnBayes", "janitor", "broom", "ggpubr",
-                       "GGally", "textshape", "factoextra", "grid", "pracma", "heatmaply",
-                       "ggsci", "patchwork", "pcpr", "PCPhelpers", "CVXR", "here")
+packages <- c( "haven", "tidyverse", "RColorBrewer", "LearnBayes", "janitor", "broom", 
+               "ggrepel","ggpubr", "FactoMineR", "osqp", "CVXR", "factoextra",
+               "GGally", "textshape",  "grid", "pracma", 
+               "heatmaply","ggsci", "patchwork", "here",
+               "snow", "doSNOW", "GPfit", "kableExtra")
 
 # if these aren't installed, install them
 new.packages <- packages[!(packages %in% installed.packages()[,"Package"])]
@@ -9,6 +11,14 @@ if(length(new.packages)) {install.packages(new.packages)}
 
 # load all packages
 lapply(packages, library, character.only = TRUE)
+
+# Change this absolute path to your own
+# install.packages("/Users/lizzy/pcpr", repos = NULL, type="source")
+library(pcpr)
+
+# Change this absolute path to your own
+# install.packages("/Users/lizzy/experiments/law_experiments/PCPhelpers", repos = NULL, type="source")
+library(PCPhelpers)
 
 theme_set(theme_bw(base_size = 20) + theme(legend.position = "bottom",
                                            strip.background =element_rect(fill="white")))

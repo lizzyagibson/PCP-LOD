@@ -9,7 +9,7 @@ source("Sims/functions.R")
 # 3 proportions <LOD, 25, 50, 75
 
 # Load data
-load("./sims/sim_lod.RDA")
+load("./Sims/Sim Data/sim_lod.RDA")
 sim_lod
 
 # CV 1 example for each mixture size/<LOD combo
@@ -31,7 +31,7 @@ sim_cv = sim_lod %>%
                                              # I ran runs = 100, but that took forever, runs = 2 still takes a while
                                              cores = 2, LOD = y)))
 
-# save(sim_cv, file = "./sims/sim_cv.RDA")
+# save(sim_cv, file = "./Sims/Sim Data/sim_cv.RDA")
 load("./Sims/Sim Data/sim_cv.RDA")
 
 which.min(sim_cv$noncvx_search[[1]]$formatted$value)

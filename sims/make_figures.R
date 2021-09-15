@@ -16,7 +16,8 @@ svd_metrics = full_join(pcp_svd_metrics, pca_svd_metrics)
 
 # Overall error figure
 
-#pdf("./sims/sim_boxplots_16.pdf")
+# Figure 2 in manuscript
+#pdf("./Figures/sim_boxplots_16.pdf")
 metrics %>%
   filter(chemicals == 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
@@ -27,6 +28,7 @@ metrics %>%
                           name == "sim_sparse" ~ "Sparse Events"),
          name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   # Jaime: in the manuscript (figure 2?) facets are named differently, please make them coincide
+  # Lizzy: Thanks, updated manuscript to have these labels
   ggplot(aes(x = lim, y = all_relerr, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -40,16 +42,17 @@ metrics %>%
   theme(legend.title = element_blank())
 #dev.off()
 
-#pdf("./sims/sim_boxplots_48.pdf")
+#pdf("./Figures/sim_boxplots_48.pdf")
 # Jaime: named as Figure S1 in manuscript
 metrics %>%
   filter(chemicals != 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+         name = case_when(name == "sim_1" ~ "Low Noise",
+                          name == "sim_5" ~ "High Noise",
+                          name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   ggplot(aes(x = lim, y = all_relerr, color = method, fill = method)) +
   geom_boxplot(outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -63,8 +66,9 @@ metrics %>%
   theme(legend.title = element_blank())
 #dev.off()
 
+# Figure 3 in manuscript
 # error above and below lod
-#pdf("./sims/lod_boxplots_16.pdf", height = 10)
+#pdf("./Figures/lod_boxplots_16.pdf", height = 10)
 metrics %>% 
   filter(chemicals == 16) %>% 
   pivot_longer(above:below,
@@ -78,6 +82,7 @@ metrics %>%
                           name == "sim_sparse" ~ "Sparse Events"),
          name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   # Jaime: in the manuscript (figure 3?) facets are named differently, please make them coincide
+  # Lizzy: Thanks, I updated the manuscript to match these
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -91,7 +96,7 @@ metrics %>%
   theme(legend.title = element_blank())
 #dev.off()
 
-#pdf("./sims/lod_boxplots_48.pdf", height = 10)
+#pdf("./Figures/lod_boxplots_48.pdf", height = 10)
 # Jaime: named as Figure S2 in manuscript
 metrics %>% 
   filter(chemicals == 48) %>% 
@@ -101,9 +106,10 @@ metrics %>%
          lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse")) %>% 
+         name = case_when(name == "sim_1" ~ "Low Noise",
+                          name == "sim_5" ~ "High Noise",
+                          name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -147,10 +153,11 @@ svd_metrics %>%
          lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse"),
-         chemicals = str_c(chemicals, " chemicals")) %>%
+         chemicals = str_c(chemicals, " chemicals"),
+         name = case_when(name == "sim_1" ~ "Low Noise",
+                          name == "sim_5" ~ "High Noise",
+                          name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   filter(grepl("Left", which)) %>% 
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
@@ -174,10 +181,11 @@ svd_metrics %>%
          lim = case_when(lim == 0.25 ~ "25%",
                          lim == 0.5 ~ "50%",
                          lim == 0.75 ~ "75%"),
-         name = case_when(name == "sim_1" ~ "N(0, 1)",
-                          name == "sim_5" ~ "N(0, 5)",
-                          name == "sim_sparse" ~ "N(0, 1) + sparse"),
-         chemicals = str_c(chemicals, " chemicals")) %>%
+         chemicals = str_c(chemicals, " chemicals"),
+         name = case_when(name == "sim_1" ~ "Low Noise",
+                          name == "sim_5" ~ "High Noise",
+                          name == "sim_sparse" ~ "Sparse Events"),
+         name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
   filter(grepl("Right", which)) %>% 
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(notch = F, outlier.size = 0.25, alpha = 0.4) +
