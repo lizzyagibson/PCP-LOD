@@ -3,6 +3,7 @@ source("./functions.R")
 
 # * **Info:** https://wwwn.cdc.gov/Nchs/Nhanes/2001-2002/L28POC_B.htm  
 all_nhanes = read_sas(here::here("./NHANES/Data/studypop_lod.sas7bdat")) %>% 
+  # Jaime: Is it possible to have access to this dataset?
   clean_names()
 seqn = all_nhanes$seqn
 

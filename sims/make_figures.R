@@ -26,6 +26,7 @@ metrics %>%
                           name == "sim_5" ~ "High Noise",
                           name == "sim_sparse" ~ "Sparse Events"),
          name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
+  # Jaime: in the manuscript (figure 2?) facets are named differently, please make them coincide
   ggplot(aes(x = lim, y = all_relerr, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -40,6 +41,7 @@ metrics %>%
 #dev.off()
 
 #pdf("./sims/sim_boxplots_48.pdf")
+# Jaime: named as Figure S1 in manuscript
 metrics %>%
   filter(chemicals != 16) %>% 
   mutate(lim = case_when(lim == 0.25 ~ "25%",
@@ -75,6 +77,7 @@ metrics %>%
                           name == "sim_5" ~ "High Noise",
                           name == "sim_sparse" ~ "Sparse Events"),
          name = fct_relevel(name, "Low Noise", "Sparse Events", "High Noise")) %>% 
+  # Jaime: in the manuscript (figure 3?) facets are named differently, please make them coincide
   ggplot(aes(x = lim, y = value, color = method, fill = method)) +
   geom_boxplot(notch = TRUE, outlier.size = 0.25, alpha = 0.4) +
   scale_y_log10() +
@@ -89,6 +92,7 @@ metrics %>%
 #dev.off()
 
 #pdf("./sims/lod_boxplots_48.pdf", height = 10)
+# Jaime: named as Figure S2 in manuscript
 metrics %>% 
   filter(chemicals == 48) %>% 
   pivot_longer(above:below,
@@ -130,10 +134,12 @@ table_err = metrics %>%
 
 table_err
 # Latex version
+# Jaime: named as Table S1 in manuscript
 xtable::xtable(table_err)
 
 # SVD right and left
 # pdf("./Figures/svd_boxplots_left.pdf", height = 10)
+# Jaime: named as Figure 4 in manuscript
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%
@@ -160,6 +166,7 @@ svd_metrics %>%
 # dev.off()
 
 # pdf("./Figures/svd_boxplots_right.pdf", height = 10)
+# Jaime: named as Figure S3 in manuscript
 svd_metrics %>% 
   pivot_longer(left:right,
                names_to = "which") %>%

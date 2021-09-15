@@ -195,6 +195,7 @@ corplot %>%
         strip.text = element_text(size = 25, colour = 'black')) +
   scale_fill_distiller(palette="YlOrRd", direction = 1,
                        na.value = 'white')+
+  # Jaime: this palette has a different color than the one in the manuscript. Is there a more updated code?
   guides(color = FALSE)
 dev.off()
 
