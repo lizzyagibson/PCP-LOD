@@ -20,6 +20,7 @@ sim_pcp_out = sim_lod %>%
                                                   r = 4, LOD = y)), # r = 4 because that's what cross validation chose
                       L = map(pcp_out, function(x) x$L))
 # Jaime: running lines 16 to 21 I get the following error, Error: Problem with `mutate() x object 'L' not found
+# Lizzy: we fixed this with the updated pcpr package
 
 save(sim_pcp_out, file = "./Sims/Sim Data/sim_pcp_out.rda")
 # load("./Sims/Sim Data/sim_pcp_out.rda")

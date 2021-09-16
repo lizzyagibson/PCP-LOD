@@ -23,7 +23,7 @@ This repo includes:
     * `sim_ncvx_cv.R` cross-validated PCP-LOD on all simulated datasets
     * `sim_ncvx_pcp.R` runs PCP-LOD on all simulated datasets
     * `make_figures.R` makes figures for the manuscript
-    
+    * `Sim Data` subfolder has CV fits
     
     
     
