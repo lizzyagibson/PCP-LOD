@@ -50,6 +50,12 @@ Sims/Sim Data/*.RDA
 # experiments repo
 experiments/
 
+# Figures
+Figures/
+
+# Tables/
+Tables/
+
 # data
-# Data/
-# *.csv
+*.csv
+*.rda

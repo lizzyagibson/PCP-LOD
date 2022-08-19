@@ -116,6 +116,7 @@ sim_iter <- sim_iter %>%
   mutate(sim_5 = pmap(list(seed, chem), function(x,y) add_noise(x,y,5)),
          sim_1 = pmap(list(seed, chem), function(x,y) add_noise(x,y,1)))
 
+
 # Add sparsity
 add_sparse <- function (seed, sim) {
   n = nrow(sim)
@@ -156,7 +157,7 @@ sim_lod = sim_iter %>%
                                corrupt_mat(x, cols = 1:ncol(x), limit=y, fill="sqrt2")))
 
 # save nested dataframe 
-save(sim_lod, file = "./Sims/Sim Data/sim_lod.RDA")
+# save(sim_lod, file = "./Sims/Sim Data/sim_lod.RDA")
 
 # Create figure 1 (b)
 corr = cor(sim_lod$sim[[4]])

@@ -100,7 +100,7 @@ col_rename = function(pops) {
 prop <- function (x) {1-(sum(x, na.rm = TRUE)/length(x[!is.na(x)]))}
 
 # Figure 5
-# pdf("./Figures/pop_detect.pdf", width = 15)
+#pdf("./Figures/Figure_5.pdf", width = 15)
 label_nhanes %>% 
   summarize_all(prop) %>% 
   pivot_longer(lbd074lc:lbdf09lc) %>%
@@ -112,7 +112,7 @@ label_nhanes %>%
   ggplot(aes(x = name, y = value, color = group)) +
   geom_segment(aes(x=name, xend=name, y=0, yend=value), size=1) +
   geom_vline(xintercept = 13.5, color = "darkgray", linetype = "dashed", size=1) +
-  geom_point(size=5) +
+  geom_point(aes(shape=group, fill=group), size=5) +
   theme_light(base_size = 25) +
   theme(panel.grid.major.x = element_blank(),
         panel.border = element_blank(),
@@ -125,8 +125,24 @@ label_nhanes %>%
         legend.key = element_rect(fill='transparent'),
         legend.position = c(0.15,0.8)) +
   labs(y = "% > LOD", x = "") +
-  scale_color_nejm()
-# dev.off()
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_shape_manual(values=c(16, 15, 17, 23, 25))
+#dev.off()
+
+# Corresponding table
+label_table = label_nhanes %>% 
+  summarize_all(prop) %>% 
+  pivot_longer(lbd074lc:lbdf09lc) %>%
+  mutate(name = str_to_upper(name),
+         name = pop_rename(name),
+         name = fct_reorder(name, value)) %>% 
+  mutate(value = round(value*100,1),
+         group = pop_label_groups(name)) %>% 
+  select(group, name, value) %>% 
+  arrange(group, value)
+
+# label_table %>% flextable() %>% flextable::save_as_docx(path = 'Tables/label_table.docx')
 
 detected = label_nhanes %>%
   summarize_all(prop) %>% 
@@ -191,7 +207,8 @@ process_pops = function(x) {
   # and scale imputed
   imputed_scaled = apply(imputed, 2, function(a) a/sd(a, na.rm = T))
   # everything is scaled
-  return(list(scaled_data = pops_scaled, lods = lod_matrix, sqrt2_data = imputed_scaled, seqn_ids = seqn_ids))
+  return(list(scaled_data = pops_scaled, lods = lod_matrix, sqrt2_data = imputed_scaled, 
+              seqn_ids = seqn_ids, mask = lods))
 }
 
 

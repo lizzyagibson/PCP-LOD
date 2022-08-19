@@ -5,7 +5,7 @@ This version of PCP uses the non-convex rank approximation and the square root o
 
 This repo includes:
 
-0. `pcpr` file with PCP-LOD and CV functions.
+0. `pcpr.R` file with PCP-LOD and CV functions
 1. `functions.R` loads packages and includes some functions that I wrote
 2. `NHANES` folder
     * `nhanes_cleaning.R` includes a function to clean the NHANES data and makes a figure

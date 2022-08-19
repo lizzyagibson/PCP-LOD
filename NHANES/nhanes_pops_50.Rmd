@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
 
 ```{r}
 source("./NHANES/nhanes_cleaning.R")
+source("pcpr.R")
 ```
 
 ## 50% > LOD
@@ -33,6 +34,9 @@ out50 = process_pops(.50)
 data_50  = out50$scaled_data
 delta_50 = out50$lods
 imputed_50 = out50$sqrt2_data
+mask_50 = out50$mask
+
+# write_csv(as.data.frame(data_50), file = "./NHANES/Data/org_data_50.csv")
 ```
 
 ## CV
@@ -45,17 +49,16 @@ m = sqrt(p/2)
 lam = 1/sqrt(n)
 
 grid.rank <- tibble(r = 1:10)
-evals = ceiling(.07*nrow(grid.rank))
 
-noncvx_search <- grid_search_cv(mat = data_50,
-                                 pcp_func = root_pcp_noncvx_nonnegL_na_lod,
-                                 grid_df = grid.rank,
-                                 lambda = lam,  mu = m, 
-                                 runs = 2,
-                                 # I ran runs = 100, but that took forever, runs = 2 still takes a while
-                                 cores = 2, LOD = delta_50)
+# noncvx_search <- grid_search_cv(mat = data_50,
+#                                  pcp_func = root_pcp_noncvx_nonnegL_na_lod,
+#                                  grid_df = grid.rank,
+#                                  lambda = lam,  mu = m, 
+#                                  runs = 2,
+#                                  # I ran runs = 100, but that took forever, runs = 2 still takes a while
+#                                  cores = 2, LOD = delta_50)
 
-formatted = noncvx_search$formatted
+#formatted = noncvx_search$formatted
 # save(formatted, file = "./NHANES/NHANES Data/nhanes_50_cv.rda")
 load("./NHANES/Data/nhanes_50_cv.rda")
 ```
@@ -90,14 +93,14 @@ optimal.r <- formatted$r[best.idx]
 
 pcp_out <- root_pcp_noncvx_nonnegL_na_lod(D = data_50, MAX_ITER = 10000,
                                    lambda = lam, mu = m,
-                                   r = 3, LOD = delta_50,
+                                   r = best.idx, LOD = delta_50,
                                            verbose = TRUE)
 
 L = pcp_out$L
 S = pcp_out$S
 ```
 
-### Sparse Matrix
+## Sparse Matrix
 
 ```{r spar}
 mask = data_50 != -1
@@ -108,23 +111,33 @@ resid = data_50*mask - L*mask
 # >2*sd(resid) is a sparse event
 sparse_thresh = apply(resid, 2, sd)*2
 
-S_thresh_p = (S > sparse_thresh)*1
-S_thresh_n = (S < -sparse_thresh)*-1
+S_thresh_p = (S > sparse_thresh)*1 # 1 if sparse event
+S_thresh_n = (S < -sparse_thresh)*-1 # -1 if sparse event
 S_thresh = S_thresh_p + S_thresh_n
+
+S_thresh_50 = S_thresh
+
+sum(abs(S_thresh))/(nrow(S_thresh)*ncol(S_thresh))
+```
+
+```{r}
+sparse_events = abs(S_thresh) * S # all sparse events
+low_events = abs(S_thresh_n) * S
+high_events = abs(S_thresh_p) * S
 ```
 
 ```{r, plotsparse}
-display.brewer.pal(3, "RdBu")
-brewer.pal(n = 3, "RdBu")
+display.brewer.pal(2, "Dark2")
+brewer.pal(n = 2, "Dark2")
 
 # Make plot with 'heatmaply' and turn it into a ggplot
 plots <- heatmaply(S_thresh, show_dendrogram = F, ylab = "Participants",
                     showticklabels = c(T, F),
           labCol = pop_rename(colnames(S)),
           scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(
-    low = "#67A9CF",
+    low = "#1B9E77",
     mid= "white",
-    high = "#EF8A62", 
+    high = "#D95F02", 
     midpoint = 0), plot_method = "ggplot", return_ppxpy=TRUE)
 
 ## Remove non-existent plots
@@ -134,7 +147,7 @@ plots <- plots[!sapply(plots, is.null)]
 ex = tibble(x = as_factor(c("High","","Low")), y = rnorm(3), z = 1:3) %>% 
   ggplot(aes(x=z, y=y, fill = x)) +
   geom_col() +
-  scale_fill_brewer(palette = "RdBu") + 
+  scale_fill_manual(values = c("#D95F02", "white", "#1B9E77")) + 
   theme(legend.title = element_blank(),
         legend.direction = "vertical",
         legend.text = element_text(size = 15))
@@ -142,7 +155,7 @@ ex = tibble(x = as_factor(c("High","","Low")), y = rnorm(3), z = 1:3) %>%
 as_ggplot(get_legend(ex))
 
 # Figure 8s
-# pdf("./Figures/nhanes_sparse_events.pdf", width = 11, height = 9)
+# pdf("./Figures/Figure_8.pdf", width = 11, height = 9)
 (plots$p +
   labs(y = "Participants") +
   theme(text = element_text(size = 20),
@@ -182,16 +195,67 @@ colSums(sparse_tb)
 sum(sparse_tb[,2:8])
 ```
 
-### Patterns
-
-#### Plot L matrix
+### Sparse event correlation
 
 ```{r}
 names = colnames(data_50) %>% pop_rename() %>% as.character() %>% str_pad(., 21)
-
 dat = data.frame(x = 1:ncol(data_50), y = 1:ncol(data_50), lbs = names)
-# Create labels and plot
 
+# Figure S5
+# pdf("./Figures/nhanes_S_corr.pdf", width = 8)
+ggcorr(sparse_events, method = c("complete.obs", "spearman"),
+       label = TRUE, label_size = 3, 
+       size = 0, color = "grey50", layout.exp = 2) +
+  geom_text(data = dat, aes(x = x, y = y, label=lbs),size = 5, hjust=0.65) +
+  scale_fill_distiller(palette = "RdYlBu", limits = c(-1,1), na.value = "blue",) + 
+  theme(legend.text = element_text(size = 12),
+        panel.border = element_blank()) +
+  labs(fill = "")
+# dev.off()
+
+ggcorr(data = sparse_events, 
+       cor_matrix = cor(sparse_events, use = "complete.obs", method = "spearman"))
+```
+
+### Report extreme events
+
+```{r}
+apply(sparse_events, 2, quantile, c(0, 0.1, 0.5, 0.9, 1.0))
+
+low_events[low_events == 0] = NA
+low_quant = apply(low_events, 2, quantile, c(0.25, 0.5, 0.75), na.rm=T) %>% as.data.frame()
+
+high_events[high_events == 0] = NA
+high_quant = apply(high_events, 2, quantile, c(0.25, 0.5, 0.75), na.rm=T) %>% as.data.frame()
+
+low_sum = abs(colSums(S_thresh_n)) %>% as.data.frame()
+high_sum = colSums(S_thresh_p) %>% as.data.frame()
+
+low_long = t(low_quant)
+names(low_long) = rownames(low_quant)
+
+high_long = t(high_quant)
+names(high_long) = rownames(high_quant)
+
+sparse_event_table = cbind(low_sum, low_long, high_sum, high_long) %>% clean_names() %>% 
+  rename(Low_Total = 1,
+         High_Total = 5) %>% 
+  mutate_all(round, 2) %>%
+  rownames_to_column() %>% 
+  mutate(rowname = pop_rename(rowname)) %>% 
+  flextable() %>% 
+  add_header_row(colwidths = c(1,4,4),
+  values = c("", "Rare low exposure events", "Rare high exposure events")
+)
+
+# sparse_event_table %>% flextable::save_as_docx(path = 'Figures/sparse_event_table.docx')
+```
+
+## Patterns
+
+### Plot L matrix
+
+```{r}
 # Figure 6 (a)
 # pdf("./Figures/nhanes_raw_corr.pdf", width = 8)
 ggcorr(data_50, method = c("complete.obs", "spearman"),
@@ -250,7 +314,7 @@ pcp_plot = pcp_pca$rotation %>%
 
 ```{r}
 # Figure 7
-# pdf('./Figures/nhanes_loadings.pdf', width=15, height=10)
+# pdf('./Figures/Figure_7.pdf', width=15, height=10)
 pcp_pca$rotation %>% 
   as_tibble() %>% 
   mutate(Chemicals = colnames(data_50)) %>% 
@@ -261,7 +325,8 @@ pcp_pca$rotation %>%
   mutate(Chemicals = pop_rename(Chemicals),
          Chemicals = fct_inorder(Chemicals),
          Component = str_replace(Component, "PC", "Component ")) %>% 
-  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point(size=4) +
+  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + 
+  geom_point(aes(shape= Group, fill = Group), size=4) +
   geom_segment(aes(yend=0, xend = Chemicals), size=1) +
   facet_wrap(.~Component, nrow = 1) + theme_bw(base_size = 25) +
   geom_hline(yintercept = 0, color = "darkgray", linetype = "dashed") +
@@ -271,8 +336,140 @@ pcp_pca$rotation %>%
         legend.direction = "horizontal",
         legend.title = element_blank(),
         plot.margin = margin(c(0,1,2,0), unit = "cm"),
-        strip.background = element_blank()) + coord_flip() + scale_color_nejm() +
-  labs(x = "")
+        strip.background = element_blank()) + coord_flip() + 
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(x = "") +
+  scale_shape_manual(values=c(16, 15, 17, 23, 25))
 # dev.off()
+
+# corresponding table
+table_loadings = pcp_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_50)) %>% 
+  select(Chemicals, PC1:PC3) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = as.character(pop_label_groups(Chemicals))) %>%
+  arrange(Group) %>%
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals),
+         Component = str_replace(Component, "PC", "Component ")) %>% 
+  select(Component, Group, Chemicals, Loadings) %>% 
+  arrange(Component, Group)
+
+table_loadings %>% 
+  mutate(Loadings = round(Loadings, 2)) %>% 
+  pivot_wider(values_from = Loadings,
+              names_from = Component) %>% 
+  flextable() %>% 
+  flextable::save_as_docx(path = 'Tables/loadings_table_50.docx')
+```
+
+### of original data
+
+```{r pca2}
+# Default is scale = false but this is ok bc we scaled data to begin with
+pca_pca <- prcomp(imputed_50)
+
+pca_scores = pca_pca$x
+
+# plot rotations (loadings) of chemicals on patterns in low rank matrix
+pca_plot = pca_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_50)) %>% 
+  select(Chemicals, PC1:PC3) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = pop_label_groups(Chemicals)) %>%
+  arrange(Group) %>% 
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals)) %>% 
+  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
+  geom_segment(aes(yend=0, xend = Chemicals)) +
+  facet_wrap(.~Component, nrow = 1) + theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        strip.background = element_blank()) + labs(title = "PCA on PCP L matrix")
+```
+
+```{r}
+# Figure S4
+# pdf('./Figures/Figure_S4.pdf', width=15, height=10)
+pca_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_50)) %>% 
+  select(Chemicals, PC1:PC3) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = as.character(pop_label_groups(Chemicals))) %>%
+  arrange(Group) %>%
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals),
+         Component = str_replace(Component, "PC", "Component ")) %>% 
+  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + 
+  geom_point(aes(shape = Group, fill = Group),
+             size=4) +
+  geom_segment(aes(yend=0, xend = Chemicals), size=1) +
+  facet_wrap(.~Component, nrow = 1) + theme_bw(base_size = 25) +
+  geom_hline(yintercept = 0, color = "darkgray", linetype = "dashed") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(size=25),
+        legend.position = c(.475,-0.225),
+        legend.direction = "horizontal",
+        legend.title = element_blank(),
+        plot.margin = margin(c(0,1,2,0), unit = "cm"),
+        strip.background = element_blank()) + coord_flip() + 
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(x = "") +
+  scale_shape_manual(values=c(16, 15, 17, 23, 25))
+# dev.off()
+
+table_loadings_pca = pcp_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_50)) %>% 
+  select(Chemicals, PC1:PC3) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = as.character(pop_label_groups(Chemicals))) %>%
+  arrange(Group) %>%
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals),
+         Component = str_replace(Component, "PC", "Component ")) %>% 
+  select(Component, Group, Chemicals, Loadings) %>% 
+  arrange(Component, Group)
+
+table_loadings_pca %>% 
+  mutate(Loadings = round(Loadings, 2)) %>% 
+  pivot_wider(values_from = Loadings,
+              names_from = Component) %>% 
+  flextable() %>% 
+  flextable::save_as_docx(path = 'Tables/loadings_table_50pca.docx')
+```
+
+## Relative error
+
+```{r}
+mask_50 = as.matrix(mask_50)
+
+# above lod
+norm(((!mask_50)*data_50)-((!mask_50)*L),"F")/norm((!mask_50)*data_50,"F")
+norm(((!mask_50)*data_50)-((!mask_50)*(L+S)),"F")/norm((!mask_50)*data_50,"F")
+```
+
+```{r}
+# Overall
+
+# scores %*% t(rotations) + kronecker(matrix(1, 500, 1), t(apply(sim, 2, mean)))
+# adds back in the mean
+pca_pred = pca_scores[,1:3] %*% t(pca_pca$rotation)[1:3,] + kronecker(matrix(1, 1000, 1), t(apply(data_50, 2, mean)))
+
+# above lod
+norm((!mask_50)*data_50-(!mask_50)*pca_pred,"F")/norm((!mask_50)*data_50,"F")
+```
+
+## Cluster sparse matrix
+
+```{r}
+summary(sparse_events)
+# write_csv(as.data.frame(S_thresh), file = "./NHANES/Data/pcplod_S_thresh.csv")
+# write_csv(as.data.frame(sparse_events), file = "./NHANES/Data/pcplod_sparse_events.csv")
 ```
 

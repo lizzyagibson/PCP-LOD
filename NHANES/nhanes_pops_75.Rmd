@@ -1,0 +1,301 @@
+---
+title: "PCP-LOD: NHANES POPs"
+author: "Lizzy Gibson"
+date: "3/16/2021"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+## NHANES
+
+* **Info:** https://wwwn.cdc.gov/Nchs/Nhanes/2001-2002/L28POC_B.htm  
+
+* CDC imputes values \<LOD as LOD/sqrt(2).  
+* Here, if comment code = "below detectable limit", set value to -1.  
+* All values are measured in blood and lipid-adjusted.  
+* Make matrix of LODs to use in LOD PCP. 
+
+```{r}
+source("./NHANES/nhanes_cleaning.R")
+source("pcpr.R")
+```
+
+## 75% > LOD
+
+```{r data75}
+out75 = process_pops(.75)
+
+data_75  = out75$scaled_data
+delta_75 = out75$lods
+imputed_75 = out75$sqrt2_data
+mask_75 = out75$mask # 1 means below LOD
+```
+
+## CV
+
+```{r cv}
+n = nrow(data_75)
+p = ncol(data_75)
+
+m = sqrt(p/2)
+lam = 1/sqrt(n)
+
+grid.rank <- tibble(r = 1:10)
+
+# noncvx_search <- grid_search_cv(mat = data_75,
+#                                  pcp_func = root_pcp_noncvx_nonnegL_na_lod,
+#                                  grid_df = grid.rank,
+#                                  lambda = lam,  mu = m, 
+#                                  runs = 2,
+#                                  # I ran runs = 100, but that took forever, runs = 2 still takes a while
+#                                  cores = 2, LOD = delta_75)
+
+#formatted = noncvx_search$formatted
+# save(formatted, file = "./NHANES/Data/nhanes_75_cv.rda")
+load("./NHANES/Data/nhanes_75_cv.rda")
+```
+
+```{r plotcv}
+formatted %>%
+  arrange(desc(value)) %>% 
+  drop_na() %>% 
+  arrange(desc(value))
+
+formatted %>%
+  drop_na() %>% 
+  mutate(opt      = ifelse(value == min(value, na.rm = T), "*", "")) %>%
+  mutate(r = as_factor(r)) %>% 
+  ggplot(aes(y = 1, x = r)) +
+  geom_tile(aes(fill = value)) +
+  geom_text(aes(label=opt), size = 7, color = "white", vjust=0.75) +
+  scale_fill_viridis_c() +
+  theme_test() +
+  labs(fill = "CV error", x = "Rank", y = "") + 
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+# choose rank = 2 based on cross-validation
+```
+
+## PCP
+
+```{r pcp}
+best.idx <- which.min(formatted$value)
+
+pcp_out <- root_pcp_noncvx_nonnegL_na_lod(D = data_75, MAX_ITER = 10000,
+                                   lambda = lam, mu = m,
+                                   r = best.idx, LOD = delta_75,
+                                           verbose = TRUE)
+
+L = pcp_out$L
+S = pcp_out$S
+```
+
+## Relative error
+
+```{r}
+mask_75 = as.matrix(mask_75) # 1 means below LOD
+
+sum(mask_75 != 0)/(nrow(mask_75)*ncol(mask_75))
+
+# above lod
+norm(((!mask_75)*data_75)-((!mask_75)*L),"F")/norm((!mask_75)*data_75,"F")
+norm(((!mask_75)*data_75)-((!mask_75)*(L+S)),"F")/norm((!mask_75)*data_75,"F")
+```
+
+### Sparse Matrix
+
+```{r spar}
+mask_lod = data_75 != -1 # 1 means ABOVE LOD
+
+# residuals = X - L = S + error
+resid = data_75*mask_lod - L*mask_lod
+
+# >2*sd(resid) is a sparse event
+sparse_thresh = apply(resid, 2, sd)*2
+
+S_thresh_p = (S > sparse_thresh)*1
+S_thresh_n = (S < -sparse_thresh)*-1
+S_thresh = S_thresh_p + S_thresh_n
+```
+
+```{r, plotsparse}
+# Make plot with 'heatmaply' and turn it into a ggplot
+plots <- heatmaply(S_thresh, show_dendrogram = F, ylab = "Participants",
+                    showticklabels = c(T, F),
+          labCol = pop_rename(colnames(S)),
+          scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(
+    low = "#1B9E77",
+    mid= "white",
+    high = "#D95F02", 
+    midpoint = 0), plot_method = "ggplot", return_ppxpy=TRUE)
+
+## Remove non-existent plots
+plots <- plots[!sapply(plots, is.null)]
+
+# extract legend
+ex = tibble(x = as_factor(c("High","","Low")), y = rnorm(3), z = 1:3) %>% 
+  ggplot(aes(x=z, y=y, fill = x)) +
+  geom_col() +
+  scale_fill_manual(values = c("#D95F02", "white", "#1B9E77")) + 
+  theme(legend.title = element_blank(),
+        legend.direction = "vertical",
+        legend.text = element_text(size = 15))
+
+as_ggplot(get_legend(ex))
+
+(plots$p +
+  labs(y = "Participants") +
+  theme(text = element_text(size = 20),
+        panel.border = element_rect(colour = "black", fill=NA, size=1),
+        plot.margin = margin(c(1,1,1,2), unit = "cm"),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20),
+        legend.position = "none")) +
+  as_ggplot(get_legend(ex)) +
+  plot_layout(widths = c(10, 1))
+```
+
+```{r}
+low = apply(S_thresh_n,1,sum)
+high = apply(S_thresh_p,1,sum)
+
+lowdf = as.data.frame(low) %>% rownames_to_column(var = "id")
+highdf = as.data.frame(high) %>% rownames_to_column(var = "id")
+
+sparse_tb = as_tibble(full_join(lowdf, highdf)) %>% 
+  group_by(low, high) %>% 
+  summarize(n = n()) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = high,
+              values_from = n) %>% 
+  mutate_all(replace_na, 0) %>% 
+  dplyr::select(1, 4, 2, 3, 5) %>% 
+  arrange(desc(low))
+
+sparse_tb[,2:5] %>% 
+  mutate(sum = rowSums(.))
+colSums(sparse_tb[,2:5])
+
+sum(sparse_tb[,2:5])
+```
+
+### Patterns
+
+#### Plot L matrix
+
+```{r}
+names = colnames(data_75) %>% pop_rename() %>% as.character() %>% str_pad(., 24)
+
+dat = data.frame(x = 1:ncol(data_75), y = 1:ncol(data_75), lbs = names)
+# Create labels and plot
+
+ggcorr(data_75, method = c("complete.obs", "spearman"),
+       label = TRUE, label_size = 3,
+       size = 0, color = "grey75", layout.exp = 2) +
+  geom_text(data = dat, aes(x = x, y = y, label=lbs),size = 5, hjust=0.6) +
+  scale_fill_distiller(palette = "RdYlBu", limits = c(-1,1)) + 
+  theme(legend.text = element_text(size = 12),
+        panel.border = element_blank()) +
+  labs(fill = "")
+
+ggcorr(L, method = c("complete.obs", "spearman"),
+       label = TRUE, label_size = 3,
+       size = 0, color = "grey75", layout.exp = 2) +
+  geom_text(data=dat, aes(x = x, y = y, label=lbs),size = 5, hjust=0.6) +
+  scale_fill_distiller(palette = "RdYlBu", limits = c(-1,1)) + 
+  theme(legend.text = element_text(size = 12),
+        panel.border = element_blank()) +
+  labs(fill = "")
+```
+
+## PCA 
+
+### of low rank matrix
+
+```{r pca2}
+# Default is scale = false but this is ok bc we scaled data to begin with
+pcp_pca <- prcomp(L)
+
+summary(pcp_pca)
+
+pcp_scores = pcp_pca$x
+
+fviz_eig(pcp_pca, main = "PCA on Low Rank Matrix",
+         xlab = "Principal components") 
+
+# plot rotations (loadings) of chemicals on patterns in low rank matrix
+pcp_plot = pcp_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_75)) %>% 
+  select(Chemicals, PC1:PC3) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = pop_label_groups(Chemicals)) %>%
+  arrange(Group) %>% 
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals)) %>% 
+  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + geom_point() +
+  geom_segment(aes(yend=0, xend = Chemicals)) +
+  facet_wrap(.~Component, nrow = 1) + theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        strip.background = element_blank()) + labs(title = "PCA on PCP L matrix")
+```
+
+```{r}
+# Figure 7
+# pdf('./Figures/Figure_S7.pdf', width=12, height=10)
+pcp_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_75)) %>% 
+  select(Chemicals, PC1:PC2) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = as.character(pop_label_groups(Chemicals))) %>%
+  arrange(Group) %>%
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals),
+         Component = str_replace(Component, "PC", "Component ")) %>% 
+  ggplot(aes(x = Chemicals, y = Loadings, color = Group)) + 
+  geom_point(aes(shape= Group, fill = Group), size=4) +
+  geom_segment(aes(yend=0, xend = Chemicals), size=1) +
+  facet_wrap(.~Component, nrow = 1) + theme_bw(base_size = 25) +
+  geom_hline(yintercept = 0, color = "darkgray", linetype = "dashed") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(size=25),
+        legend.position = c(.475,-0.225),
+        legend.direction = "horizontal",
+        legend.title = element_blank(),
+        plot.margin = margin(c(0,1,2,0), unit = "cm"),
+        strip.background = element_blank()) + coord_flip() + 
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(x = "") +
+  scale_shape_manual(values=c(16, 15, 17, 23, 25))
+# dev.off()
+
+# corresponding table
+table_loadings = pcp_pca$rotation %>% 
+  as_tibble() %>% 
+  mutate(Chemicals = colnames(data_75)) %>% 
+  select(Chemicals, PC1:PC2) %>% 
+  gather(key = Component, value = Loadings, -Chemicals) %>%
+  mutate(Group = as.character(pop_label_groups(Chemicals))) %>%
+  arrange(Group) %>%
+  mutate(Chemicals = pop_rename(Chemicals),
+         Chemicals = fct_inorder(Chemicals),
+         Component = str_replace(Component, "PC", "Component ")) %>% 
+  select(Component, Group, Chemicals, Loadings) %>% 
+  arrange(Component, Group)
+
+# table_loadings %>% 
+#   mutate(Loadings = round(Loadings, 2)) %>% 
+#   pivot_wider(values_from = Loadings,
+#               names_from = Component) %>% flextable() %>% flextable::save_as_docx(path = 'Tables/loadings_table_75.docx')
+```
+
