@@ -367,7 +367,7 @@ table_loadings %>%
 
 ### of original data
 
-```{r pca2}
+```{r pca12}
 # Default is scale = false but this is ok bc we scaled data to begin with
 pca_pca <- prcomp(imputed_50)
 

@@ -160,14 +160,14 @@ sparse_identified = bind_rows(identified_size, identified_overall) %>%
   ungroup() %>% select(c(1, 2,5,8,3,6,9,4,7,10))
 
 # make tables
-sparse_identified %>% 
-  flextable() %>% 
-  add_header_row(colwidths = c(1,3,3,3),
-                 values = c("", "25% < LOD",	"50% < LOD",	"75% < LOD")) %>% 
-  flextable::save_as_docx(path = 'Figures/identified_sparse_table.docx')
+# sparse_identified %>% 
+#   flextable() %>% 
+#   add_header_row(colwidths = c(1,3,3,3),
+#                  values = c("", "25% < LOD",	"50% < LOD",	"75% < LOD")) %>% 
+#   flextable::save_as_docx(path = 'Figures/identified_sparse_table.docx')
 
-sparse_percent %>% 
-  flextable() %>% 
-  add_header_row(colwidths = c(1,3,3,3),
-                 values = c("", "25% < LOD",	"50% < LOD",	"75% < LOD")) %>% 
-  flextable::save_as_docx(path = 'Figures/percent_sparse_table.docx')
+# sparse_percent %>% 
+#   flextable() %>% 
+#   add_header_row(colwidths = c(1,3,3,3),
+#                  values = c("", "25% < LOD",	"50% < LOD",	"75% < LOD")) %>% 
+#   flextable::save_as_docx(path = 'Figures/percent_sparse_table.docx')
