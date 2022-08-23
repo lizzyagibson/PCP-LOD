@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
 
 ```{r}
 source("./NHANES/nhanes_cleaning.R")
-source("pcpr.R")
+source("grid_search_cv.R")
 ```
 
 ## 75% > LOD

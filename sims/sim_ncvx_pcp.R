@@ -1,6 +1,7 @@
 # CV
 # Load packages
 source("./functions.R")
+source("pcp.rR")
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48

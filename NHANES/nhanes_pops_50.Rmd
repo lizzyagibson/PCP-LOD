@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
 
 ```{r}
 source("./NHANES/nhanes_cleaning.R")
-source("pcpr.R")
+source("grid_search_cv.R")
 ```
 
 ## 50% > LOD
@@ -50,13 +50,13 @@ lam = 1/sqrt(n)
 
 grid.rank <- tibble(r = 1:10)
 
-# noncvx_search <- grid_search_cv(mat = data_50,
-#                                  pcp_func = root_pcp_noncvx_nonnegL_na_lod,
-#                                  grid_df = grid.rank,
-#                                  lambda = lam,  mu = m, 
-#                                  runs = 2,
-#                                  # I ran runs = 100, but that took forever, runs = 2 still takes a while
-#                                  cores = 2, LOD = delta_50)
+noncvx_search <- grid_search_cv(mat = data_50,
+                                 pcp_func = root_pcp_noncvx_nonnegL_na_lod,
+                                 grid_df = grid.rank,
+                                 lambda = lam,  mu = m,
+                                 runs = 2,
+                                 # I ran runs = 100, but that took forever, runs = 2 still takes a while
+                                 cores = 2, LOD = delta_50)
 
 #formatted = noncvx_search$formatted
 # save(formatted, file = "./NHANES/NHANES Data/nhanes_50_cv.rda")

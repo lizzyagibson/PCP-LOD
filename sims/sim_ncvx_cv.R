@@ -2,6 +2,7 @@
 
 # Get functions
 source("Sims/functions.R")
+source("grid_search_cv.R")
 
 # 4 patterns
 # 2 mixture sizes, 16 & 48
