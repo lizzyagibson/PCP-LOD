@@ -5,16 +5,17 @@ This version of PCP uses the non-convex rank approximation and the square root o
 
 This repo includes:
 
-0. `pcpr.R` file with PCP-LOD and CV functions
-1. `functions.R` loads packages and includes some functions that I wrote
+0. `pcpr.R` file with PCP-LOD and `grid_search_cv` with CV functions
+1. `functions.R` loads packages and includes some helper functions
 2. `NHANES` folder
     * `nhanes_cleaning.R` includes a function to clean the NHANES data and makes a figure
     * `nhanes_pops_50.Rmd` includes analysis and makes some figures
+    * `nhanes_pops_75.Rmd` includes sensitivity analysis and makes a figure
     * `Data` subfolder has original NHANES SAS file and R object with saved CV fits
 3. `Sims` folder
     * `sim_grid.R` makes the simulated datasets
     * `sim_pca.R` runs PCA on all simulated datasets
-    * `sim_ncvx_cv.R` cross-validated PCP-LOD on all simulated datasets
+    * `sim_ncvx_cv.R` cross-validates PCP-LOD on all simulated datasets
     * `sim_ncvx_pcp.R` runs PCP-LOD on all simulated datasets
     * `make_figures.R` makes figures for the manuscript
     * `Sim Data` subfolder has CV fits
