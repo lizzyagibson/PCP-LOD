@@ -9,6 +9,33 @@ sparsity <- function(mat, tol = .00001) {
 }
 
 # Corrupts a data matrix
+impute <- function(v, limit, fill="NA") {
+  q = quantile(v, probs = limit)
+  if (fill == "sqrt2") {
+    rep_val = q/sqrt(2)
+  } else if (fill == "-1") {
+    rep_val = -1
+  } else if (fill == "mean") {
+    rep_val = mean(v[v <= q])
+  } else {
+    rep_val = NA
+  }
+  # annoying edge cases with quantile
+  if (limit == 0) {
+    x = ifelse(v < q, rep_val, v)
+  } else {
+    x = ifelse(v <= q, rep_val, v)
+  }
+  if (fill == "status") {
+    if (limit == 0) {
+      x = ifelse(v < q, "< LOD", "above")
+    } else {
+      x = ifelse(v <= q, "< LOD", "above")
+    }
+  }
+  x
+}
+
 corrupt_mat <- function(mat, cols, limit, fill="NA") {
   mat[, cols] <- apply(mat[, cols, drop=FALSE], FUN=impute, limit=limit, fill=fill, MARGIN=2)
   mat
